@@ -1,5 +1,7 @@
 # Tài liệu Tích hợp Web Emulator (Emulator Integration Report)
 
+> **Trạng thái: CHƯA NGHIỆM THU.** Ngày 09/11/2026, người dùng yêu cầu tiếp tục sửa hệ thống và giữ emulator ở trạng thái chưa nghiệm thu. Nội dung khảo sát, license và khả năng tích hợp dưới đây cần được đối chiếu với upstream và bằng chứng thực tế trước khi dùng để kết luận. Chưa có đủ kết quả game/version/hash/browser/device theo gate Phase 0.
+
 ## 1. Giới thiệu & Mục tiêu
 Tài liệu này thuộc **Phase 0** theo kế hoạch `plan.md`. Mục tiêu là nghiên cứu, đánh giá các công nghệ emulator Java ME (J2ME) trên nền tảng Web, xác định giải pháp tối ưu và thiết kế kiến trúc adapter độc lập để nhúng vào nền tảng **Game Tuổi Thơ**.
 
@@ -81,19 +83,21 @@ export interface GameEmulatorInstance {
 
 ---
 
-## 5. Kết quả Thử nghiệm Tương thích (Compatibility Report)
+## 5. Ma trận tương thích chờ xác minh
 
-Đã kiểm tra danh sách đại diện các thể loại game J2ME:
+Các tên game dưới đây là danh sách dự kiến từ báo cáo ban đầu. Chưa có bằng chứng đủ để giữ các kết luận hiệu năng “hoàn hảo/mượt mà” trước đây; không dùng chúng để nghiệm thu.
 
-| Tên Game | Thể loại | Phân giải chuẩn | Âm thanh | Keypad | Kết quả | Ghi chú |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Ninja School** | ARPG 2D | 240x320 | MIDI | Full 0-9, Softkeys | **Mượt mà** | Đồ họa sắc nét, chuyển cảnh nhanh |
-| **Diamond Rush** | Puzzle/Adventure | 240x320 | MIDI/SFX | D-Pad, 2,4,6,8 | **Hoàn hảo** | Gameplay ổn định, lưu RMS tốt |
-| **Bounce Tales** | Platformer 2D | 240x320 | MIDI | D-Pad / Softkeys | **Hoàn hảo** | Hiệu ứng bóng nảy vật lý chuẩn |
-| **Avatar (Thành phố Diệu kỳ)** | Social/Casual | 240x320 | SFX | Phím số, Softkeys | **Tốt** | Font chữ hiển thị rõ ràng |
-| **Gomoku / Cờ Caro** | Trí tuệ 2D | 176x208 / 240x320 | Bíp/MIDI | D-Pad, Enter | **Hoàn hảo** | Nhẹ, tải tức thì |
-| **Space Impact** | Bắn phi thuyền | 96x65 / 128x128 | Bíp 8-bit | D-Pad, 5/Enter | **Hoàn hảo** | Cảm giác hoài niệm Nokia monochrome |
-| **Asphalt 3 / 3D Games** | Đua xe 3D | 240x320 | Đầy đủ | Phím số 4, 6, 2, 8 | **Khá** | WebGL2 xử lý tốt polygon 3D cơ bản |
+| Game dự kiến | JAR version/hash | Emulator revision | Browser/device | Khởi chạy, đồ họa, âm thanh, phím, RMS | Trạng thái |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Ninja School | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Diamond Rush | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Bounce Tales | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Avatar | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Gomoku / Cờ Caro | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Space Impact | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+| Asphalt 3 / game 3D | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+
+Phase 0 cần ít nhất 10 game đại diện được phép dùng để kiểm thử, cùng kết quả và bằng chứng thực tế. JAR fixture hoặc archive chỉ có manifest không phải game chạy được. Không thực thi JAR trên server; kiểm thử chạy game thuộc trình duyệt/client. Hiện tiếp tục sửa hệ thống, chưa chuyển trạng thái emulator sang đạt.
 
 ---
 

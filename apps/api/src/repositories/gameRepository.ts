@@ -74,7 +74,15 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
+      LEFT JOIN (
+        SELECT ca.id, ca.storage_key
+        FROM game_assets ca
+        LEFT JOIN users co ON ca.owner_user_id = co.id
+        WHERE ca.status = 'ACTIVE'
+          AND ca.asset_type = 'COVER'
+          AND ca.storage_key NOT LIKE 'users/%'
+          AND (ca.owner_user_id IS NULL OR co.role = 'ADMIN')
+      ) a ON g.cover_asset_id = a.id
       ${whereSql}
       ${orderSql}
       LIMIT ? OFFSET ?
@@ -94,7 +102,15 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
+      LEFT JOIN (
+        SELECT ca.id, ca.storage_key
+        FROM game_assets ca
+        LEFT JOIN users co ON ca.owner_user_id = co.id
+        WHERE ca.status = 'ACTIVE'
+          AND ca.asset_type = 'COVER'
+          AND ca.storage_key NOT LIKE 'users/%'
+          AND (ca.owner_user_id IS NULL OR co.role = 'ADMIN')
+      ) a ON g.cover_asset_id = a.id
       WHERE g.slug = ?
     `;
     return this.db.queryFirst<Game>(sql, [slug]);
@@ -109,7 +125,15 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
+      LEFT JOIN (
+        SELECT ca.id, ca.storage_key
+        FROM game_assets ca
+        LEFT JOIN users co ON ca.owner_user_id = co.id
+        WHERE ca.status = 'ACTIVE'
+          AND ca.asset_type = 'COVER'
+          AND ca.storage_key NOT LIKE 'users/%'
+          AND (ca.owner_user_id IS NULL OR co.role = 'ADMIN')
+      ) a ON g.cover_asset_id = a.id
       WHERE g.id = ?
     `;
     return this.db.queryFirst<Game>(sql, [id]);
@@ -181,7 +205,20 @@ export class GameRepository {
   // Versions
   async findVersionsByGameId(gameId: string, activeOnly = true): Promise<GameVersion[]> {
     const activeCondition = activeOnly
-      ? "AND v.status = 'ACTIVE' AND jar.status = 'ACTIVE' AND (v.jad_asset_id IS NULL OR jad.status = 'ACTIVE')"
+      ? `AND v.status = 'ACTIVE'
+         AND jar.status = 'ACTIVE'
+         AND jar.asset_type = 'JAR'
+         AND jar.storage_key NOT LIKE 'users/%'
+         AND (jar.owner_user_id IS NULL OR jar_owner.role = 'ADMIN')
+         AND (
+           v.jad_asset_id IS NULL OR (
+             jad.id IS NOT NULL
+             AND jad.status = 'ACTIVE'
+             AND jad.asset_type = 'JAD'
+             AND jad.storage_key NOT LIKE 'users/%'
+             AND (jad.owner_user_id IS NULL OR jad_owner.role = 'ADMIN')
+           )
+         )`
       : '';
     const sql = `
       SELECT 
@@ -190,7 +227,9 @@ export class GameRepository {
         jad.storage_key as jad_storage_key
       FROM game_versions v
       JOIN game_assets jar ON v.jar_asset_id = jar.id
+      LEFT JOIN users jar_owner ON jar.owner_user_id = jar_owner.id
       LEFT JOIN game_assets jad ON v.jad_asset_id = jad.id
+      LEFT JOIN users jad_owner ON jad.owner_user_id = jad_owner.id
       WHERE v.game_id = ? ${activeCondition}
       ORDER BY v.created_at DESC
     `;
@@ -239,7 +278,12 @@ export class GameRepository {
       SELECT s.*, a.storage_key
       FROM game_screenshots s
       JOIN game_assets a ON s.asset_id = a.id
-      WHERE s.game_id = ? AND a.status = 'ACTIVE'
+      LEFT JOIN users o ON a.owner_user_id = o.id
+      WHERE s.game_id = ? 
+        AND a.status = 'ACTIVE'
+        AND a.asset_type = 'SCREENSHOT'
+        AND a.storage_key NOT LIKE 'users/%'
+        AND (a.owner_user_id IS NULL OR o.role = 'ADMIN')
       ORDER BY s.sort_order ASC
     `;
     return this.db.query<GameScreenshot>(sql, [gameId]);

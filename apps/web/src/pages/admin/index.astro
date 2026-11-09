@@ -16,13 +16,21 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <a
+          href="/admin/crawler"
+          class="px-4 py-2.5 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-neon-cyan"
+        >
+          <span>🕷️</span>
+          <span>Nhập Game (gametuoitho.cc)</span>
+        </a>
+
         <a
           href="/admin/games/create"
           class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-neon-pink"
         >
           <span>➕</span>
-          <span>Tạo Game Mới</span>
+          <span>Tạo Game Thủ Công</span>
         </a>
       </div>
     </div>
@@ -70,6 +78,34 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </div>
     </div>
 
+    <!-- Crawler Promo Banner -->
+    <div class="bg-gradient-to-r from-neon-cyan/20 via-arcade-900 to-neon-pink/20 border-2 border-neon-cyan/50 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-neon-cyan">
+      <div class="space-y-2 max-w-xl">
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 bg-neon-cyan text-arcade-950 text-[10px] font-mono font-black rounded-full uppercase">
+            CÔNG CỤ ĐỘC QUYỀN
+          </span>
+          <span class="text-xs text-neon-yellow font-mono font-bold">
+            ⚡ 3.350+ Game Sẵn Sàng
+          </span>
+        </div>
+        <h3 class="text-xl sm:text-2xl font-black text-slate-100 flex items-center gap-2">
+          <span>🕷️</span>
+          <span>Cào & Tự Động Nhập Game Từ gametuoitho.cc</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Tìm kiếm và nạp tự động file JAR + ảnh bìa vào kho game chỉ với <strong>1 cú click chuột</strong>. Không cần tìm hay upload file thủ công!
+        </p>
+      </div>
+      <a
+        href="/admin/crawler"
+        class="px-6 py-3.5 bg-gradient-to-r from-neon-cyan to-neon-yellow text-arcade-950 font-black rounded-xl text-xs hover:scale-105 transition-all shadow-lg flex items-center gap-2 flex-shrink-0"
+      >
+        <span>Mở Bộ Cào Game Ngay</span>
+        <span>→</span>
+      </a>
+    </div>
+
     <!-- Quick Actions & Guidelines -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-6">
@@ -78,6 +114,20 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <span>Hành Động Quản Trị Nhanh</span>
         </h3>
         <div class="grid grid-cols-2 gap-3">
+          <a
+            href="/admin/crawler"
+            class="p-4 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 rounded-xl transition-all block group col-span-2"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-2xl block mb-1">🕷️</span>
+              <span class="px-2 py-0.5 bg-neon-cyan text-arcade-950 text-[10px] font-bold rounded">HOT</span>
+            </div>
+            <span class="font-bold text-xs text-neon-cyan group-hover:text-neon-yellow block">
+              Nhập Game Tự Động (gametuoitho.cc)
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Duyệt & tải hơn 3.350 game Nokia J2ME với 1-click</span>
+          </a>
+
           <a
             href="/admin/games"
             class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"

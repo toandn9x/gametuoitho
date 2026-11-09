@@ -2,11 +2,13 @@
 
 Nền tảng lưu trữ, quản lý và trải nghiệm các tựa game Java cổ điển (J2ME) thời kỳ hoàng kim của điện thoại Nokia, Motorola, Sony Ericsson trên nền tảng Web hiện đại, sẵn sàng mở rộng cho ứng dụng Native Android APK và iOS.
 
+**Trạng thái nghiệm thu:** Web MVP đang được review và sửa lỗi; emulator chưa được nghiệm thu theo lựa chọn của người dùng. Theo dõi bằng chứng và các việc còn mở trong [delivery board](docs/delivery-board.md). Các mục tính năng bên dưới cần được kiểm chứng theo `plan.md` trước khi coi là hoàn thành.
+
 ---
 
 ## ⚡ Chế Độ Chạy 1 Server Duy Nhất (Single Process + SQLite)
 
-Hệ thống được thiết kế tối ưu để có thể chạy **cả Frontend, Backend API và Cơ sở dữ liệu SQLite trong 1 tiến trình Node.js duy nhất** trên cùng **1 cổng mạng duy nhất**:
+Repo hiện có adapter local để chạy **Frontend, Backend API và SQLite trong 1 tiến trình Node.js** trên **1 cổng mạng**. Mục tiêu triển khai Cloudflare Workers/D1/R2 vẫn theo `plan.md`; triển khai production chưa được nghiệm thu.
 
 - 🌐 **Web Frontend (Astro 5 + React 19 + Tailwind CSS)**: Tự động phục vụ giao diện người dùng, trang chi tiết game và Web Emulator iframe.
 - 🔌 **Backend REST API (Hono)**: Cung cấp đầy đủ endpoint `/api/v1/*` (xác thực, catalog, tìm kiếm, upload file, thư viện cá nhân, trang quản trị admin).

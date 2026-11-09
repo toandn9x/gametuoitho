@@ -15,13 +15,23 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         </p>
       </div>
 
-      <a
-        href="/admin/games/create"
-        class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all shadow-neon-pink flex items-center gap-1.5"
-      >
-        <span>➕</span>
-        <span>Thêm Game Mới</span>
-      </a>
+      <div class="flex flex-wrap items-center gap-3">
+        <a
+          href="/admin/crawler"
+          class="px-4 py-2.5 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs transition-all shadow-neon-cyan flex items-center gap-2"
+        >
+          <span>🕷️</span>
+          <span>Nhập Từ gametuoitho.cc</span>
+        </a>
+
+        <a
+          href="/admin/games/create"
+          class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all shadow-neon-pink flex items-center gap-1.5"
+        >
+          <span>➕</span>
+          <span>Thêm Thủ Công</span>
+        </a>
+      </div>
     </div>
 
     <!-- Games Table Container -->
