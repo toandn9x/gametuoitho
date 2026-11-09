@@ -63,6 +63,10 @@ export class GameService {
   }
 
   async getGameVersions(gameId: string) {
+    const game = await this.gameRepo.findById(gameId);
+    if (!game || game.status !== 'PUBLISHED' || game.visibility !== 'PUBLIC') {
+      return null;
+    }
     const versions = await this.gameRepo.findVersionsByGameId(gameId, true);
     return versions.map((v) => this.enrichVersionUrls(v));
   }

@@ -5,10 +5,13 @@ param(
 
     [switch]$DirectConversation,
 
-    [switch]$ExecuteFirstBatch
+    [switch]$ExecuteFirstBatch,
+
+    [string]$TaskFile
 )
 
 $ErrorActionPreference = 'Stop'
+$antyExecutesTask = $ExecuteFirstBatch -or -not [string]::IsNullOrWhiteSpace($TaskFile)
 $antyExecutable = Join-Path $env:USERPROFILE '.gemini\bin\agy.exe'
 if (-not (Test-Path -LiteralPath $antyExecutable)) {
     throw 'Antigravity CLI was not found in the expected installation directory.'
@@ -22,12 +25,14 @@ $antySettings = @{
         allow = @()
     }
 }
-if ($ExecuteFirstBatch) {
+if ($antyExecutesTask) {
     $antySettings.permissions.allow = @(
         'command(pnpm test)',
         'command(pnpm lint)',
         'command(pnpm --filter @gametuoitho/api build)',
         'command(pnpm --filter @gametuoitho/web build)',
+        'command(pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts)',
+        'command(node tests/pm/admin-render-review.cjs)',
         'command(git status --short)',
         'command(git diff --check)'
     )
@@ -44,7 +49,18 @@ function ConvertTo-AntyNativeArgument([string]$Argument) {
 }
 
 try {
-    if ($ExecuteFirstBatch) {
+    if ($TaskFile) {
+        $antyTaskPath = (Resolve-Path -LiteralPath $TaskFile).Path
+        $antyDocsRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\docs')).TrimEnd('\') + '\'
+        if (-not $antyTaskPath.StartsWith($antyDocsRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+            [System.IO.Path]::GetFileName($antyTaskPath) -notmatch '^review-round-\d{2}(?:-fix-\d{2})?\.md$') {
+            throw 'TaskFile must be a coordinator review-round document inside this repository docs directory.'
+        }
+        $antyTaskBody = [System.IO.File]::ReadAllText($antyTaskPath, [System.Text.Encoding]::UTF8)
+        $antyTaskPrompt = 'The user authorizes the Codex project manager to request corrections and verify Gemini work until it is sound. Pause unrelated feature expansion. Execute ONLY the finite review packet below, preserve all existing unrelated edits, and respect AGENTS.md and plan.md. No new agents, model changes, permission bypass, global settings changes, git commits/resets, application server starts or cloud actions. The coordinator and reviewers own their coordination documents/script and independent tests/pm files; do not edit those. Run each allowed check command separately: pnpm test; pnpm lint; pnpm --filter @gametuoitho/api build; pnpm --filter @gametuoitho/web build; pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts; node tests/pm/admin-render-review.cjs; git diff --check; git status --short. The browser QA command uses only its isolated fixture server/profile and may be run for verification. Report real results in docs/anty-status.md and stop after this packet for independent review. Do not treat a report or a successful build as acceptance. REVIEW PACKET:' + [Environment]::NewLine + $antyTaskBody
+        $antyArguments = @('--conversation', $TargetConversationId, '--mode', 'accept-edits', '--settings', $antySettingsPath, '--print-timeout', '0', '--output-format', 'json', '--print', $antyTaskPrompt)
+    }
+    elseif ($ExecuteFirstBatch) {
         $antyTaskPrompt = 'Execute the T01/S5 first task you accepted in the coordination handshake. User authorizes code/build work. Read latest source and preserve ongoing work. You own only package test/lint scripts, existing test entrypoints and minimal new check configuration needed for T01, plus docs/anty-status.md. Coordinator owns docs/delivery-board.md and scripts/anty-bridge.ps1. Do not edit application business logic or frontend pages in this batch. Replace failure-masking API test script and placeholder lint scripts with real checks using installed dependencies where practical; root pnpm test/lint must invoke actual checks and propagate failures. Evaluate need/license before proposing any new dependency; do not install dependencies in this batch. Avoid writing tests that merely mirror script text. Run relevant checks and record exact commands, exit codes and limitations in docs/anty-status.md, along with owned files and next proposed S1/S2 work. A check failing on an existing application error must be reported honestly, not masked or fixed outside scope. Run each verification command separately; allowances cover the literal commands pnpm test, pnpm lint, pnpm --filter @gametuoitho/api build, pnpm --filter @gametuoitho/web build, git status --short, git diff --check. Do not use broad permission bypass, alter global CLI settings, remove existing files recursively, reset git, run servers, execute JAR or touch cloud resources. Stop and report after T01 implementation and checks; S1/S2 requires coordinator review of this batch first.'
         $antyArguments = @('--conversation', $TargetConversationId, '--mode', 'accept-edits', '--settings', $antySettingsPath, '--print-timeout', '0', '--output-format', 'json', '--print', $antyTaskPrompt)
     }
@@ -69,7 +85,7 @@ try {
     $antyStderr = $antyProcess.StandardError.ReadToEndAsync()
     $antyDeadline = [DateTime]::UtcNow.AddSeconds(135)
     while (-not $antyProcess.WaitForExit(1000)) {
-        if (-not $ExecuteFirstBatch -and [DateTime]::UtcNow -gt $antyDeadline) {
+        if (-not $antyExecutesTask -and [DateTime]::UtcNow -gt $antyDeadline) {
             $antyProcess.Kill()
             throw 'Communication helper timed out; message delivery is not confirmed.'
         }
@@ -82,17 +98,23 @@ try {
     if ($antyExitCode -ne 0) {
         throw "Antigravity bridge exited with code $antyExitCode."
     }
+    $antyReceivedResult = $false
     foreach ($antyLine in $antyOutput) {
         if ([string]$antyLine -match '^\s*\{') {
             $antyResult = $antyLine | ConvertFrom-Json
+            if ($antyResult.conversation_id) { $antyReceivedResult = $true }
             if ($antyResult.denied_actions.Count -gt 0) {
                 throw 'Antigravity denied a bridge action; delivery is not confirmed.'
             }
             if ($antyResult.conversation_id -and $antyResult.conversation_id -ne $TargetConversationId) {
                 throw 'Antigravity responded from an unexpected conversation.'
             }
+            if ($antyResult.status -and $antyResult.status -ne 'SUCCESS') {
+                throw "Antigravity returned status $($antyResult.status). Review the report before retrying."
+            }
         }
     }
+    if (-not $antyReceivedResult) { throw 'No final conversation result was received from Antigravity.' }
 }
 finally {
     if (Test-Path -LiteralPath $antySettingsPath) {

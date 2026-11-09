@@ -46,14 +46,27 @@ export class LocalStorageDriver implements StorageDriver {
     }
   }
 
-  private getFilePath(key: string): string {
-    // Prevent directory traversal
-    const safeKey = key.replace(/\.\./g, '');
-    return path.join(this.baseDir, safeKey);
+  private getSafeFilePath(key: string): string | null {
+    if (!key || typeof key !== 'string') return null;
+    if (key.includes('\0') || key.includes('\\')) return null;
+    if (path.isAbsolute(key) || /^[a-zA-Z]:/.test(key) || key.startsWith('/')) return null;
+    const parts = key.split('/');
+    for (const p of parts) {
+      if (p === '..' || p === '.') return null;
+    }
+    const resolvedPath = path.resolve(this.baseDir, key);
+    const rel = path.relative(this.baseDir, resolvedPath);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      return null;
+    }
+    return resolvedPath;
   }
 
   async put(key: string, data: Uint8Array | ArrayBuffer, _contentType: string): Promise<void> {
-    const filePath = this.getFilePath(key);
+    const filePath = this.getSafeFilePath(key);
+    if (!filePath) {
+      throw new Error('Invalid storage key: path traversal or invalid path detected');
+    }
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -63,8 +76,8 @@ export class LocalStorageDriver implements StorageDriver {
   }
 
   async get(key: string): Promise<{ data: ArrayBuffer; contentType: string } | null> {
-    const filePath = this.getFilePath(key);
-    if (!fs.existsSync(filePath)) return null;
+    const filePath = this.getSafeFilePath(key);
+    if (!filePath || !fs.existsSync(filePath)) return null;
     const file = fs.readFileSync(filePath);
     const contentType = key.endsWith('.jar')
       ? 'application/java-archive'
@@ -81,7 +94,10 @@ export class LocalStorageDriver implements StorageDriver {
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = this.getFilePath(key);
+    const filePath = this.getSafeFilePath(key);
+    if (!filePath) {
+      throw new Error('Invalid storage key: path traversal or invalid path detected');
+    }
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

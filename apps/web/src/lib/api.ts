@@ -251,3 +251,36 @@ export async function getAdminImports(page = 1, limit = 50) {
 export async function getAdminAssets(page = 1, limit = 50) {
   return apiRequest<any[]>(`/admin/assets?page=${page}&limit=${limit}`);
 }
+
+// Crawler API (gametuoitho.cc)
+export async function getCrawlerGames(params: {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+} = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', params.search);
+  if (params.category) query.set('category', params.category);
+  if (params.page) query.set('page', String(params.page));
+  if (params.limit) query.set('limit', String(params.limit));
+
+  return apiRequest<any[]>(`/admin/crawler/games?${query.toString()}`);
+}
+
+export async function importCrawlerGame(gameId: string) {
+  return apiRequest<{ game: Game; version: GameVersion }>(`/admin/crawler/import`, {
+    method: 'POST',
+    body: JSON.stringify({ gameId }),
+  });
+}
+
+export async function batchImportCrawlerGames(gameIds: string[]) {
+  return apiRequest<{ importedCount: number; errorCount: number; imported: any[]; errors: any[] }>(
+    `/admin/crawler/batch-import`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ gameIds }),
+    }
+  );
+}

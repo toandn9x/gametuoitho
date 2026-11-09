@@ -6,6 +6,7 @@ import { GameService } from './services/gameService';
 import { LibraryService } from './services/libraryService';
 import { UploadService } from './services/uploadService';
 import { AdminService } from './services/adminService';
+import { CrawlerService } from './services/crawlerService';
 
 export interface Bindings {
   DB: any;
@@ -24,6 +25,7 @@ export interface Variables {
     libraryService: LibraryService;
     uploadService: UploadService;
     adminService: AdminService;
+    crawlerService: CrawlerService;
   };
 }
 

@@ -11,6 +11,8 @@ Nguồn yêu cầu: [plan.md](../plan.md) và [AGENTS.md](../AGENTS.md).
 - `backend_audit`: chỉ đọc Backend/Database, đối chiếu bảo mật và API với plan.
 - `web_emulator_audit`: chỉ đọc Web/Admin/Emulator, đối chiếu chức năng và bằng chứng POC.
 
+Cập nhật ownership ở review round 01: hai reviewer được giao viết **test độc lập**, chỉ trong `tests/pm/asset-review.ts` (+ README của bộ test) và `tests/pm/admin-render-review.cjs` (+ fixture có prefix `admin-render-`) tương ứng. Họ không sửa source ứng dụng, package, config hoặc test của Gemini. Gemini là người duy nhất sửa ứng dụng trong packet [review-round-01.md](review-round-01.md); coordinator giữ script và tài liệu review.
+
 Hai agent audit đã hoàn tất rà soát chỉ đọc. Agent Antigravity đã nhận phần S5 của T01 và được giao triển khai qua CLI. Các gói còn lại giữ TODO cho đến khi được giao và xác nhận riêng.
 
 Trong khi chưa thống nhất lại ownership, coordinator và các agent audit không sửa source, migration, package/lockfile; không chạy build, cài dependency hoặc khởi động server song song với agent code/build. Nếu bổ sung agent triển khai, phải chia thư mục/file cụ thể trước; các file dùng chung chỉ có một người sửa mỗi lượt.
@@ -46,6 +48,12 @@ Không mở rộng Android/iOS trước khi Web MVP đạt tiêu chí tại mụ
 | S6 | Library/activity chưa kiểm tra đầy đủ tài nguyên đích và quyền sở hữu; history có thể join thư viện của user khác | `apps/api/src/services/libraryService.ts:32`, `apps/api/src/services/libraryService.ts:92`, `apps/api/src/repositories/libraryRepository.ts:110` | User A không ghi activity tham chiếu library của B và không đọc được tên riêng của B qua history. Catalog entry chỉ nhận game được phép truy cập, version phải thuộc game; IMPORT không đồng thời chứa version Catalog. |
 | S7 | Create/update game có thể đặt PUBLISHED bỏ qua publish guard; addVersion mới kiểm tra asset tồn tại | `apps/api/src/services/adminService.ts:68`, `apps/api/src/services/adminService.ts:90`, `apps/api/src/services/adminService.ts:123` | Mọi đường publish dùng cùng policy. Version chỉ nhận asset đúng loại, ACTIVE và được phép sử dụng; không đưa private import vào Catalog nếu chưa đáp ứng đồng ý/quyền phân phối theo plan. |
 | E1 | README mô tả `jar=URL_TO_JAR`, runner lại ghép tham số vào đường dẫn `/jar/` nội bộ | `apps/emulator-web/README.md:13`, `apps/emulator-web/src/main.js:356` | Chạy được JAR qua URL do API cấp, JAD nếu có, và file local; có log lỗi tải/timeout rõ ràng. |
+| X1 | Tên game import, filename và metadata user được ghép vào HTML/attributes trên Admin | `apps/web/src/pages/admin/user-imports.astro:61`, `apps/web/src/pages/admin/storage.astro:59` | DOM hiển thị dữ liệu như text, không tạo phần tử/event/script từ dữ liệu; URL không cho javascript:/data:; API lỗi/xóa lỗi được báo đúng. |
+| I1 | Unified server tự tạo JAR chỉ có manifest để thay mọi JAR bị thiếu, kể cả import | `apps/api/src/server.ts:120` | Startup không tạo hoặc thay thế game; object thiếu trả lỗi thật; fixture chỉ nằm trong test; không in credential ra startup log. |
+| F1 | Caller Player truyền props không khớp interface, ID/title có thể undefined | `apps/web/src/components/PlayGameClient.tsx:110`, `apps/web/src/components/EmulatorPlayer.tsx:4` | Đồng bộ contract props, typecheck đạt và ID/title đúng lúc chạy; không tắt kiểm tra kiểu. |
+| F2 | Web/API URL và env không thống nhất giữa hai port dev, browser và build/server | `apps/web/src/lib/api.ts:4`, `apps/web/astro.config.mjs` | Luồng Web thực sự gọi API đúng ở dev và cấu hình deploy; dùng env phù hợp Astro; không chữa bằng kiểu giả hoặc URL/port tùy tiện. |
+| F3 | Emulator cùng origin có quyền script/same-origin, trong khi JWT nằm trong localStorage/cookie cùng origin | `apps/web/src/components/EmulatorPlayer.tsx:118`, `apps/web/src/lib/api.ts:16` | Emulator không đọc được storage/cookie/document của website; origin/source/schema message được kiểm tra; private playback không nhận JWT đăng nhập. |
+| F4 | Static route đọc query khi build, slug mới sau publish không có route và có fallback game/category giả | `apps/web/src/pages/play/custom.astro:5`, các trang `[slug].astro` | Game mới/hide thay đổi đúng sau build, private player dùng library ID đã xác thực, API down/empty không sinh catalog giả. |
 
 Các vị trí dòng chỉ áp dụng cho ảnh chụp source lúc rà soát. Không ghi giá trị password, token hoặc secret vào báo cáo.
 
@@ -59,6 +67,15 @@ Agent đã bàn giao thay đổi tại [anty-status.md](anty-status.md). Coordin
 - Agent báo API build và Web build exit 0; coordinator không chạy lặp build trong lượt review này.
 
 **Kết luận:** chấp nhận phần sửa test runner và thay placeholder bằng kiểm tra TypeScript. Chưa nghiệm thu toàn bộ S5/T01: cần xử lý hai vấn đề frontend, bổ sung CI và các phần nền tảng còn lại. `lint` hiện là `tsc --noEmit`, kiểm tra TS/TSX; chưa phải kiểm tra đầy đủ template `.astro`, style hoặc format. Chưa nghiệm thu các lỗi bảo mật S1–S4/S6–S7 từ bộ smoke test này.
+
+### Review round 01 đang triển khai
+
+- Packet R01-A/B/C/D giao Gemini: **S1 + S2 + X1 + I1**; source ứng dụng chỉ Gemini sửa. Chi tiết policy quyền/Range/cache, metadata/asset trạng thái, stored XSS và dữ liệu JAR tại [review-round-01.md](review-round-01.md).
+- Reviewer Backend viết bộ test endpoint độc lập bằng DB/storage in-memory, có spy xác nhận request bị từ chối không đọc object.
+- Reviewer Web viết bộ test DOM bằng browser headless riêng và API fixture, chạy source renderer thật thay vì kiểm tra chuỗi implementation.
+- PM tự đọc code và chạy lại test sau bàn giao. Kết quả không đạt sẽ trở thành yêu cầu sửa cùng round, không tự chấm DONE từ lời báo cáo của Gemini.
+- F1–F4 và S3/S4/S6/S7 vẫn mở; không coi test của round này là nghiệm thu những phần đó. Commit có tên “complete MVP” chưa là bằng chứng đạt mục 12/16 của plan.
+- Review sau bàn giao đầu: PM chạy **294 API checks: 248 đạt, 46 fail**; **8/8 DOM checks đạt**, source không đổi trong suốt lần kiểm tra. Chấp nhận X1 trong phạm vi DOM suite; S1/S2 chưa đạt. Trả lại [review-round-01-fix-01.md](review-round-01-fix-01.md) về private import bị public hóa, counterpart JAR/JAD và loại asset/provenance trên versions/detail. Không sửa các bộ test PM để lấy pass.
 
 ## 4. Các gói việc triển khai
 
@@ -104,6 +121,7 @@ Việc tiếp theo:
 ## 6. Kênh trao đổi trực tiếp
 
 - CLI thực tế trên máy là `agy.exe`. Script điều phối: [scripts/anty-bridge.ps1](../scripts/anty-bridge.ps1).
+- Quy trình tái sử dụng cho phiên sau: [antigravity-agent-access.md](antigravity-agent-access.md), gồm conversation ID, lệnh gọi đã kiểm chứng và xử lý lỗi CLI.
 - `agentapi send-message` đã bị RPC từ chối vì source project `default-cli-project` và target project rỗng không khớp. Không sửa project ID, database phiên hoặc kiểm tra quyền để vượt ranh giới này.
 - Luồng CLI được hỗ trợ `--conversation <id> --print <prompt>` đã trả phản hồi xác nhận từ đúng conversation đích. Coordinator dùng luồng này cho lượt giao việc, giữ nguyên project/permission checks của CLI.
 - Agent được yêu cầu duy trì `docs/anty-status.md`: phạm vi file, task đang làm, lệnh kiểm tra, exit code, kết quả và blocker. File này thuộc agent code/build; coordinator cập nhật bảng này sau review.
@@ -117,6 +135,9 @@ powershell.exe -NoProfile -File scripts/anty-bridge.ps1 -DirectConversation
 
 # Đợt S5 đã được giao: sửa scripts/checks và báo cáo, không sửa logic ứng dụng
 powershell.exe -NoProfile -File scripts/anty-bridge.ps1 -ExecuteFirstBatch
+
+# Một packet review có phạm vi và điều kiện nghiệm thu cụ thể
+powershell.exe -NoProfile -File scripts/anty-bridge.ps1 -TaskFile docs/review-round-01.md
 ```
 
 Không chạy lại lệnh triển khai khi lượt trước còn đang chạy. Chế độ `-ExecuteFirstBatch` dùng quyền sửa file theo phiên và allowlist các lệnh kiểm tra cụ thể; không cài dependency, không thay cấu hình quyền toàn cục, không dùng cờ bỏ qua toàn bộ quyền. S1/S2 chờ coordinator review kết quả S5 trước khi giao lượt tiếp theo.
@@ -127,3 +148,5 @@ Không chạy lại lệnh triển khai khi lượt trước còn đang chạy. 
 - Hai agent audit đã hoàn tất báo cáo. Coordinator đối chiếu lại các lỗi S1–S3, S5–S7 và E1 với source; bổ sung các gói việc và acceptance vào bảng. S4 được xác định bằng rà soát tĩnh validator/upload, chưa có thử nghiệm file độc hại hay load test.
 - Coordinator tìm được CLI, xác minh conversation của workspace và nhận phản hồi handshake: agent giữ source/build, nhận T01/S5 rồi tới S1/S2. Lệnh triển khai phần S5 đã được gửi; kết quả chưa được nghiệm thu.
 - Agent bàn giao phần scripts S5 và tạo `docs/anty-status.md`. Coordinator chạy lại `pnpm test` (exit 0, 10 nhóm), `pnpm lint` (exit 1, hai vấn đề frontend) và chấp nhận phần sửa runner/typecheck. T01 còn việc, S1/S2 đã được thống nhất là gói bảo mật tiếp theo nhưng chưa có kết quả triển khai/nghiệm thu trong lượt này.
+- Người dùng yêu cầu PM chủ động trả lỗi cho Gemini sửa đến khi hợp lý. Rà soát lại xác nhận S1/S2 còn, phát hiện X1 stored XSS và I1 JAR giả; giao packet round 01 qua CLI. Hai reviewer nhận ownership test độc lập, không sửa ứng dụng. Round 01 đang IN_PROGRESS, chưa nghiệm thu.
+- Người dùng xác nhận tiếp tục sửa hệ thống và giữ emulator chưa nghiệm thu. Đã ghi quy trình truy cập CLI vào `docs/antigravity-agent-access.md` để phiên sau không phải dò lại. Browser QA baseline đã tái hiện XSS (2/8 case đạt trước sửa); API QA độc lập được đóng băng ở 294 checks để review bản sửa, không suy diễn các lỗi trùng ma trận thành số bug riêng biệt.

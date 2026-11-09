@@ -74,7 +74,7 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id
+      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
       ${whereSql}
       ${orderSql}
       LIMIT ? OFFSET ?
@@ -94,7 +94,7 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id
+      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
       WHERE g.slug = ?
     `;
     return this.db.queryFirst<Game>(sql, [slug]);
@@ -109,7 +109,7 @@ export class GameRepository {
         a.storage_key as cover_storage_key
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id
+      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
       WHERE g.id = ?
     `;
     return this.db.queryFirst<Game>(sql, [id]);
@@ -180,6 +180,9 @@ export class GameRepository {
 
   // Versions
   async findVersionsByGameId(gameId: string, activeOnly = true): Promise<GameVersion[]> {
+    const activeCondition = activeOnly
+      ? "AND v.status = 'ACTIVE' AND jar.status = 'ACTIVE' AND (v.jad_asset_id IS NULL OR jad.status = 'ACTIVE')"
+      : '';
     const sql = `
       SELECT 
         v.*,
@@ -188,7 +191,7 @@ export class GameRepository {
       FROM game_versions v
       JOIN game_assets jar ON v.jar_asset_id = jar.id
       LEFT JOIN game_assets jad ON v.jad_asset_id = jad.id
-      WHERE v.game_id = ? ${activeOnly ? "AND v.status = 'ACTIVE'" : ''}
+      WHERE v.game_id = ? ${activeCondition}
       ORDER BY v.created_at DESC
     `;
     return this.db.query<GameVersion>(sql, [gameId]);
@@ -236,7 +239,7 @@ export class GameRepository {
       SELECT s.*, a.storage_key
       FROM game_screenshots s
       JOIN game_assets a ON s.asset_id = a.id
-      WHERE s.game_id = ?
+      WHERE s.game_id = ? AND a.status = 'ACTIVE'
       ORDER BY s.sort_order ASC
     `;
     return this.db.query<GameScreenshot>(sql, [gameId]);

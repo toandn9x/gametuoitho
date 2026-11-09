@@ -13,6 +13,7 @@ import { GameService } from './services/gameService';
 import { LibraryService } from './services/libraryService';
 import { UploadService } from './services/uploadService';
 import { AdminService } from './services/adminService';
+import { CrawlerService } from './services/crawlerService';
 
 import { authMiddleware } from './middleware/auth';
 import { authRoutes } from './routes/auth';
@@ -22,6 +23,7 @@ import { searchRoutes } from './routes/search';
 import { userLibraryRoutes } from './routes/userLibrary';
 import { uploadRoutes } from './routes/upload';
 import { adminRoutes } from './routes/admin';
+import { crawlerRoutes } from './routes/crawler';
 import { AppEnv } from './types';
 
 export function createApp(customDb?: DatabaseClient, customStorage?: StorageDriver) {
@@ -77,13 +79,19 @@ export function createApp(customDb?: DatabaseClient, customStorage?: StorageDriv
         authService: new AuthService(userRepo, jwtSecret),
         gameService: new GameService(gameRepo, categoryRepo, storageDriver),
         libraryService: new LibraryService(libraryRepo, gameRepo, assetRepo, storageDriver),
-        uploadService: new UploadService(assetRepo, storageDriver),
+        uploadService: new UploadService(assetRepo, storageDriver, userRepo),
         adminService: new AdminService(
           gameRepo,
           categoryRepo,
           assetRepo,
           userRepo,
           libraryRepo,
+          storageDriver
+        ),
+        crawlerService: new CrawlerService(
+          gameRepo,
+          categoryRepo,
+          assetRepo,
           storageDriver
         ),
       };
@@ -101,6 +109,7 @@ export function createApp(customDb?: DatabaseClient, customStorage?: StorageDriv
   v1.route('/search', searchRoutes((c) => getServices(c).gameService));
   v1.route('/me', userLibraryRoutes((c) => getServices(c).libraryService));
   v1.route('/', uploadRoutes((c) => getServices(c).uploadService));
+  v1.route('/admin/crawler', crawlerRoutes((c) => getServices(c).crawlerService));
   v1.route('/admin', adminRoutes((c) => getServices(c).adminService));
 
   app.route('/api/v1', v1);

@@ -45,64 +45,111 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
     async function loadImports() {
       const tbody = document.getElementById('imports-table-body')!;
+      tbody.replaceChildren();
+
       const res = await getAdminImports(1, 100);
 
-      if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
-              Chưa có file game nào do người dùng tải lên.
-            </td>
-          </tr>
-        `;
+      if (!res.success) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'px-6 py-8 text-center text-red-400 font-mono';
+        td.textContent = `Lỗi tải dữ liệu: ${res.error?.message || 'Không thể kết nối máy chủ'}`;
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
       }
 
-      tbody.innerHTML = res.data
-        .map((item: any) => {
-          return `
-            <tr class="hover:bg-arcade-850/50 transition-colors">
-              <td class="px-6 py-4">
-                <span class="font-bold text-slate-100 block">${item.custom_name}</span>
-                <span class="text-[10px] text-slate-500 font-mono">${item.custom_original_filename}</span>
-              </td>
-              <td class="px-6 py-4">
-                <span class="font-semibold text-neon-cyan block">${item.owner_username}</span>
-                <span class="text-[10px] text-slate-400">${item.owner_email}</span>
-              </td>
-              <td class="px-6 py-4 font-mono text-neon-yellow">
-                ${((item.custom_file_size || 0) / 1024).toFixed(0)} KB
-              </td>
-              <td class="px-6 py-4 font-mono text-[10px] text-slate-500 truncate max-w-[120px]" title="${item.custom_sha256}">
-                ${item.custom_sha256 ? item.custom_sha256.substring(0, 16) + '...' : 'N/A'}
-              </td>
-              <td class="px-6 py-4 text-slate-400 font-mono text-[11px]">
-                ${new Date(item.created_at).toLocaleDateString('vi-VN')}
-              </td>
-              <td class="px-6 py-4 text-right">
-                <button
-                  data-id="${item.id}"
-                  data-name="${item.custom_name}"
-                  class="del-import-btn px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all"
-                >
-                  Gỡ bỏ
-                </button>
-              </td>
-            </tr>
-          `;
-        })
-        .join('');
+      if (!res.data || res.data.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'px-6 py-8 text-center text-slate-500 font-mono';
+        td.textContent = 'Chưa có file game nào do người dùng tải lên.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-      document.querySelectorAll('.del-import-btn').forEach((btn) => {
-        btn.addEventListener('click', async (e) => {
-          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
-          const name = (e.currentTarget as HTMLElement).getAttribute('data-name')!;
+      for (const item of res.data) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-arcade-850/50 transition-colors';
+
+        // 1. Tên Game & File
+        const tdName = document.createElement('td');
+        tdName.className = 'px-6 py-4';
+        const spanTitle = document.createElement('span');
+        spanTitle.className = 'font-bold text-slate-100 block';
+        spanTitle.textContent = item.custom_name || '';
+        const spanFilename = document.createElement('span');
+        spanFilename.className = 'text-[10px] text-slate-500 font-mono';
+        spanFilename.textContent = item.custom_original_filename || '';
+        tdName.appendChild(spanTitle);
+        tdName.appendChild(spanFilename);
+        tr.appendChild(tdName);
+
+        // 2. Người Sở Hữu
+        const tdOwner = document.createElement('td');
+        tdOwner.className = 'px-6 py-4';
+        const spanUser = document.createElement('span');
+        spanUser.className = 'font-semibold text-neon-cyan block';
+        spanUser.textContent = item.owner_username || '';
+        const spanEmail = document.createElement('span');
+        spanEmail.className = 'text-[10px] text-slate-400';
+        spanEmail.textContent = item.owner_email || '';
+        tdOwner.appendChild(spanUser);
+        tdOwner.appendChild(spanEmail);
+        tr.appendChild(tdOwner);
+
+        // 3. Dung Lượng
+        const tdSize = document.createElement('td');
+        tdSize.className = 'px-6 py-4 font-mono text-neon-yellow';
+        const kb = ((item.custom_file_size || 0) / 1024).toFixed(0);
+        tdSize.textContent = `${kb} KB`;
+        tr.appendChild(tdSize);
+
+        // 4. SHA-256 Checksum
+        const tdSha = document.createElement('td');
+        tdSha.className = 'px-6 py-4 font-mono text-[10px] text-slate-500 truncate max-w-[120px]';
+        tdSha.title = item.custom_sha256 || '';
+        tdSha.textContent = item.custom_sha256 ? item.custom_sha256.substring(0, 16) + '...' : 'N/A';
+        tr.appendChild(tdSha);
+
+        // 5. Thời Gian
+        const tdDate = document.createElement('td');
+        tdDate.className = 'px-6 py-4 text-slate-400 font-mono text-[11px]';
+        try {
+          tdDate.textContent = new Date(item.created_at).toLocaleDateString('vi-VN');
+        } catch {
+          tdDate.textContent = item.created_at || '';
+        }
+        tr.appendChild(tdDate);
+
+        // 6. Thao Tác
+        const tdAction = document.createElement('td');
+        tdAction.className = 'px-6 py-4 text-right';
+        const btn = document.createElement('button');
+        btn.className = 'px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all';
+        btn.textContent = 'Gỡ bỏ';
+        btn.dataset.id = item.id;
+        btn.dataset.name = item.custom_name || '';
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id!;
+          const name = btn.dataset.name!;
           if (!confirm(`Xóa file import "${name}" này do vi phạm chính sách?`)) return;
 
-          await apiRequest(`/admin/imports/${id}`, { method: 'DELETE' });
-          loadImports();
+          const delRes = await apiRequest(`/admin/imports/${id}`, { method: 'DELETE' });
+          if (!delRes.success) {
+            alert('Lỗi gỡ bỏ: ' + (delRes.error?.message || 'Không thể xóa file'));
+            return;
+          }
+          await loadImports();
         });
-      });
+        tdAction.appendChild(btn);
+        tr.appendChild(tdAction);
+
+        tbody.appendChild(tr);
+      }
     }
 
     loadImports();

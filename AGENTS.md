@@ -18,3 +18,7 @@ Tài liệu này quy định các nguyên tắc bất biến mà mọi Agent ph�
    - Đóng gói emulator độc lập trong iframe sandbox, kết nối qua adapter interface.
 5. **Không Hardcode Dữ Liệu:**
    - Mọi dữ liệu game hiển thị trên Web Frontend phải được truy xuất qua REST API `/api/v1/*`.
+
+## 2. Tiếp Tục Điều Phối Agent
+
+Khi cần trao đổi hoặc giao việc cho agent Antigravity hiện có, đọc [docs/antigravity-agent-access.md](docs/antigravity-agent-access.md) trước để dùng lại CLI, conversation ID và script đã kiểm chứng. Kiểm tra [docs/delivery-board.md](docs/delivery-board.md) cùng [docs/anty-status.md](docs/anty-status.md) để nắm task đang chạy và tránh sửa chồng file.

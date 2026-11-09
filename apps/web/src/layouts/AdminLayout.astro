@@ -94,6 +94,18 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
           </a>
 
           <a
+            href="/admin/crawler"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'crawler'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>🕷️</span>
+            <span>Nhập Game (gametuoitho.cc)</span>
+          </a>
+
+          <a
             href="/admin/storage"
             class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeNav === 'storage'

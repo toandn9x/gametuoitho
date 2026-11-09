@@ -51,6 +51,15 @@ export const gameRoutes = (getService: (c: Context<AppEnv>) => GameService) => {
     const gameService = getService(c);
     const gameId = c.req.param('id');
     const versions = await gameService.getGameVersions(gameId);
+    if (versions === null) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Không tìm thấy game hoặc game chưa được xuất bản' },
+        },
+        404
+      );
+    }
     return c.json({ success: true, data: versions });
   });
 

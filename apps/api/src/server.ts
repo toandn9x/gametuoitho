@@ -58,76 +58,9 @@ if (!tableCheck) {
   }
 }
 
-// 3. Initialize File Storage & Seed sample assets if needed
+// 3. Initialize File Storage
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// Helper to create minimal valid JAR binary
-function createMinimalJarBuffer(title: string): Buffer {
-  const manifest = Buffer.from(
-    `Manifest-Version: 1.0\r\nMIDlet-1: ${title},,com.gametuoitho.Main\r\nMIDlet-Name: ${title}\r\nMIDlet-Vendor: Game Tuoi Tho\r\nMIDlet-Version: 1.0.0\r\nMicroEdition-Configuration: CLDC-1.1\r\nMicroEdition-Profile: MIDP-2.0\r\n`
-  );
-  const filename = Buffer.from('META-INF/MANIFEST.MF');
-  const localHeader = Buffer.alloc(30);
-  localHeader.writeUInt32LE(0x04034b50, 0);
-  localHeader.writeUInt16LE(20, 4);
-  localHeader.writeUInt16LE(0, 6);
-  localHeader.writeUInt16LE(0, 8);
-  localHeader.writeUInt16LE(0, 10);
-  localHeader.writeUInt16LE(0, 12);
-  localHeader.writeUInt32LE(0, 14);
-  localHeader.writeUInt32LE(manifest.length, 18);
-  localHeader.writeUInt32LE(manifest.length, 22);
-  localHeader.writeUInt16LE(filename.length, 26);
-  localHeader.writeUInt16LE(0, 28);
-
-  const centralHeader = Buffer.alloc(46);
-  centralHeader.writeUInt32LE(0x02014b50, 0);
-  centralHeader.writeUInt16LE(20, 4);
-  centralHeader.writeUInt16LE(20, 6);
-  centralHeader.writeUInt16LE(0, 8);
-  centralHeader.writeUInt16LE(0, 10);
-  centralHeader.writeUInt16LE(0, 12);
-  centralHeader.writeUInt16LE(0, 14);
-  centralHeader.writeUInt32LE(0, 16);
-  centralHeader.writeUInt32LE(manifest.length, 20);
-  centralHeader.writeUInt32LE(manifest.length, 24);
-  centralHeader.writeUInt16LE(filename.length, 28);
-  centralHeader.writeUInt16LE(0, 30);
-  centralHeader.writeUInt16LE(0, 32);
-  centralHeader.writeUInt16LE(0, 34);
-  centralHeader.writeUInt16LE(0, 36);
-  centralHeader.writeUInt32LE(0, 38);
-  centralHeader.writeUInt32LE(0, 42);
-
-  const centralDirSize = centralHeader.length + filename.length;
-  const centralDirOffset = localHeader.length + filename.length + manifest.length;
-
-  const endRecord = Buffer.alloc(22);
-  endRecord.writeUInt32LE(0x06054b50, 0);
-  endRecord.writeUInt16LE(0, 4);
-  endRecord.writeUInt16LE(0, 6);
-  endRecord.writeUInt16LE(1, 8);
-  endRecord.writeUInt16LE(1, 10);
-  endRecord.writeUInt32LE(centralDirSize, 12);
-  endRecord.writeUInt32LE(centralDirOffset, 16);
-  endRecord.writeUInt16LE(0, 20);
-
-  return Buffer.concat([localHeader, filename, manifest, centralHeader, filename, endRecord]);
-}
-
-// Seed sample JARs on disk if missing
-const seedAssets = sqlite
-  .prepare("SELECT storage_key, original_filename FROM game_assets WHERE asset_type = 'JAR'")
-  .all() as { storage_key: string; original_filename: string }[];
-
-for (const asset of seedAssets) {
-  const filePath = path.join(UPLOADS_DIR, asset.storage_key);
-  if (!fs.existsSync(filePath)) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, createMinimalJarBuffer(asset.original_filename));
-  }
 }
 
 const dbClient = new SqliteDatabaseClient(sqlite);
@@ -188,9 +121,6 @@ serve(
 🕹️   Web Frontend:     http://localhost:${info.port}
 📁  SQLite Database:  ${DB_PATH}
 💾  Uploads Storage:  ${UPLOADS_DIR}
---------------------------------------------------------------------
-🔑  Admin Login:      admin / Admin@123456
-👤  Player Login:     gamer9x / Gamer@123456
 ====================================================================
 `);
   }

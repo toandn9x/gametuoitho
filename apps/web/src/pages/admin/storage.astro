@@ -41,51 +41,104 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <script>
     import { getAdminAssets } from '../../lib/api';
 
+    function isSafeUrl(rawUrl: string): boolean {
+      try {
+        if (!rawUrl || typeof rawUrl !== 'string') return false;
+        if (rawUrl.startsWith('/api/v1/assets/raw/')) return true;
+        const parsed = new URL(rawUrl, window.location.origin);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }
+
     async function loadAssets() {
       const tbody = document.getElementById('assets-table-body')!;
+      tbody.replaceChildren();
+
       const res = await getAdminAssets(1, 100);
 
-      if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" class="px-6 py-8 text-center text-slate-500 font-mono">
-              Chưa có asset nào trong kho lưu trữ.
-            </td>
-          </tr>
-        `;
+      if (!res.success) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = 'px-6 py-8 text-center text-red-400 font-mono';
+        td.textContent = `Lỗi tải danh sách tài nguyên: ${res.error?.message || 'Không thể kết nối máy chủ'}`;
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
       }
 
-      tbody.innerHTML = res.data
-        .map((a: any) => {
-          const typeBadge =
-            a.asset_type === 'JAR'
-              ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40">JAR FILE</span>'
-              : a.asset_type === 'COVER'
-              ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-pink/20 text-neon-pink border border-neon-pink/40">COVER</span>'
-              : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-300">' + a.asset_type + '</span>';
+      if (!res.data || res.data.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = 'px-6 py-8 text-center text-slate-500 font-mono';
+        td.textContent = 'Chưa có asset nào trong kho lưu trữ.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-          return `
-            <tr class="hover:bg-arcade-850/50 transition-colors">
-              <td class="px-6 py-4">${typeBadge}</td>
-              <td class="px-6 py-4 font-mono text-[11px] text-slate-300">
-                <a href="${a.url}" target="_blank" class="hover:text-neon-cyan hover:underline">
-                  ${a.storage_key}
-                </a>
-              </td>
-              <td class="px-6 py-4 text-slate-400 font-mono text-[11px]">
-                ${a.original_filename}
-              </td>
-              <td class="px-6 py-4 font-mono text-neon-yellow">
-                ${((a.file_size || 0) / 1024).toFixed(0)} KB
-              </td>
-              <td class="px-6 py-4 font-mono text-[10px] text-neon-green">
-                ${a.status}
-              </td>
-            </tr>
-          `;
-        })
-        .join('');
+      for (const a of res.data) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-arcade-850/50 transition-colors';
+
+        // 1. Loại Asset Badge
+        const tdType = document.createElement('td');
+        tdType.className = 'px-6 py-4';
+        const badge = document.createElement('span');
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold';
+        if (a.asset_type === 'JAR') {
+          badge.className += ' bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40';
+          badge.textContent = 'JAR FILE';
+        } else if (a.asset_type === 'COVER') {
+          badge.className += ' bg-neon-pink/20 text-neon-pink border border-neon-pink/40';
+          badge.textContent = 'COVER';
+        } else {
+          badge.className += ' bg-slate-700 text-slate-300';
+          badge.textContent = String(a.asset_type || 'UNKNOWN');
+        }
+        tdType.appendChild(badge);
+        tr.appendChild(tdType);
+
+        // 2. Storage Key with safe Link
+        const tdKey = document.createElement('td');
+        tdKey.className = 'px-6 py-4 font-mono text-[11px] text-slate-300';
+        if (a.url && isSafeUrl(a.url)) {
+          const link = document.createElement('a');
+          link.href = a.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.className = 'hover:text-neon-cyan hover:underline';
+          link.textContent = a.storage_key || '';
+          tdKey.appendChild(link);
+        } else {
+          tdKey.textContent = a.storage_key || '';
+        }
+        tr.appendChild(tdKey);
+
+        // 3. Tên File Ban Đầu
+        const tdFilename = document.createElement('td');
+        tdFilename.className = 'px-6 py-4 text-slate-400 font-mono text-[11px]';
+        tdFilename.textContent = a.original_filename || '';
+        tr.appendChild(tdFilename);
+
+        // 4. Dung Lượng
+        const tdSize = document.createElement('td');
+        tdSize.className = 'px-6 py-4 font-mono text-neon-yellow';
+        const kb = ((a.file_size || 0) / 1024).toFixed(0);
+        tdSize.textContent = `${kb} KB`;
+        tr.appendChild(tdSize);
+
+        // 5. Trạng Thái
+        const tdStatus = document.createElement('td');
+        tdStatus.className = 'px-6 py-4 font-mono text-[10px] text-neon-green';
+        tdStatus.textContent = a.status || '';
+        tr.appendChild(tdStatus);
+
+        tbody.appendChild(tr);
+      }
     }
 
     loadAssets();

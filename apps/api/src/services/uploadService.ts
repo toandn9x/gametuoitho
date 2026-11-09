@@ -1,10 +1,15 @@
 import { AssetRepository } from '../repositories/assetRepository';
+import { UserRepository } from '../repositories/userRepository';
 import { StorageDriver } from '../storage/storage';
-import { computeSha256, validateJarFile, generateId } from '@gametuoitho/shared-utils';
+import { computeSha256, validateJarFile, generateId, verifyJwt } from '@gametuoitho/shared-utils';
 import { AssetType, GameAsset } from '@gametuoitho/shared-types';
 
 export class UploadService {
-  constructor(private assetRepo: AssetRepository, private storage: StorageDriver) {}
+  constructor(
+    private assetRepo: AssetRepository,
+    private storage: StorageDriver,
+    private userRepo?: UserRepository
+  ) {}
 
   async uploadFile(params: {
     userId: string;
@@ -82,5 +87,86 @@ export class UploadService {
 
   async getFile(storageKey: string) {
     return this.storage.get(storageKey);
+  }
+
+  async checkAssetAccess(
+    key: string,
+    jwtSecret: string,
+    authHeader?: string,
+    cookieHeader?: string
+  ): Promise<{
+    allowed: boolean;
+    status: number;
+    asset?: GameAsset;
+    error?: string;
+  }> {
+    // 1. Traverse & double encoding defense
+    if (!key || typeof key !== 'string') {
+      return { allowed: false, status: 404, error: 'Asset Not Found' };
+    }
+    if (key.includes('%') || key.includes('\0') || key.includes('\\')) {
+      return { allowed: false, status: 404, error: 'Asset Not Found' };
+    }
+    const parts = key.split('/');
+    for (const p of parts) {
+      if (p === '..' || p === '.') {
+        return { allowed: false, status: 404, error: 'Asset Not Found' };
+      }
+    }
+
+    // 2. Fetch metadata from DB
+    const asset = await this.assetRepo.findByStorageKey(key);
+    if (!asset) {
+      return { allowed: false, status: 404, error: 'Asset Not Found' };
+    }
+
+    // 3. Only ACTIVE assets can be served via raw playback endpoint
+    if (asset.status !== 'ACTIVE') {
+      return { allowed: false, status: 403, error: 'Asset is not active' };
+    }
+
+    // 4. Check if public catalog asset
+    const isPublic = await this.assetRepo.isCatalogPublicAsset(asset.id, asset.asset_type);
+    if (isPublic) {
+      return { allowed: true, status: 200, asset };
+    }
+
+    // 5. Private asset: require authenticated and active user or admin
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (cookieHeader) {
+      const match = cookieHeader.match(/token=([^;]+)/);
+      if (match) token = match[1];
+    }
+
+    if (!token) {
+      return { allowed: false, status: 401, error: 'Authentication required' };
+    }
+
+    const payload = await verifyJwt(token, jwtSecret);
+    if (!payload || !payload.userId) {
+      return { allowed: false, status: 401, error: 'Invalid token' };
+    }
+
+    // Re-verify user and role in database to prevent trust in stale JWT claims
+    if (!this.userRepo) {
+      return { allowed: false, status: 403, error: 'User repository unavailable' };
+    }
+
+    const user = await this.userRepo.findById(payload.userId);
+    if (!user || user.status !== 'ACTIVE') {
+      return { allowed: false, status: 403, error: 'Account is not active' };
+    }
+
+    if (user.role === 'ADMIN') {
+      return { allowed: true, status: 200, asset };
+    }
+
+    if (asset.owner_user_id && asset.owner_user_id === user.id) {
+      return { allowed: true, status: 200, asset };
+    }
+
+    return { allowed: false, status: 403, error: 'Forbidden' };
   }
 }

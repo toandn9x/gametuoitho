@@ -55,38 +55,134 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
     }
   });
 
-  // GET /assets/raw/:key - Raw asset delivery with full HTTP 206 Range support (Required for CheerpJ!)
-  router.get('/assets/raw/:key', async (c) => {
+  // OPTIONS /assets/raw/:key{.*} - CORS Preflight
+  router.options('/assets/raw/:key{.*}', (c) => {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range, Content-Type, Authorization',
+        'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  });
+
+  // GET & HEAD /assets/raw/:key{.*} - Raw asset delivery with strict authorization and Range support
+  router.on(['GET', 'HEAD'], '/assets/raw/:key{.*}', async (c) => {
     const uploadService = getService(c);
     const rawKey = c.req.param('key');
-    const key = decodeURIComponent(rawKey);
 
-    const asset = await uploadService.getFile(key);
-    if (!asset) {
-      return c.text('Asset Not Found', 404);
+    // Double-encoding check: %25 in URL or param represents double-encoded percent
+    if (c.req.url.includes('%25') || rawKey.includes('%25') || rawKey.includes('%2F') || rawKey.includes('%2f')) {
+      return new Response('Asset Not Found', {
+        status: 404,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
     }
 
-    const totalSize = asset.data.byteLength;
-    const rangeHeader = c.req.header('Range');
+    let key: string;
+    try {
+      key = decodeURIComponent(rawKey);
+    } catch {
+      return new Response('Asset Not Found', {
+        status: 404,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
+    }
 
-    // Default headers
+    // Traversal and encoding checks
+    if (key.includes('%') || key.includes('\0') || key.includes('\\')) {
+      return new Response('Asset Not Found', {
+        status: 404,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
+    }
+    const pathSegments = key.split('/');
+    for (const segment of pathSegments) {
+      if (segment === '..' || segment === '.') {
+        return new Response('Asset Not Found', {
+          status: 404,
+          headers: { 'Cache-Control': 'private, no-store' },
+        });
+      }
+    }
+
+    const jwtSecret = c.env?.JWT_SECRET || 'gametuoitho-dev-secret';
+    const authHeader = c.req.header('Authorization');
+    const cookieHeader = c.req.header('Cookie');
+
+    // Authorization check MUST happen before reading any bytes from storage
+    const authRes = await uploadService.checkAssetAccess(key, jwtSecret, authHeader, cookieHeader);
+    if (!authRes.allowed || !authRes.asset) {
+      return new Response('Access Denied', {
+        status: authRes.status,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    // Only read object after authorization passes
+    const assetRecord = authRes.asset;
+    const fileObj = await uploadService.getFile(key);
+    if (!fileObj) {
+      return new Response('Asset Not Found', {
+        status: 404,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
+    }
+
+    const totalSize = fileObj.data.byteLength;
+    const isHead = c.req.method.toUpperCase() === 'HEAD';
+
+    // Determine content type & disposition
+    let contentType = 'application/octet-stream';
+    let disposition = 'attachment';
+
+    if (assetRecord.asset_type === 'JAR') {
+      contentType = 'application/java-archive';
+      const filename = encodeURIComponent(assetRecord.original_filename || 'game.jar');
+      disposition = `attachment; filename="${filename}"`;
+    } else if (assetRecord.asset_type === 'JAD') {
+      contentType = 'text/vnd.sun.j2me.app-descriptor';
+      const filename = encodeURIComponent(assetRecord.original_filename || 'game.jad');
+      disposition = `attachment; filename="${filename}"`;
+    } else if (assetRecord.asset_type === 'COVER' || assetRecord.asset_type === 'SCREENSHOT') {
+      const mime = (assetRecord.mime_type || '').toLowerCase();
+      if (mime === 'image/webp' || key.endsWith('.webp')) {
+        contentType = 'image/webp';
+        disposition = 'inline';
+      } else if (mime === 'image/png' || key.endsWith('.png')) {
+        contentType = 'image/png';
+        disposition = 'inline';
+      } else if (mime === 'image/jpeg' || mime === 'image/jpg' || key.endsWith('.jpg') || key.endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+        disposition = 'inline';
+      }
+    }
+
     const headers: Record<string, string> = {
       'Accept-Ranges': 'bytes',
-      'Content-Type': asset.contentType,
+      'Content-Type': contentType,
+      'Content-Disposition': disposition,
+      'X-Content-Type-Options': 'nosniff',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-      'Access-Control-Allow-Headers': 'Range, Content-Type',
+      'Access-Control-Allow-Headers': 'Range, Content-Type, Authorization',
       'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'no-store',
     };
 
+    const rangeHeader = c.req.header('Range');
     if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-      const parts = rangeHeader.replace('bytes=', '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+      const spec = rangeHeader.substring(6).trim();
 
-      if (start >= totalSize || end >= totalSize || start > end) {
-        return new Response('Requested range not satisfiable', {
+      // Disallow multiple ranges
+      if (spec.includes(',')) {
+        return new Response(isHead ? null : 'Requested range not satisfiable', {
           status: 416,
           headers: {
             ...headers,
@@ -95,10 +191,68 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
         });
       }
 
-      const chunk = asset.data.slice(start, end + 1);
-      headers['Content-Range'] = `bytes ${start}-${end}/${totalSize}`;
-      headers['Content-Length'] = String(chunk.byteLength);
+      let start = 0;
+      let end = totalSize - 1;
+      let valid = true;
 
+      if (spec.startsWith('-')) {
+        // Suffix range: -N
+        const suffixStr = spec.substring(1);
+        if (!/^\d+$/.test(suffixStr)) {
+          valid = false;
+        } else {
+          const suffix = parseInt(suffixStr, 10);
+          if (suffix === 0 || totalSize === 0) {
+            valid = false;
+          } else {
+            start = Math.max(0, totalSize - suffix);
+            end = totalSize - 1;
+          }
+        }
+      } else if (spec.endsWith('-')) {
+        // Open-ended range: N-
+        const startStr = spec.slice(0, -1);
+        if (!/^\d+$/.test(startStr)) {
+          valid = false;
+        } else {
+          start = parseInt(startStr, 10);
+          if (start >= totalSize) {
+            valid = false;
+          } else {
+            end = totalSize - 1;
+          }
+        }
+      } else {
+        // Closed range: N-M
+        const parts = spec.split('-');
+        if (parts.length !== 2 || !/^\d+$/.test(parts[0]) || !/^\d+$/.test(parts[1])) {
+          valid = false;
+        } else {
+          start = parseInt(parts[0], 10);
+          const rawEnd = parseInt(parts[1], 10);
+          if (start > rawEnd || start >= totalSize) {
+            valid = false;
+          } else {
+            end = Math.min(rawEnd, totalSize - 1);
+          }
+        }
+      }
+
+      if (!valid) {
+        return new Response(isHead ? null : 'Requested range not satisfiable', {
+          status: 416,
+          headers: {
+            ...headers,
+            'Content-Range': `bytes */${totalSize}`,
+          },
+        });
+      }
+
+      const chunkLength = end - start + 1;
+      headers['Content-Range'] = `bytes ${start}-${end}/${totalSize}`;
+      headers['Content-Length'] = String(chunkLength);
+
+      const chunk = isHead ? null : fileObj.data.slice(start, end + 1);
       return new Response(chunk, {
         status: 206,
         headers,
@@ -106,7 +260,8 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
     }
 
     headers['Content-Length'] = String(totalSize);
-    return new Response(asset.data, {
+    const body = isHead ? null : fileObj.data;
+    return new Response(body, {
       status: 200,
       headers,
     });
