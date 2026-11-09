@@ -155,7 +155,3 @@ pnpm --filter @gametuoitho/web build
 pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts
 node tests/pm/admin-render-review.cjs
 ```
-
-## Điều phối agent Antigravity
-
-Xem [hướng dẫn tiếp tục conversation Antigravity](docs/antigravity-agent-access.md) để dùng lại CLI, giao packet sửa lỗi và kiểm tra kết quả. Tiến độ review nằm trong [delivery board](docs/delivery-board.md).
