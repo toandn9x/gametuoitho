@@ -1,35 +1,27 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import GameCard from '../../components/GameCard';
-import { getGames, getCategories } from '../../lib/api';
+import CategoryGamesView from '../../components/CategoryGamesView';
+import { getCategories } from '../../lib/api';
 
 export async function getStaticPaths() {
   const catRes = await getCategories();
   const categories = catRes.success && catRes.data && catRes.data.length > 0 ? catRes.data : [
-    { slug: 'nhap-vai' },
-    { slug: 'hanh-dong' },
-    { slug: 'tri-tue' },
-    { slug: 'the-thao-dua-xe' },
-    { slug: 'doi-song' },
-    { slug: 'ban-sung' },
+    { slug: 'nhap-vai', name: 'Nhập vai (RPG)' },
+    { slug: 'hanh-dong', name: 'Hành động' },
+    { slug: 'tri-tue', name: 'Trí tuệ & Giải đố' },
+    { slug: 'the-thao-dua-xe', name: 'Đua xe & Thể thao' },
+    { slug: 'doi-song', name: 'Đời sống & Nông trại' },
+    { slug: 'ban-sung', name: 'Bắn súng & Arcade' },
   ];
   return categories.map((cat) => ({
     params: { slug: cat.slug },
+    props: { name: cat.name },
   }));
 }
 
 const { slug } = Astro.params;
-const page = Number(Astro.url.searchParams.get('page') || '1');
-
-const [gamesRes, catRes] = await Promise.all([
-  getGames({ categorySlug: slug, page, limit: 16 }),
-  getCategories(),
-]);
-
-const games = gamesRes.success && gamesRes.data ? gamesRes.data : [];
-const categories = catRes.success && catRes.data ? catRes.data : [];
-const currentCat = categories.find((c) => c.slug === slug);
-const categoryName = currentCat ? currentCat.name : slug;
+const { name } = Astro.props;
+const categoryName = name || slug;
 ---
 
 <Layout title={`Thể loại: ${categoryName} --- Game Tuổi Thơ`}>
@@ -47,26 +39,9 @@ const categoryName = currentCat ? currentCat.name : slug;
         <span class="text-neon-yellow">📁</span>
         <span>Thể Loại: {categoryName}</span>
       </h1>
-      {currentCat?.description && (
-        <p class="text-slate-400 text-sm mt-2">{currentCat.description}</p>
-      )}
     </div>
 
-    {games.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {games.map((game) => (
-          <GameCard client:visible game={game} />
-        ))}
-      </div>
-    ) : (
-      <div class="text-center py-20 bg-arcade-900/60 rounded-3xl border border-arcade-800">
-        <span class="text-5xl">🎮</span>
-        <h3 class="text-lg font-bold text-slate-300 mt-4">Chưa có game thuộc thể loại này</h3>
-        <p class="text-xs text-slate-500 mt-1">Quản trị viên sẽ sớm cập nhật thêm các tựa game mới!</p>
-        <a href="/games" class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
-          Khám phá thể loại khác
-        </a>
-      </div>
-    )}
+    <!-- Category Games View -->
+    <CategoryGamesView client:load categorySlug={slug || ''} />
   </div>
 </Layout>

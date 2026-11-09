@@ -2,8 +2,8 @@ import { ApiResponse } from '@gametuoitho/api-contracts';
 import { Game, GameVersion, Category, User, UserLibraryItem } from '@gametuoitho/shared-types';
 
 export const API_BASE_URL = typeof window !== 'undefined'
-  ? (window as any).__PUBLIC_API_URL__ || 'http://localhost:8787/api/v1'
-  : process.env.PUBLIC_API_URL || 'http://localhost:8787/api/v1';
+  ? (window as any).__PUBLIC_API_URL__ || '/api/v1'
+  : process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || 4321}/api/v1`;
 
 // Token storage helpers
 export function getAuthToken(): string | null {

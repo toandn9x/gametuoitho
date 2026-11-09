@@ -3,8 +3,8 @@
 -- 1. Insert Initial Users
 INSERT OR IGNORE INTO users (id, username, email, password_hash, role, status, created_at, updated_at)
 VALUES
-  ('usr-admin-01', 'admin', 'admin@gametuoitho.vn', 'de044ce919ce40c11f0b62f80facf32d:e9623f7aa9c2960fde597f2ce503589ad8be686d907140282519b99cb4538c43', 'ADMIN', 'ACTIVE', datetime('now'), datetime('now')),
-  ('usr-player-01', 'gamer9x', 'gamer9x@gametuoitho.vn', '1a71b3d3f900ce7383a4a4bcb1f32f07:4d6a360994531df7c43a94e876fd642ee19b1eb2c316ed823d789ab8b5b1594c', 'USER', 'ACTIVE', datetime('now'), datetime('now'));
+  ('usr-admin-01', 'admin', 'admin@gametuoitho.vn', 'd235387e13a1a21a05c3867631bb0fa9:5c884feed68a8a5d86f04788dcac236e177adddb49b3f4cf9ea8f7ddd3b8c606', 'ADMIN', 'ACTIVE', datetime('now'), datetime('now')),
+  ('usr-player-01', 'gamer9x', 'gamer9x@gametuoitho.vn', 'd235387e13a1a21a05c3867631bb0fa9:f7540cd2d2f00bfa15b15b1d5464f502550d958a2b8e6797269fa6241efbd8ca', 'USER', 'ACTIVE', datetime('now'), datetime('now'));
 
 -- 2. Insert Categories
 INSERT OR IGNORE INTO categories (id, name, slug, description, sort_order, status)

@@ -6,7 +6,7 @@
     "dev": "astro dev --port 4321 --host",
     "build": "astro build",
     "preview": "astro preview",
-    "lint": "echo ok"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.1",

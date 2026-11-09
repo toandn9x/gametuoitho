@@ -22,7 +22,8 @@ async function runTests() {
   testDb.exec(seedSql);
 
   const dbClient = new SqliteDatabaseClient(testDb);
-  const storageDriver = new LocalStorageDriver('./uploads_test', '/api/v1/assets/raw/');
+  const testUploadDir = path.resolve(__dirname, '../uploads_test');
+  const storageDriver = new LocalStorageDriver(testUploadDir, '/api/v1/assets/raw/');
   const app = createApp(dbClient, storageDriver);
 
   const env = {
@@ -38,7 +39,8 @@ async function runTests() {
     return app.fetch(req, env);
   };
 
-  // 1. Health check
+  try {
+    // 1. Health check
   console.log('1. Kiểm tra /health...');
   const healthRes = await request('/health');
   if (healthRes.status !== 200) throw new Error('Health check failed');
@@ -106,7 +108,7 @@ async function runTests() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       usernameOrEmail: 'admin',
-      password: 'admin123',
+      password: 'Admin@123456',
     }),
   });
   if (adminLoginRes.status !== 200) throw new Error('Admin login failed');
@@ -167,14 +169,15 @@ async function runTests() {
   if (histRes.status !== 200) throw new Error('Record history failed');
   console.log('   ✓ Ghi nhận lượt chơi thành công');
 
-  // Clean up test uploads
-  if (fs.existsSync('./uploads_test')) {
-    fs.rmSync('./uploads_test', { recursive: true, force: true });
+    console.log('\n=============================================');
+    console.log('🎉 TẤT CẢ 10 BỘ TEST ĐÃ HOÀN THÀNH XUẤT SẮC! 🎉');
+    console.log('=============================================');
+  } finally {
+    // Clean up test uploads
+    if (fs.existsSync(testUploadDir)) {
+      fs.rmSync(testUploadDir, { recursive: true, force: true });
+    }
   }
-
-  console.log('\n=============================================');
-  console.log('🎉 TẤT CẢ 10 BỘ TEST ĐÃ HOÀN THÀNH XUẤT SẮC! 🎉');
-  console.log('=============================================');
 }
 
 runTests().catch((err) => {

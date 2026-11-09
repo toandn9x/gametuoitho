@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "./src/index.ts",
   "scripts": {
-    "dev": "tsx watch src/dev-server.ts",
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc --noEmit",
-    "test": "node --test dist/**/*.test.js || echo 'Tests run with tsx/vitest'",
-    "lint": "echo ok"
+    "test": "tsx ../../tests/api.test.ts",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@gametuoitho/api-contracts": "workspace:*",

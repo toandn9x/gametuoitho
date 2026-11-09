@@ -1,93 +1,94 @@
-# Hướng Dẫn Triển Khai Production (Deployment Guide)
+# Hướng Dẫn Triển Khai Nền Tảng Game Tuổi Thơ (Deployment Guide)
 
-Nền tảng được thiết kế tối ưu hóa cho hệ sinh thái **Cloudflare (Workers + D1 + R2 + Pages)** với chi phí tối thiểu, hiệu năng toàn cầu và độ ổn định cao.
-
-## 1. Yêu Cầu Trước Khi Triển Khai
-- Tài khoản Cloudflare (Free Tier hoặc Pro Tier).
-- Node.js >= 20.x và pnpm >= 9.x.
-- Cloudflare Wrangler CLI (`pnpm add -g wrangler` hoặc `npx wrangler`).
+Nền tảng hỗ trợ 2 mô hình triển khai linh hoạt:
+1. **Mô hình 1 Server Tinh Gọn (Single Server Node.js + SQLite):** Toàn bộ Frontend + Backend API + Database SQLite + Local File Storage chạy trong 1 tiến trình duy nhất trên VPS/Server riêng/Docker.
+2. **Mô hình Serverless (Cloudflare Workers + D1 + R2 + Pages):** Triển khai phân tán toàn cầu trên hạ tầng Cloudflare.
 
 ---
 
-## 2. Triển Khai Backend API (Cloudflare Workers)
+## PHƯƠNG ÁN 1: Triển Khai 1 Server Duy Nhất (Node.js + SQLite)
 
-### Bước 1: Tạo D1 Database
+Đây là phương án đơn giản, tiết kiệm và dễ quản lý nhất cho máy chủ riêng (VPS Ubuntu/Debian, Windows Server hoặc Docker):
+
+### 1. Kiến Trúc 1 Server
+- **Cổng dịch vụ:** 1 cổng duy nhất (Ví dụ `4321` hoặc `80` hoặc `8080`).
+- **Frontend:** Astro 5 Static Pages & React Components được serve trực tiếp từ `./apps/web/dist`.
+- **Backend API:** Hono REST API chạy tại `/api/v1/*`.
+- **Database:** SQLite file `./gametuoitho.sqlite` tự động tạo schema & seed dữ liệu mẫu khi khởi động.
+- **File Storage:** Thư mục `./uploads/` lưu trữ JAR và Covers cục bộ với hỗ trợ HTTP 206 `Range` header.
+
+### 2. Triển Khai Trên VPS với PM2
 ```bash
-# Tạo cơ sở dữ liệu D1
+# 1. Clone repository
+git clone <repo_url>
+cd gametuoitho
+
+# 2. Cài đặt pnpm và dependencies
+corepack enable
+pnpm install
+
+# 3. Build Web Frontend
+pnpm build
+
+# 4. Chạy dịch vụ nền bằng PM2
+pnpm add -g pm2
+PORT=4321 pm2 start "pnpm start" --name "gametuoitho"
+
+# 5. Lưu trạng thái PM2 tự khởi động khi reboot server
+pm2 save
+pm2 startup
+```
+
+### 3. Cấu Hình Nginx Reverse Proxy (Tùy Chọn)
+Nếu bạn muốn trỏ tên miền (ví dụ: `gametuoitho.vn`):
+```nginx
+server {
+    listen 80;
+    server_name gametuoitho.vn www.gametuoitho.vn;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:4321;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+---
+
+## PHƯƠNG ÁN 2: Triển Khai Phân Tán Serverless (Cloudflare)
+
+Tối ưu chi phí $0 cho traffic toàn cầu với Cloudflare:
+
+### 1. Tạo D1 Database
+```bash
 wrangler d1 create gametuoitho-d1
-
-# Cập nhật database_id vừa tạo vào apps/api/wrangler.toml:
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "gametuoitho-d1"
-# database_id = "<YOUR_DATABASE_ID>"
-```
-
-### Bước 2: Tạo R2 Storage Bucket
-```bash
-# Tạo R2 bucket lưu trữ file JAR và ảnh
-wrangler r2 bucket create gametuoitho-assets
-```
-
-### Bước 3: Chạy Database Migration trên Production
-```bash
-# Áp dụng schema
 wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0001_initial_schema.sql --remote
-
-# Nạp dữ liệu ban đầu (Tài khoản admin và danh mục, game mẫu)
 wrangler d1 execute gametuoitho-d1 --file=./database/seeds/0001_seed_data.sql --remote
 ```
 
-### Bước 4: Thiết Lập Secret Keys
+### 2. Tạo R2 Storage Bucket
 ```bash
-# Đặt mã bí mật JWT
-wrangler secret put JWT_SECRET
+wrangler r2 bucket create gametuoitho-assets
 ```
 
-### Bước 5: Deploy Worker API
+### 3. Deploy Backend Worker API
 ```bash
 cd apps/api
+wrangler secret put JWT_SECRET
 wrangler deploy
-# API sẽ được phát hành tại: https://gametuoitho-api.<subdomain>.workers.dev
 ```
 
----
-
-## 3. Triển Khai Frontend Web (Cloudflare Pages)
-
-### Bước 1: Build Frontend
+### 4. Deploy Web Frontend (Cloudflare Pages)
 ```bash
-# Build mã nguồn Astro + React
-pnpm --filter @gametuoitho/web build
-```
-
-Thư mục build output nằm tại: `apps/web/dist/`.
-
-### Bước 2: Deploy lên Cloudflare Pages
-```bash
-# Triển khai trực tiếp qua Wrangler
-wrangler pages deploy apps/web/dist --project-name gametuoitho
-```
-
-Hoặc kết nối repository Git với Cloudflare Dashboard:
-- **Build command**: `pnpm --filter @gametuoitho/web build`
-- **Build output directory**: `apps/web/dist`
-- **Environment variables**:
-  `PUBLIC_API_URL` = `https://api.yourdomain.com/api/v1` (hoặc URL worker đã deploy)
-
----
-
-## 4. Chạy Môi Trường Phát Triển Cục Bộ (Local Development)
-
-```bash
-# 1. Cài đặt toàn bộ dependencies
-pnpm install
-
-# 2. Chạy Backend API (sử dụng SQLite cục bộ tự tạo và uploads/ directory)
-pnpm dev:api
-# API chạy tại: http://localhost:8787
-
-# 3. Chạy Web Frontend (Astro dev server)
-pnpm dev:web
-# Website chạy tại: http://localhost:4321
+cd apps/web
+PUBLIC_API_URL=https://api.gametuoitho.vn/api/v1 pnpm build
+npx wrangler pages deploy dist --project-name gametuoitho-web
 ```

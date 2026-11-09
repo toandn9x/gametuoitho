@@ -6,12 +6,12 @@ Nguồn yêu cầu: [plan.md](../plan.md) và [AGENTS.md](../AGENTS.md).
 
 ## 1. Phạm vi và người phụ trách
 
-- Agent đang làm ở phiên khác: tiếp tục giữ quyền sửa code và chạy build. Người dùng đã xác nhận phạm vi này; coordinator chưa có kênh liên lạc trực tiếp với agent đó.
-- Coordinator trong phiên chat này: lập backlog, giao việc cho các agent phụ của phiên này, review, theo dõi bằng chứng nghiệm thu và tổng hợp kết quả. File do coordinator phụ trách: `docs/delivery-board.md`.
+- Agent code/build: Antigravity CLI (`agy`), conversation `51cc8bdc-59b0-4855-bb5f-e6cca0b6e184`. Agent đã phản hồi xác nhận vai trò và nhận gói đầu tiên qua luồng CLI `--conversation`.
+- Coordinator trong phiên chat này: lập backlog, giao việc, review, theo dõi bằng chứng nghiệm thu và tổng hợp kết quả. File do coordinator phụ trách: `docs/delivery-board.md`, `scripts/anty-bridge.ps1`.
 - `backend_audit`: chỉ đọc Backend/Database, đối chiếu bảo mật và API với plan.
 - `web_emulator_audit`: chỉ đọc Web/Admin/Emulator, đối chiếu chức năng và bằng chứng POC.
 
-Hai agent audit đã được giao việc trong phiên này. Các gói triển khai bên dưới là đề bài để chuyển cho agent code/build; chưa coi là đã được agent ở phiên khác nhận việc.
+Hai agent audit đã hoàn tất rà soát chỉ đọc. Agent Antigravity đã nhận phần S5 của T01 và được giao triển khai qua CLI. Các gói còn lại giữ TODO cho đến khi được giao và xác nhận riêng.
 
 Trong khi chưa thống nhất lại ownership, coordinator và các agent audit không sửa source, migration, package/lockfile; không chạy build, cài dependency hoặc khởi động server song song với agent code/build. Nếu bổ sung agent triển khai, phải chia thư mục/file cụ thể trước; các file dùng chung chỉ có một người sửa mỗi lượt.
 
@@ -30,6 +30,8 @@ Trong khi chưa thống nhất lại ownership, coordinator và các agent audit
 | 6 — Kiểm thử/tối ưu | Chưa đủ bằng chứng | Có `tests/api.test.ts`, nhưng chưa có báo cáo lần chạy hay coverage nghiệm thu. |
 | 7 — Production | Chưa có bằng chứng triển khai | Cần staging/production, domain, secrets, migration, smoke test, logs và quy trình backup/restore. |
 
+Trong khi thiết lập liên lạc, agent đã bổ sung `apps/web/src`, `public`, cấu hình Tailwind, build output và các tài liệu architecture/database/deployment/security. Các hàng phía trên lưu ảnh chụp rà soát ban đầu; chưa nghiệm thu các phần bổ sung này hoặc coi build output là bằng chứng chức năng.
+
 Không mở rộng Android/iOS trước khi Web MVP đạt tiêu chí tại mục 12 và 16 của plan.
 
 ## 3. Những vấn đề P0 đã thấy trong source
@@ -47,9 +49,20 @@ Không mở rộng Android/iOS trước khi Web MVP đạt tiêu chí tại mụ
 
 Các vị trí dòng chỉ áp dụng cho ảnh chụp source lúc rà soát. Không ghi giá trị password, token hoặc secret vào báo cáo.
 
+### Review đợt S5
+
+Agent đã bàn giao thay đổi tại [anty-status.md](anty-status.md). Coordinator đã đọc scripts/config/test runner và chạy lại độc lập:
+
+- `pnpm test`: exit **0**, chạy 10 nhóm smoke test API.
+- `pnpm lint`: exit **1**, trả lỗi thực tế từ Web: prop `game` không thuộc `EmulatorPlayerProps` tại `apps/web/src/components/PlayGameClient.tsx:111`; hai tham chiếu `process` chưa có kiểu tại `apps/web/src/lib/api.ts:6`.
+- Đã xác minh đường dẫn cleanup test nằm trong workspace trước khi chạy. Runner gọi test nguồn qua `tsx`, không còn nhánh `|| echo` che lỗi; catch của test trả exit 1.
+- Agent báo API build và Web build exit 0; coordinator không chạy lặp build trong lượt review này.
+
+**Kết luận:** chấp nhận phần sửa test runner và thay placeholder bằng kiểm tra TypeScript. Chưa nghiệm thu toàn bộ S5/T01: cần xử lý hai vấn đề frontend, bổ sung CI và các phần nền tảng còn lại. `lint` hiện là `tsc --noEmit`, kiểm tra TS/TSX; chưa phải kiểm tra đầy đủ template `.astro`, style hoặc format. Chưa nghiệm thu các lỗi bảo mật S1–S4/S6–S7 từ bộ smoke test này.
+
 ## 4. Các gói việc triển khai
 
-Trạng thái khởi tạo của mọi gói dưới đây: **TODO — chờ agent code/build nhận việc**. Coordinator chỉ đổi sang DONE sau khi đã xem thay đổi và bằng chứng kiểm tra. Code đang tồn tại được review và sửa tại chỗ khi phù hợp, không yêu cầu viết lại toàn bộ.
+Trạng thái: **T01/S5 — phần scripts đã REVIEWED; T01 còn IN_PROGRESS**, các gói khác **TODO**. Đợt đầu chỉ sửa độ tin cậy của test/lint; các yêu cầu môi trường/CI còn lại của T01 chưa được nghiệm thu. Coordinator chỉ đổi sang DONE sau khi đã xem thay đổi và bằng chứng kiểm tra. Code đang tồn tại được review và sửa tại chỗ khi phù hợp, không yêu cầu viết lại toàn bộ.
 
 | Gói | Phạm vi file chính | Công việc và điều kiện nghiệm thu | Phụ thuộc |
 | --- | --- | --- | --- |
@@ -88,25 +101,29 @@ Rủi ro:
 Việc tiếp theo:
 ```
 
-## 6. Tin nhắn chuyển cho agent đang code/build
+## 6. Kênh trao đổi trực tiếp
 
-```text
-Bạn tiếp tục phụ trách source code và build; coordinator ở phiên khác
-phụ trách docs/delivery-board.md và review. Đọc plan.md, AGENTS.md và
-docs/delivery-board.md. Trước tiên báo bạn đang sửa những file nào và
-phần nào đã chạy kiểm tra, để giữ lại công việc đang tiến hành.
+- CLI thực tế trên máy là `agy.exe`. Script điều phối: [scripts/anty-bridge.ps1](../scripts/anty-bridge.ps1).
+- `agentapi send-message` đã bị RPC từ chối vì source project `default-cli-project` và target project rỗng không khớp. Không sửa project ID, database phiên hoặc kiểm tra quyền để vượt ranh giới này.
+- Luồng CLI được hỗ trợ `--conversation <id> --print <prompt>` đã trả phản hồi xác nhận từ đúng conversation đích. Coordinator dùng luồng này cho lượt giao việc, giữ nguyên project/permission checks của CLI.
+- Agent được yêu cầu duy trì `docs/anty-status.md`: phạm vi file, task đang làm, lệnh kiểm tra, exit code, kết quả và blocker. File này thuộc agent code/build; coordinator cập nhật bảng này sau review.
+- Mỗi lượt chỉ giao một gói hữu hạn và chờ kết quả; không khởi chạy nhiều lượt triển khai song song vào cùng conversation. Không coi việc tiến trình đã chạy là bằng chứng task đã xong.
 
-Ưu tiên đợt đầu: đóng S1–S7 trong bảng, bổ sung regression test có
-exit code đáng tin cậy, đồng thời xác định bằng chứng T00 còn thiếu.
-Không tự đánh dấu Phase 0 hay MVP hoàn thành từ báo cáo hoặc build.
-Không thực thi JAR trên server, không làm public user import và không
-truyền JWT đăng nhập vào emulator. Không sửa file delivery-board.md;
-báo kết quả theo mẫu bàn giao để coordinator review/cập nhật trạng thái.
-Nếu đang có bản sửa cho các mục này, báo file và kết quả để review
-trước khi viết thêm hoặc chuyển sang gói tiếp theo.
+Các lệnh trên máy hiện tại:
+
+```powershell
+# Hỏi/xác nhận phạm vi, chỉ đọc và phản hồi
+powershell.exe -NoProfile -File scripts/anty-bridge.ps1 -DirectConversation
+
+# Đợt S5 đã được giao: sửa scripts/checks và báo cáo, không sửa logic ứng dụng
+powershell.exe -NoProfile -File scripts/anty-bridge.ps1 -ExecuteFirstBatch
 ```
+
+Không chạy lại lệnh triển khai khi lượt trước còn đang chạy. Chế độ `-ExecuteFirstBatch` dùng quyền sửa file theo phiên và allowlist các lệnh kiểm tra cụ thể; không cài dependency, không thay cấu hình quyền toàn cục, không dùng cờ bỏ qua toàn bộ quyền. S1/S2 chờ coordinator review kết quả S5 trước khi giao lượt tiếp theo.
 
 ## 7. Nhật ký điều phối
 
 - 09/11/2026: Người dùng xác nhận agent ở phiên khác giữ code/build. Hai agent phụ trong phiên coordinator nhận rà soát chỉ đọc Backend và Web/Emulator. Coordinator lập backlog và đề bài bàn giao; chưa chạy build/test, chưa nghiệm thu phase và chưa trực tiếp chuyển lệnh cho agent ở phiên khác.
 - Hai agent audit đã hoàn tất báo cáo. Coordinator đối chiếu lại các lỗi S1–S3, S5–S7 và E1 với source; bổ sung các gói việc và acceptance vào bảng. S4 được xác định bằng rà soát tĩnh validator/upload, chưa có thử nghiệm file độc hại hay load test.
+- Coordinator tìm được CLI, xác minh conversation của workspace và nhận phản hồi handshake: agent giữ source/build, nhận T01/S5 rồi tới S1/S2. Lệnh triển khai phần S5 đã được gửi; kết quả chưa được nghiệm thu.
+- Agent bàn giao phần scripts S5 và tạo `docs/anty-status.md`. Coordinator chạy lại `pnpm test` (exit 0, 10 nhóm), `pnpm lint` (exit 1, hai vấn đề frontend) và chấp nhận phần sửa runner/typecheck. T01 còn việc, S1/S2 đã được thống nhất là gói bảo mật tiếp theo nhưng chưa có kết quả triển khai/nghiệm thu trong lượt này.

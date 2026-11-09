@@ -4,6 +4,8 @@
   "private": true,
   "description": "Nền tảng lưu trữ, quản lý và chơi game Java ME (J2ME) đa thiết bị",
   "scripts": {
+    "start": "pnpm --filter @gametuoitho/api start",
+    "dev": "pnpm --filter @gametuoitho/api dev",
     "dev:api": "pnpm --filter @gametuoitho/api dev",
     "dev:web": "pnpm --filter @gametuoitho/web dev",
     "build": "pnpm --filter \"@gametuoitho/*\" build",
