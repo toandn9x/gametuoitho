@@ -26,8 +26,12 @@ export default function AdminCrawlerView() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 3357, page: 1, limit: 24, totalPages: 140 });
 
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const [importingId, setImportingId] = useState<string | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [batchProgressText, setBatchProgressText] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -76,13 +80,59 @@ export default function AdminCrawlerView() {
     setPage(1);
   };
 
+  // Toggle selection for a single game
+  const toggleSelectGame = (gameId: string, isImported = false) => {
+    if (isImported) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gameId)) {
+        next.delete(gameId);
+      } else {
+        next.add(gameId);
+      }
+      return next;
+    });
+  };
+
+  // Select / Deselect all unimported games on the current page
+  const unimportedOnPage = games.filter((g) => !g.is_imported);
+  const allPageSelected =
+    unimportedOnPage.length > 0 && unimportedOnPage.every((g) => selectedIds.has(g.id));
+
+  const toggleSelectAllPage = () => {
+    if (allPageSelected) {
+      // Uncheck all on current page
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        unimportedOnPage.forEach((g) => next.delete(g.id));
+        return next;
+      });
+    } else {
+      // Check all on current page
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        unimportedOnPage.forEach((g) => next.add(g.id));
+        return next;
+      });
+    }
+  };
+
+  // Quick select first 10 unimported games on the page
+  const selectFirst10 = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      unimportedOnPage.slice(0, 10).forEach((g) => next.add(g.id));
+      return next;
+    });
+  };
+
+  // Single game import
   const handleImportSingle = async (sourceGame: SourceGame) => {
     setImportingId(sourceGame.id);
     try {
       const res = await importCrawlerGame(sourceGame.id);
       if (res.success && res.data) {
         showToast(`Đã nhập thành công game "${sourceGame.name}" vào Catalog!`, 'success');
-        // Update local state to mark as imported
         setGames((prev) =>
           prev.map((g) =>
             g.id === sourceGame.id
@@ -90,6 +140,11 @@ export default function AdminCrawlerView() {
               : g
           )
         );
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(sourceGame.id);
+          return next;
+        });
       } else {
         showToast(res.error?.message || 'Nhập game thất bại', 'error');
       }
@@ -100,6 +155,57 @@ export default function AdminCrawlerView() {
     }
   };
 
+  // Bulk Import Selected Games
+  const handleBatchImportSelected = async () => {
+    const idsToImport = Array.from(selectedIds);
+    if (idsToImport.length === 0) {
+      showToast('Vui lòng tích chọn ít nhất 1 game để nhập hàng loạt', 'error');
+      return;
+    }
+
+    if (!confirm(`Bạn có chắc chắn muốn nhập tự động ${idsToImport.length} game đã chọn vào hệ thống?`)) {
+      return;
+    }
+
+    setBatchLoading(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < idsToImport.length; i++) {
+      const id = idsToImport[i];
+      const gameObj = games.find((g) => g.id === id);
+      const gameName = gameObj ? gameObj.name : id;
+      setBatchProgressText(`Đang nhập (${i + 1}/${idsToImport.length}): ${gameName}...`);
+
+      try {
+        const res = await importCrawlerGame(id);
+        if (res.success && res.data) {
+          successCount++;
+          // Mark game as imported in local state immediately
+          setGames((prev) =>
+            prev.map((g) =>
+              g.id === id ? { ...g, is_imported: true, imported_slug: res.data.game.slug } : g
+            )
+          );
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBatchLoading(false);
+    setBatchProgressText('');
+    setSelectedIds(new Set());
+
+    showToast(
+      `Hoàn tất duyệt hàng loạt! Đã nhập thành công ${successCount} game${failCount > 0 ? `, thất bại ${failCount} game` : ''}.`,
+      successCount > 0 ? 'success' : 'error'
+    );
+  };
+
+  // Top 5 preset
   const handleBatchImportTop = async () => {
     if (!confirm('Bạn có muốn tự động tải và nhập 5 tựa game kinh điển hàng đầu vào hệ thống?')) return;
     setBatchLoading(true);
@@ -160,7 +266,7 @@ export default function AdminCrawlerView() {
             <span>Trình Nhập Game Cực Nhanh (Crawler)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Duyệt hơn 3.350 tựa game Java Nokia từ gametuoitho.cc. Tải tự động file JAR, icon và nạp thẳng vào Catalog chỉ với 1 click!
+            Duyệt hơn 3.350 tựa game Java Nokia từ gametuoitho.cc. Tải tự động file JAR, icon và nạp thẳng vào Catalog!
           </p>
         </div>
 
@@ -169,10 +275,10 @@ export default function AdminCrawlerView() {
           disabled={batchLoading}
           className="px-5 py-3 bg-neon-yellow hover:bg-neon-cyan text-arcade-950 font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 flex-shrink-0"
         >
-          {batchLoading ? (
+          {batchLoading && !batchProgressText ? (
             <>
               <div className="w-3.5 h-3.5 border-2 border-arcade-950 border-t-transparent rounded-full animate-spin" />
-              <span>Đang nhập Top 5...</span>
+              <span>Đang xử lý...</span>
             </>
           ) : (
             <>
@@ -191,7 +297,7 @@ export default function AdminCrawlerView() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo tên game (vd: Ninja School, Contra, Diamond Rush, Đặt bom, AoE...)"
+              placeholder="Tìm theo tên game (vd: Ninja School, Contra, Diamond Rush, Đặt bom, AoE, Tam Quốc...)"
               className="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
             />
             {search && (
@@ -235,6 +341,83 @@ export default function AdminCrawlerView() {
         </div>
       </div>
 
+      {/* Bulk Action & Multi-select Toolbar */}
+      <div className="bg-arcade-850 border border-arcade-700/80 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Select all on page checkbox */}
+          <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-200 select-none bg-arcade-800/80 px-3 py-2 rounded-xl border border-arcade-700 hover:border-slate-500 transition-colors">
+            <input
+              type="checkbox"
+              checked={allPageSelected}
+              disabled={unimportedOnPage.length === 0}
+              onChange={toggleSelectAllPage}
+              className="w-4 h-4 rounded text-neon-pink bg-arcade-900 border-arcade-600 focus:ring-neon-pink cursor-pointer"
+            />
+            <span>
+              Chọn tất cả trên trang này ({unimportedOnPage.length} game chưa có)
+            </span>
+          </label>
+
+          {/* Quick select 10 button */}
+          {unimportedOnPage.length > 5 && (
+            <button
+              type="button"
+              onClick={selectFirst10}
+              className="text-xs bg-arcade-800 hover:bg-arcade-700 text-slate-300 px-3 py-2 rounded-xl border border-arcade-700 transition-colors"
+            >
+              + Chọn 10 game đầu
+            </button>
+          )}
+
+          {/* Deselect all */}
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-slate-400 hover:text-red-400 transition-colors underline ml-1"
+            >
+              Bỏ chọn ({selectedIds.size})
+            </button>
+          )}
+        </div>
+
+        {/* Bulk Action CTA */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <div className="text-xs font-mono">
+            {selectedIds.size > 0 ? (
+              <span className="text-neon-yellow font-bold">
+                Đã tích chọn: <strong className="text-base text-neon-cyan">{selectedIds.size}</strong> game
+              </span>
+            ) : (
+              <span className="text-slate-500">Tích chọn các ô vuông để duyệt nhiều game</span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBatchImportSelected}
+            disabled={selectedIds.size === 0 || batchLoading}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-neon-pink ${
+              selectedIds.size > 0 && !batchLoading
+                ? 'bg-gradient-to-r from-neon-pink via-neon-yellow to-neon-cyan text-arcade-950 hover:scale-105 cursor-pointer'
+                : 'bg-arcade-800 text-slate-500 border border-arcade-700 cursor-not-allowed opacity-60'
+            }`}
+          >
+            {batchLoading ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-arcade-950 border-t-transparent rounded-full animate-spin" />
+                <span>{batchProgressText || `Đang nạp ${selectedIds.size} game...`}</span>
+              </>
+            ) : (
+              <>
+                <span>⚡</span>
+                <span>Duyệt & Nhập Hàng Loạt ({selectedIds.size})</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Stats bar */}
       <div className="flex items-center justify-between text-xs text-slate-400 px-1 font-mono">
         <span>Tìm thấy: <strong className="text-neon-cyan">{pagination.total}</strong> game phù hợp</span>
@@ -261,6 +444,7 @@ export default function AdminCrawlerView() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {games.map((g) => {
             const isImporting = importingId === g.id;
+            const isSelected = selectedIds.has(g.id);
             const fullIconUrl = g.icon.startsWith('http')
               ? g.icon
               : `https://gametuoitho.cc${g.icon}`;
@@ -268,12 +452,43 @@ export default function AdminCrawlerView() {
             return (
               <div
                 key={g.id}
-                className={`bg-arcade-900 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 hover:border-arcade-600 ${
-                  g.is_imported ? 'border-neon-green/30 bg-arcade-900/90' : 'border-arcade-800'
+                onClick={(e) => {
+                  // If clicking on buttons or links, don't toggle card
+                  if ((e.target as HTMLElement).closest('button, a')) return;
+                  if (!g.is_imported) {
+                    toggleSelectGame(g.id, g.is_imported);
+                  }
+                }}
+                className={`relative bg-arcade-900 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none ${
+                  g.is_imported
+                    ? 'border-neon-green/30 bg-arcade-900/90 opacity-90'
+                    : isSelected
+                    ? 'border-neon-pink ring-2 ring-neon-pink/40 bg-arcade-850 shadow-neon-pink cursor-pointer'
+                    : 'border-arcade-800 hover:border-arcade-600 cursor-pointer'
                 }`}
               >
+                {/* Checkbox indicator */}
+                <div className="absolute top-3 right-3 z-10">
+                  {g.is_imported ? (
+                    <span
+                      title="Game này đã được nhập vào kho của bạn"
+                      className="w-5 h-5 rounded-md bg-neon-green/20 text-neon-green border border-neon-green/50 flex items-center justify-center text-xs font-bold"
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectGame(g.id, g.is_imported)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-5 h-5 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
+                    />
+                  )}
+                </div>
+
                 <div>
-                  <div className="flex gap-3 items-start">
+                  <div className="flex gap-3 items-start pr-6">
                     {/* Icon */}
                     <div className="w-14 h-14 rounded-xl overflow-hidden bg-arcade-950 border border-arcade-700/60 flex-shrink-0 relative">
                       <img
@@ -281,7 +496,6 @@ export default function AdminCrawlerView() {
                         alt={g.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Fallback icon
                           (e.target as HTMLElement).style.display = 'none';
                         }}
                       />
@@ -326,28 +540,48 @@ export default function AdminCrawlerView() {
                         rel="noreferrer"
                         className="px-3 py-1.5 bg-neon-cyan/20 hover:bg-neon-cyan text-neon-cyan hover:text-arcade-950 border border-neon-cyan/40 rounded-lg text-xs font-bold transition-all"
                       >
-                        ▶ Chơi
+                        ▶ Chơi ngay
                       </a>
                     </>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleImportSingle(g)}
-                      disabled={isImporting}
-                      className="w-full py-2 px-3 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
-                    >
-                      {isImporting ? (
-                        <>
-                          <div className="w-3 h-3 border-2 border-arcade-950 border-t-transparent rounded-full animate-spin" />
-                          <span>Đang tải & nạp...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>📥</span>
-                          <span>Nhập Vào Catalog</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-2 w-full">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelectGame(g.id, g.is_imported);
+                        }}
+                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
+                          isSelected
+                            ? 'bg-neon-pink/20 text-neon-pink border-neon-pink'
+                            : 'bg-arcade-800 text-slate-300 border-arcade-700 hover:border-slate-500'
+                        }`}
+                      >
+                        {isSelected ? '✓ Đã chọn' : '+ Chọn'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleImportSingle(g);
+                        }}
+                        disabled={isImporting || batchLoading}
+                        className="flex-1 py-2 px-3 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+                      >
+                        {isImporting ? (
+                          <>
+                            <div className="w-3 h-3 border-2 border-arcade-950 border-t-transparent rounded-full animate-spin" />
+                            <span>Đang nạp...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>📥</span>
+                            <span>Nhập 1 Game</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

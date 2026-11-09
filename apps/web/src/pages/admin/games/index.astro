@@ -11,7 +11,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <span>Danh Sách Game Trong Catalog</span>
         </h2>
         <p class="text-xs text-slate-400 mt-1">
-          Quản lý xuất bản, chỉnh sửa metadata và kiểm thử game trước khi công khai
+          Quản lý xuất bản, duyệt hàng loạt, chỉnh sửa metadata và kiểm thử game trước khi công khai
         </p>
       </div>
 
@@ -34,12 +34,59 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       </div>
     </div>
 
+    <!-- Bulk Action Toolbar -->
+    <div id="bulk-toolbar" class="hidden bg-arcade-850 border border-neon-cyan/40 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg transition-all">
+      <div class="flex items-center gap-3">
+        <span class="w-3 h-3 rounded-full bg-neon-cyan animate-pulse"></span>
+        <span class="text-xs font-bold text-slate-200">
+          Đã chọn: <strong id="selected-count" class="text-neon-cyan text-sm">0</strong> game
+        </span>
+        <button id="btn-deselect-all" class="text-[11px] text-slate-400 hover:text-red-400 underline ml-2">
+          Bỏ chọn tất cả
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <button
+          id="btn-bulk-publish"
+          class="px-4 py-2 bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-arcade-950 border border-neon-green/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+        >
+          <span>✓</span>
+          <span>Duyệt & Xuất Bản</span>
+        </button>
+
+        <button
+          id="btn-bulk-hide"
+          class="px-4 py-2 bg-neon-yellow/20 hover:bg-neon-yellow text-neon-yellow hover:text-arcade-950 border border-neon-yellow/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+        >
+          <span>👁️</span>
+          <span>Ẩn Khỏi Catalog</span>
+        </button>
+
+        <button
+          id="btn-bulk-delete"
+          class="px-4 py-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+        >
+          <span>🗑️</span>
+          <span>Xóa Các Game Đã Chọn</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Games Table Container -->
     <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
           <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
             <tr>
+              <th class="w-12 px-4 py-4 text-center">
+                <input
+                  type="checkbox"
+                  id="select-all-header"
+                  title="Chọn tất cả game trên trang"
+                  class="w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
+                />
+              </th>
               <th class="px-6 py-4">Tên Game</th>
               <th class="px-6 py-4">Thể Loại</th>
               <th class="px-6 py-4">Nhà Phát Triển</th>
@@ -50,7 +97,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           </thead>
           <tbody id="games-table-body" class="divide-y divide-arcade-800 text-slate-300">
             <tr>
-              <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
+              <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-mono">
                 Đang tải dữ liệu...
               </td>
             </tr>
@@ -63,15 +110,40 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
   <script>
     import { getAdminGames, publishAdminGame, hideAdminGame, deleteAdminGame } from '../../../lib/api';
 
+    const selectedGameIds = new Set<string>();
+
+    function updateBulkToolbar() {
+      const toolbar = document.getElementById('bulk-toolbar')!;
+      const countEl = document.getElementById('selected-count')!;
+      const selectAllHeader = document.getElementById('select-all-header') as HTMLInputElement;
+
+      const count = selectedGameIds.size;
+      countEl.textContent = String(count);
+
+      if (count > 0) {
+        toolbar.classList.remove('hidden');
+      } else {
+        toolbar.classList.add('hidden');
+      }
+
+      const allCheckboxes = document.querySelectorAll<HTMLInputElement>('.game-checkbox');
+      if (allCheckboxes.length > 0) {
+        selectAllHeader.checked = Array.from(allCheckboxes).every((cb) => cb.checked);
+      }
+    }
+
     async function loadGames() {
+      selectedGameIds.clear();
+      updateBulkToolbar();
+
       const tbody = document.getElementById('games-table-body')!;
       const res = await getAdminGames(1, 100);
 
       if (!res.success || !res.data || res.data.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
-              Chưa có game nào trong catalog. Bấm "Thêm Game Mới" để tạo.
+            <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-mono">
+              Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".
             </td>
           </tr>
         `;
@@ -82,7 +154,6 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         .map((game: any) => {
           const isPublished = game.status === 'PUBLISHED';
           const isDraft = game.status === 'DRAFT';
-          const isHidden = game.status === 'HIDDEN';
 
           const statusBadge = isPublished
             ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40">PUBLISHED</span>'
@@ -91,7 +162,14 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-400">HIDDEN</span>';
 
           return `
-            <tr class="hover:bg-arcade-850/60 transition-colors">
+            <tr class="hover:bg-arcade-850/60 transition-colors ${selectedGameIds.has(game.id) ? 'bg-arcade-850/80' : ''}">
+              <td class="w-12 px-4 py-4 text-center">
+                <input
+                  type="checkbox"
+                  data-id="${game.id}"
+                  class="game-checkbox w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
+                />
+              </td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700">
@@ -138,7 +216,21 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         })
         .join('');
 
-      // Attach event listeners
+      // Checkbox listeners
+      document.querySelectorAll<HTMLInputElement>('.game-checkbox').forEach((cb) => {
+        cb.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const id = target.getAttribute('data-id')!;
+          if (target.checked) {
+            selectedGameIds.add(id);
+          } else {
+            selectedGameIds.delete(id);
+          }
+          updateBulkToolbar();
+        });
+      });
+
+      // Single action listeners
       document.querySelectorAll('.publish-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
@@ -173,6 +265,67 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         });
       });
     }
+
+    // Header select all
+    const selectAllHeader = document.getElementById('select-all-header') as HTMLInputElement;
+    selectAllHeader?.addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      document.querySelectorAll<HTMLInputElement>('.game-checkbox').forEach((cb) => {
+        cb.checked = checked;
+        const id = cb.getAttribute('data-id')!;
+        if (checked) {
+          selectedGameIds.add(id);
+        } else {
+          selectedGameIds.delete(id);
+        }
+      });
+      updateBulkToolbar();
+    });
+
+    // Deselect all button
+    document.getElementById('btn-deselect-all')?.addEventListener('click', () => {
+      selectedGameIds.clear();
+      document.querySelectorAll<HTMLInputElement>('.game-checkbox').forEach((cb) => {
+        cb.checked = false;
+      });
+      updateBulkToolbar();
+    });
+
+    // Bulk Publish
+    document.getElementById('btn-bulk-publish')?.addEventListener('click', async () => {
+      if (selectedGameIds.size === 0) return;
+      if (!confirm(`Bạn có chắc chắn muốn duyệt và xuất bản ${selectedGameIds.size} game đã chọn?`)) return;
+
+      for (const id of Array.from(selectedGameIds)) {
+        await publishAdminGame(id).catch(() => {});
+      }
+      alert(`Đã hoàn tất duyệt & xuất bản các game đã chọn!`);
+      loadGames();
+    });
+
+    // Bulk Hide
+    document.getElementById('btn-bulk-hide')?.addEventListener('click', async () => {
+      if (selectedGameIds.size === 0) return;
+      if (!confirm(`Bạn có chắc chắn muốn ẩn ${selectedGameIds.size} game đã chọn?`)) return;
+
+      for (const id of Array.from(selectedGameIds)) {
+        await hideAdminGame(id).catch(() => {});
+      }
+      alert(`Đã hoàn tất ẩn các game đã chọn!`);
+      loadGames();
+    });
+
+    // Bulk Delete
+    document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
+      if (selectedGameIds.size === 0) return;
+      if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedGameIds.size} game đã chọn?`)) return;
+
+      for (const id of Array.from(selectedGameIds)) {
+        await deleteAdminGame(id).catch(() => {});
+      }
+      alert(`Đã hoàn tất xóa các game đã chọn!`);
+      loadGames();
+    });
 
     loadGames();
   </script>
