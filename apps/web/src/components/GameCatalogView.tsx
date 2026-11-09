@@ -99,14 +99,14 @@ export default function GameCatalogView() {
         </form>
 
         {/* Sorting */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end text-xs">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end text-xs">
           <span className="text-slate-400">Sắp xếp:</span>
           {(['newest', 'popular', 'name'] as const).map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => handleSortChange(s)}
-              className={`px-3 py-1.5 rounded-lg border transition-all ${
+              className={`px-3 py-2 sm:py-1.5 rounded-lg border transition-all ${
                 sort === s
                   ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan font-bold'
                   : 'border-arcade-700 text-slate-400 hover:text-slate-200'
@@ -119,12 +119,12 @@ export default function GameCatalogView() {
       </div>
 
       {/* Categories row */}
-      <div className="flex items-center gap-2 overflow-x-auto mt-4 pt-2 pb-2">
+      <div className="flex flex-wrap items-center gap-2 mt-4 pt-2 pb-2">
         <button
           type="button"
           aria-pressed={featuredOnly}
           onClick={() => { setFeaturedOnly(value => !value); setPage(1); }}
-          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`px-3 py-2.5 sm:py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
             featuredOnly ? 'bg-neon-yellow text-arcade-950 border-neon-yellow' : 'bg-arcade-800 text-slate-400 border-arcade-700 hover:text-neon-yellow'
           }`}
         >
@@ -133,7 +133,7 @@ export default function GameCatalogView() {
         <button
           type="button"
           onClick={() => handleCategorySelect('')}
-          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`px-3 py-2.5 sm:py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
             !selectedCategory
               ? 'bg-neon-yellow text-arcade-950 font-bold'
               : 'bg-arcade-800 text-slate-400 hover:text-slate-200 border border-arcade-700'
@@ -146,7 +146,7 @@ export default function GameCatalogView() {
             key={cat.id}
             type="button"
             onClick={() => handleCategorySelect(cat.slug)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3 py-2.5 sm:py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
               selectedCategory === cat.slug
                 ? 'bg-neon-yellow text-arcade-950 font-bold'
                 : 'bg-arcade-800 text-slate-400 hover:text-slate-200 border border-arcade-700'
@@ -158,9 +158,9 @@ export default function GameCatalogView() {
       </div>
 
       {/* Content Area */}
-      <div className="mt-8">
+      <div className="mt-5 sm:mt-8">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
@@ -175,7 +175,7 @@ export default function GameCatalogView() {
             ))}
           </div>
         ) : games.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {games.map((game) => (
               <GameCard key={game.id} game={game} />
             ))}

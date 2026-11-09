@@ -8,15 +8,15 @@ import CategoryList from '../components/CategoryList';
 <Layout title="Game Tuổi Thơ --- Chơi Game Java ME Nokia Kinh Điển Trực Tiếp Trên Web">
   <HeroBanner />
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 sm:space-y-16">
     <!-- Categories section -->
     <section>
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+      <div class="flex items-center justify-between gap-3 mb-4 sm:mb-6">
+        <h2 class="text-lg sm:text-xl font-extrabold text-slate-100 flex items-center gap-2">
           <span class="text-neon-cyan">📁</span>
           <span>Thể Loại Game</span>
         </h2>
-        <a href="/games" class="text-xs text-neon-cyan hover:underline font-mono">
+        <a href="/games" class="flex-shrink-0 whitespace-nowrap py-2 text-xs text-neon-cyan hover:underline font-mono">
           Xem tất cả →
         </a>
       </div>
@@ -26,15 +26,15 @@ import CategoryList from '../components/CategoryList';
 
     <!-- Admin-curated favorite games -->
     <section aria-labelledby="favorite-games-heading">
-      <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div>
-          <h2 id="favorite-games-heading" class="text-2xl font-black text-slate-100 flex items-center gap-2">
+      <div class="flex items-end justify-between gap-3 mb-5 sm:mb-8">
+        <div class="min-w-0">
+          <h2 id="favorite-games-heading" class="text-lg sm:text-2xl font-black text-slate-100 flex items-center gap-2">
             <span class="text-neon-yellow" aria-hidden="true">★</span>
             <span>Game ưa thích</span>
           </h2>
           <p class="text-xs text-slate-400 mt-1">Ghé lại những tựa game được yêu thích trong kho tuổi thơ</p>
         </div>
-        <a href="/games?featured=true" class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-yellow hover:border-neon-yellow transition-colors">
+        <a href="/games?featured=true" class="flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-yellow hover:border-neon-yellow transition-colors">
           Xem tất cả →
         </a>
       </div>
@@ -43,9 +43,9 @@ import CategoryList from '../components/CategoryList';
 
     <!-- Latest Games -->
     <section>
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+      <div class="flex items-end justify-between gap-3 mb-5 sm:mb-8">
+        <div class="min-w-0">
+          <h2 class="text-lg sm:text-2xl font-black text-slate-100 flex items-center gap-2">
             <span class="text-neon-yellow">⭐</span>
             <span>Game mới cập nhật</span>
           </h2>
@@ -53,7 +53,7 @@ import CategoryList from '../components/CategoryList';
         </div>
         <a
           href="/games"
-          class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-cyan hover:border-neon-cyan transition-all"
+          class="flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-cyan hover:border-neon-cyan transition-all"
         >
           Xem kho game →
         </a>
@@ -63,12 +63,12 @@ import CategoryList from '../components/CategoryList';
     </section>
 
     <!-- Import Promo Box -->
-    <section class="relative overflow-hidden bg-gradient-to-r from-arcade-850 via-arcade-800 to-arcade-850 border-2 border-neon-cyan/40 rounded-3xl p-8 sm:p-12 shadow-neon-cyan">
+    <section class="relative overflow-hidden bg-gradient-to-r from-arcade-850 via-arcade-800 to-arcade-850 border-2 border-neon-cyan/40 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-neon-cyan">
       <div class="max-w-2xl space-y-4">
         <span class="px-3 py-1 bg-neon-cyan/20 text-neon-cyan text-xs font-mono font-bold rounded-full border border-neon-cyan/40">
           TÍNH NĂNG ĐỘC QUYỀN
         </span>
-        <h3 class="text-2xl sm:text-3xl font-black text-slate-100">
+        <h3 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-100">
           Bạn Có File Game Java Riêng Của Mình?
         </h3>
         <p class="text-sm text-slate-300 leading-relaxed">

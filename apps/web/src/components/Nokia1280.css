@@ -1,6 +1,15 @@
+/*
+ * Nokia 1280 skin.
+ * Inner sizes are expressed in --u (1 design px at the full 278px content width), so the
+ * whole phone scales with the frame width. The frame width is capped by the viewport height
+ * on tablets/laptops and in fullscreen, so screen + keypad fit without scrolling.
+ */
 .nokia1280 {
+  --nk-offset: 210px; /* space taken above/below the frame on single-column layouts */
+  --u: calc(100cqw / 278);
   position: relative;
   isolation: isolate;
+  container-type: inline-size;
   width: min(100%, 326px);
   padding: 14px 20px 12px;
   scroll-margin-top: 80px;
@@ -21,6 +30,32 @@
   flex-shrink: 0;
 }
 
+/* Frame height ≈ 36px + 2.655 × (width − 48px)  ⇒  width ≈ 0.3767 × height + 34.4px */
+@media (min-width: 768px) {
+  .nokia1280 {
+    width: min(100%, 326px, max(200px, calc((100vh - var(--nk-offset)) * 0.3767 + 34.4px)));
+    width: min(100%, 326px, max(200px, calc((100dvh - var(--nk-offset)) * 0.3767 + 34.4px)));
+  }
+}
+
+/* Phones: keep the screen and the D-pad row inside the first screen (number pad may scroll). */
+@media (max-width: 767px) {
+  .nokia1280 {
+    width: min(100%, 326px, max(250px, calc((100vh - 80px) * 0.3767 + 34.4px)));
+    width: min(100%, 326px, max(250px, calc((100dvh - 80px) * 0.3767 + 34.4px)));
+  }
+}
+
+@media (min-width: 1024px) {
+  .nokia1280 { --nk-offset: 150px; }
+}
+
+:fullscreen .nokia1280 {
+  --nk-offset: 32px;
+  width: min(100%, 326px, max(200px, calc((100vh - var(--nk-offset)) * 0.3767 + 34.4px)));
+  width: min(100%, 326px, max(200px, calc((100dvh - var(--nk-offset)) * 0.3767 + 34.4px)));
+}
+
 .nokia1280::before {
   content: '';
   position: absolute;
@@ -34,13 +69,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
-  padding: 1px 0 10px;
+  gap: calc(9 * var(--u));
+  padding: 1px 0 calc(10 * var(--u));
 }
 
 .nokia1280__speaker {
-  width: 66px;
-  height: 9px;
+  width: calc(66 * var(--u));
+  height: calc(9 * var(--u));
   border: 1px solid #101214;
   border-radius: 7px;
   background: repeating-linear-gradient(90deg, #090b0c 0 3px, #393e40 3px 5px);
@@ -49,15 +84,15 @@
 
 .nokia1280__brand {
   color: #d9dddf;
-  font-size: 18px;
+  font-size: calc(18 * var(--u));
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 2px;
+  letter-spacing: calc(2 * var(--u));
   text-shadow: 0 1px 1px #000;
 }
 
 .nokia1280__bezel {
-  padding: 10px 9px 12px;
+  padding: calc(10 * var(--u)) calc(9 * var(--u)) calc(12 * var(--u));
   border: 1px solid #080a0b;
   border-radius: 9px 9px 17px 17px;
   background: linear-gradient(135deg, #0c1112, #272d2e 45%, #0b0f10);
@@ -84,16 +119,16 @@
 
 .nokia1280__controls {
   display: grid;
-  grid-template-columns: 1fr 92px 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr calc(92 * var(--u)) 1fr;
+  gap: calc(8 * var(--u));
   align-items: center;
-  margin: 14px 1px 10px;
+  margin: calc(14 * var(--u)) 1px calc(10 * var(--u));
   user-select: none;
 }
 
 .nokia1280__sidekeys {
   display: grid;
-  gap: 5px;
+  gap: calc(5 * var(--u));
 }
 
 .nokia1280 button {
@@ -118,7 +153,7 @@
 
 .nokia1280__function {
   display: flex;
-  height: 44px;
+  height: calc(44 * var(--u));
   align-items: center;
   justify-content: center;
   border-radius: 12px 8px 10px 11px;
@@ -129,7 +164,7 @@
 }
 
 .nokia1280__softkey-mark {
-  width: 19px;
+  width: calc(19 * var(--u));
   height: 3px;
   border-radius: 3px;
   background: #dfe2e3;
@@ -137,8 +172,8 @@
 }
 
 .nokia1280__function svg {
-  width: 23px;
-  height: 23px;
+  width: calc(23 * var(--u));
+  height: calc(23 * var(--u));
   fill: none;
   stroke: currentColor;
   stroke-width: 2.3;
@@ -152,10 +187,10 @@
 .nokia1280__dpad {
   display: grid;
   grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr;
-  height: 92px;
-  padding: 3px;
+  height: calc(92 * var(--u));
+  padding: calc(3 * var(--u));
   border: 2px solid #9ca3a5;
-  border-radius: 15px;
+  border-radius: calc(15 * var(--u));
   background: linear-gradient(135deg, #626a6d, #b0b7b9 35%, #353d40 75%);
   box-shadow: 0 0 0 2px #090c0d, 0 2px 4px #000, inset 0 1px 1px #e1e7e6;
 }
@@ -169,7 +204,7 @@
   border-radius: 5px;
   background: #303639;
   color: #d5d9d8;
-  font-size: 9px;
+  font-size: max(8px, calc(9 * var(--u)));
   line-height: 1;
 }
 
@@ -181,41 +216,41 @@
 .nokia1280 .nokia1280__select {
   z-index: 2;
   grid-area: 2 / 2;
-  margin: -5px;
+  margin: calc(-5 * var(--u));
   border: 1px solid #121718;
   border-radius: 6px;
   background: linear-gradient(135deg, #343b3e, #171e21);
   box-shadow: 0 0 0 2px #7b8486, inset 0 1px 0 #626b6e;
-  font-size: 10px;
+  font-size: max(9px, calc(10 * var(--u)));
   font-weight: 700;
 }
 
 .nokia1280__numbers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
+  gap: calc(5 * var(--u));
   padding: 1px 1px 0;
 }
 
 .nokia1280__number {
   display: flex;
-  height: 44px;
+  height: calc(44 * var(--u));
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: calc(7 * var(--u));
   border-radius: 5px 5px 12px 12px / 5px 5px 9px 9px;
 }
 
 .nokia1280__digit {
-  font-size: 22px;
+  font-size: calc(22 * var(--u));
   font-weight: 400;
   line-height: 1;
 }
 
 .nokia1280__letters {
-  min-width: 21px;
+  min-width: calc(21 * var(--u));
   color: #d3d8da;
-  font-size: 9px;
+  font-size: max(7px, calc(9 * var(--u)));
   line-height: 1;
   letter-spacing: .4px;
 }
@@ -223,8 +258,8 @@
 .nokia1280__number:nth-child(5)::after {
   content: '';
   position: absolute;
-  bottom: 5px;
-  width: 11px;
+  bottom: calc(5 * var(--u));
+  width: calc(11 * var(--u));
   height: 2px;
   border-radius: 2px;
   background: #b1b9bb;
@@ -249,10 +284,10 @@
 
 .nokia1280__bottom {
   display: flex;
-  height: 14px;
+  height: calc(14 * var(--u));
   align-items: flex-end;
   justify-content: center;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .nokia1280__bottom span {
@@ -265,6 +300,6 @@
 
 @media (max-width: 360px) {
   .nokia1280 { padding-right: 14px; padding-left: 14px; }
-  .nokia1280__controls { grid-template-columns: 1fr 86px 1fr; gap: 6px; }
-  .nokia1280__number { gap: 4px; }
+  .nokia1280__controls { grid-template-columns: 1fr calc(86 * var(--u)) 1fr; gap: calc(6 * var(--u)); }
+  .nokia1280__number { gap: calc(4 * var(--u)); }
 }

@@ -3,25 +3,25 @@ import UserNav from './UserNav';
 ---
 
 <header class="sticky top-0 z-40 bg-arcade-950/90 backdrop-blur-md border-b border-arcade-800">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16 gap-2 sm:gap-4">
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-3 group flex-shrink-0">
-        <div class="w-10 h-10 rounded bg-arcade-800 border-2 border-neon-cyan flex items-center justify-center shadow-neon-cyan group-hover:scale-105 transition-transform">
-          <span class="text-xl">🕹️</span>
+      <a href="/" class="flex items-center gap-2 sm:gap-3 group flex-shrink-0 min-w-0">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded bg-arcade-800 border-2 border-neon-cyan flex items-center justify-center shadow-neon-cyan group-hover:scale-105 transition-transform flex-shrink-0">
+          <span class="text-lg sm:text-xl">🕹️</span>
         </div>
-        <div>
-          <span class="font-extrabold text-sm sm:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-neon-yellow to-neon-pink text-glow-cyan">
+        <div class="min-w-0">
+          <span class="block whitespace-nowrap font-extrabold text-sm sm:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-neon-yellow to-neon-pink text-glow-cyan">
             GAME TUỔI THƠ
           </span>
-          <span class="block text-[10px] text-neon-cyan/70 font-mono tracking-widest uppercase">
+          <span class="hidden min-[400px]:block text-[10px] text-neon-cyan/70 font-mono tracking-widest uppercase whitespace-nowrap">
             J2ME Retro Platform
           </span>
         </div>
       </a>
 
       <!-- Navigation links -->
-      <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+      <nav class="hidden lg:flex items-center gap-4 xl:gap-6 text-sm font-medium whitespace-nowrap">
         <a href="/" class="text-slate-300 hover:text-neon-cyan transition-colors">
           Trang chủ
         </a>
@@ -38,13 +38,13 @@ import UserNav from './UserNav';
       </nav>
 
       <!-- Search bar & User Account -->
-      <div class="flex items-center gap-4">
-        <form action="/games" method="GET" class="hidden sm:block relative">
+      <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <form action="/games" method="GET" class="hidden xl:block relative">
           <input
             type="text"
             name="search"
             placeholder="Tìm game, thể loại..."
-            class="w-48 lg:w-64 bg-arcade-800/80 border border-arcade-700 focus:border-neon-cyan rounded-full px-4 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:outline-none transition-all focus:w-72"
+            class="w-52 2xl:w-64 bg-arcade-800/80 border border-arcade-700 focus:border-neon-cyan rounded-full px-4 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:outline-none transition-all"
           />
           <button type="submit" class="absolute right-3 top-2 text-slate-400 hover:text-neon-cyan text-xs">
             🔍
@@ -52,7 +52,68 @@ import UserNav from './UserNav';
         </form>
 
         <UserNav client:load />
+
+        <button
+          type="button"
+          id="site-menu-toggle"
+          class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg border border-arcade-700 bg-arcade-800 text-slate-200 hover:border-neon-cyan hover:text-neon-cyan transition-colors"
+          aria-label="Mở menu"
+          aria-expanded="false"
+          aria-controls="site-menu"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
+
+  <!-- Mobile / tablet menu -->
+  <div id="site-menu" class="hidden lg:hidden border-t border-arcade-800 bg-arcade-950/95 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 space-y-3">
+      <form action="/games" method="GET" class="relative">
+        <input
+          type="text"
+          name="search"
+          placeholder="Tìm game, thể loại..."
+          class="w-full bg-arcade-800/80 border border-arcade-700 focus:border-neon-cyan rounded-full pl-4 pr-11 py-2.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
+        />
+        <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-neon-cyan" aria-label="Tìm kiếm">
+          🔍
+        </button>
+      </form>
+      <nav class="grid grid-cols-2 gap-2 text-sm font-medium">
+        <a href="/" class="flex items-center min-h-[44px] px-3 rounded-lg bg-arcade-800/60 text-slate-200 hover:text-neon-cyan">Trang chủ</a>
+        <a href="/games" class="flex items-center min-h-[44px] px-3 rounded-lg bg-arcade-800/60 text-slate-200 hover:text-neon-cyan">Kho Game</a>
+        <a href="/me/imports" class="flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg bg-arcade-800/60 text-slate-200 hover:text-neon-yellow">
+          <span>Tải lên JAR</span>
+          <span class="text-[10px] bg-neon-yellow/20 text-neon-yellow px-1.5 rounded font-mono">FREE</span>
+        </a>
+        <a href="/me/library" class="flex items-center min-h-[44px] px-3 rounded-lg bg-arcade-800/60 text-slate-200 hover:text-neon-cyan">Thư viện của tôi</a>
+      </nav>
+    </div>
+  </div>
 </header>
+
+<script>
+  const toggle = document.getElementById('site-menu-toggle');
+  const menu = document.getElementById('site-menu');
+  if (toggle && menu) {
+    const setOpen = (open: boolean) => {
+      menu.classList.toggle('hidden', !open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Đóng menu' : 'Mở menu');
+    };
+    toggle.addEventListener('click', () => setOpen(menu.classList.contains('hidden')));
+    menu.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  }
+</script>

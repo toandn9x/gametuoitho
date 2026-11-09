@@ -19,8 +19,11 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
     <meta name="robots" content="noindex, nofollow" />
   </head>
   <body class="bg-arcade-950 text-slate-100 min-h-screen flex">
-    <!-- Admin Sidebar -->
-    <aside class="w-64 bg-arcade-900 border-r border-arcade-800 flex flex-col justify-between hidden md:flex">
+    <!-- Backdrop for the mobile admin menu -->
+    <div id="admin-menu-backdrop" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden" aria-hidden="true"></div>
+
+    <!-- Admin Sidebar (static on md+, slide-in drawer on small screens) -->
+    <aside id="admin-sidebar" class="w-64 max-w-[85vw] bg-arcade-900 border-r border-arcade-800 flex flex-col justify-between overflow-y-auto hidden md:flex md:static md:max-w-none md:shadow-none md:flex-shrink-0">
       <div>
         <!-- Admin header -->
         <div class="h-16 px-6 border-b border-arcade-800 flex items-center gap-3">
@@ -144,24 +147,62 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
     </aside>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
       <!-- Top header bar -->
-      <header class="h-16 bg-arcade-900 border-b border-arcade-800 px-6 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <a href="/" class="md:hidden text-neon-cyan font-bold text-sm">← Về trang chủ</a>
-          <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">{title}</h2>
+      <header class="h-14 sm:h-16 bg-arcade-900 border-b border-arcade-800 px-3 sm:px-6 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button
+            type="button"
+            id="admin-menu-toggle"
+            class="md:hidden flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg border border-arcade-700 bg-arcade-800 text-slate-200 hover:border-neon-pink hover:text-neon-pink transition-colors"
+            aria-label="Mở menu quản trị"
+            aria-expanded="false"
+            aria-controls="admin-sidebar"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <h2 class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider truncate" title={title}>{title}</h2>
         </div>
 
-        <div class="flex items-center gap-3">
-          <span class="w-2 h-2 rounded-full bg-neon-green"></span>
-          <span class="text-xs font-mono text-slate-400">ADMIN MODE</span>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <a href="/" class="md:hidden text-neon-cyan font-bold text-xs whitespace-nowrap py-2">← Trang chủ</a>
+          <span class="hidden sm:inline-block w-2 h-2 rounded-full bg-neon-green"></span>
+          <span class="hidden sm:inline text-xs font-mono text-slate-400">ADMIN MODE</span>
         </div>
       </header>
 
       <!-- Content slot -->
-      <main class="flex-1 overflow-y-auto p-6 bg-arcade-950">
+      <main class="flex-1 overflow-y-auto p-3 sm:p-6 bg-arcade-950">
         <slot />
       </main>
     </div>
+    <script>
+      const sidebar = document.getElementById('admin-sidebar');
+      const toggle = document.getElementById('admin-menu-toggle');
+      const backdrop = document.getElementById('admin-menu-backdrop');
+      if (sidebar && toggle && backdrop) {
+        const DRAWER = ['fixed', 'inset-y-0', 'left-0', 'z-50', 'shadow-2xl'];
+        const setOpen = (open: boolean) => {
+          sidebar.classList.toggle('hidden', !open);
+          DRAWER.forEach((c) => sidebar.classList.toggle(c, open));
+          backdrop.classList.toggle('hidden', !open);
+          toggle.setAttribute('aria-expanded', String(open));
+          toggle.setAttribute('aria-label', open ? 'Đóng menu quản trị' : 'Mở menu quản trị');
+        };
+        toggle.addEventListener('click', () => setOpen(sidebar.classList.contains('hidden')));
+        backdrop.addEventListener('click', () => setOpen(false));
+        sidebar.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('a') && window.matchMedia('(max-width: 767px)').matches) setOpen(false);
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !backdrop.classList.contains('hidden')) {
+            setOpen(false);
+            toggle.focus();
+          }
+        });
+      }
+    </script>
   </body>
 </html>

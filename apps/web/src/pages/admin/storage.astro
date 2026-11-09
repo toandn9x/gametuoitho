@@ -7,7 +7,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
       <div>
-        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-100 flex items-center gap-2">
           <span>🧹</span>
           <span>Quản Lý & Dọn Dẹp Dung Lượng Lưu Trữ</span>
         </h2>
@@ -134,7 +134,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
               <tr>
                 <th class="w-10 px-3 py-3 text-center">
-                  <input type="checkbox" id="check-all-assets" class="rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer" title="Chọn tất cả" />
+                  <input type="checkbox" id="check-all-assets" class="w-5 h-5 sm:w-4 sm:h-4 rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer" title="Chọn tất cả" />
                 </th>
                 <th class="px-4 py-3 whitespace-nowrap">Loại Asset</th>
                 <th class="px-4 py-3">Storage Key (Đường Dẫn)</th>
@@ -318,7 +318,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         tdCheck.className = 'w-10 px-3 py-3 text-center';
         const chk = document.createElement('input');
         chk.type = 'checkbox';
-        chk.className = 'asset-row-checkbox rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer';
+        chk.className = 'asset-row-checkbox w-5 h-5 sm:w-4 sm:h-4 rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer';
         chk.checked = selectedAssets.has(a.id);
         chk.addEventListener('change', () => {
           if (chk.checked) {
@@ -362,13 +362,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           const link = document.createElement('a');
           link.href = candidateUrl;
           link.target = '_blank';
-          link.className = 'hover:text-neon-cyan hover:underline truncate block max-w-[200px] xl:max-w-xs';
+          link.className = 'hover:text-neon-cyan hover:underline truncate block max-w-[200px] 2xl:max-w-xs';
           link.title = a.storage_key || '';
           link.textContent = a.storage_key || '';
           tdKey.appendChild(link);
         } else {
           const spanUnsafe = document.createElement('span');
-          spanUnsafe.className = 'truncate block max-w-[200px] xl:max-w-xs';
+          spanUnsafe.className = 'truncate block max-w-[200px] 2xl:max-w-xs';
           spanUnsafe.textContent = a.storage_key || '';
           tdKey.appendChild(spanUnsafe);
         }
@@ -376,7 +376,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
         // 3. Tên File Gốc (original_filename)
         const tdFile = document.createElement('td');
-        tdFile.className = 'px-4 py-3 text-slate-200 font-medium max-w-[160px] xl:max-w-[220px] truncate';
+        tdFile.className = 'px-4 py-3 text-slate-200 font-medium max-w-[160px] 2xl:max-w-[220px] truncate';
         tdFile.title = a.original_filename || '';
         tdFile.textContent = a.original_filename || '';
         tr.appendChild(tdFile);

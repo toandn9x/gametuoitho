@@ -29,7 +29,7 @@ export default function CategoryList({ initialCategories = [] }: CategoryListPro
   if (categories.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-2 sm:pb-4">
       {categories.map((cat) => (
         <a
           key={cat.id}

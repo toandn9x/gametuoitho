@@ -23,16 +23,16 @@ export default function UserNav() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 sm:gap-3">
         <a
           href="/login"
-          className="text-sm px-3 py-1.5 text-slate-300 hover:text-neon-cyan transition-colors"
+          className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 py-2 sm:py-1.5 text-slate-300 hover:text-neon-cyan transition-colors"
         >
           Đăng nhập
         </a>
         <a
           href="/register"
-          className="text-sm px-4 py-1.5 bg-neon-cyan text-arcade-950 font-bold rounded hover:bg-neon-yellow transition-all shadow-neon-cyan"
+          className="hidden min-[400px]:inline-block whitespace-nowrap text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-1.5 bg-neon-cyan text-arcade-950 font-bold rounded hover:bg-neon-yellow transition-all shadow-neon-cyan"
         >
           Đăng ký
         </a>
@@ -44,12 +44,14 @@ export default function UserNav() {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-arcade-800 border border-neon-cyan/40 rounded hover:border-neon-cyan text-sm transition-all"
+        className="flex items-center gap-2 h-10 sm:h-auto px-2.5 sm:px-3 py-1.5 bg-arcade-800 border border-neon-cyan/40 rounded hover:border-neon-cyan text-sm transition-all"
+        aria-expanded={open}
+        title={user.username}
       >
-        <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-        <span className="font-semibold text-slate-200">{user.username}</span>
+        <span className="w-2 h-2 flex-shrink-0 rounded-full bg-neon-green animate-pulse" />
+        <span className="font-semibold text-slate-200 truncate max-w-[5.5rem] sm:max-w-[10rem]">{user.username}</span>
         {user.role === 'ADMIN' && (
-          <span className="text-[10px] bg-neon-pink/20 text-neon-pink border border-neon-pink/40 px-1.5 py-0.5 rounded font-mono font-bold">
+          <span className="hidden sm:inline text-[10px] bg-neon-pink/20 text-neon-pink border border-neon-pink/40 px-1.5 py-0.5 rounded font-mono font-bold">
             ADMIN
           </span>
         )}

@@ -7,7 +7,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     <!-- Header with Action Buttons -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
       <div>
-        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-100 flex items-center gap-2">
           <span>🎮</span>
           <span>Danh Sách Game Trong Catalog</span>
         </h2>
@@ -133,24 +133,24 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     <!-- Games Table Container -->
     <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
+        <table class="w-full min-w-[860px] text-left text-xs">
           <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
             <tr>
-              <th class="w-12 px-4 py-4 text-center">
+              <th class="w-10 px-3 py-4 text-center">
                 <input
                   type="checkbox"
                   id="select-all-header"
                   title="Chọn tất cả game trên trang"
-                  class="w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
+                  class="w-5 h-5 sm:w-4 sm:h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
                 />
               </th>
-              <th class="px-6 py-4">Tên Game</th>
+              <th class="px-3 xl:px-5 py-4">Tên Game</th>
               <th class="px-4 py-4 text-center">Ưa thích</th>
-              <th class="px-6 py-4">Thể Loại</th>
-              <th class="px-6 py-4">Nhà Phát Triển</th>
-              <th class="px-6 py-4">Trạng Thái</th>
-              <th class="px-6 py-4">Hiển Thị</th>
-              <th class="px-6 py-4 text-right">Thao Tác</th>
+              <th class="px-3 xl:px-5 py-4">Thể Loại</th>
+              <th class="px-3 xl:px-5 py-4">Nhà Phát Triển</th>
+              <th class="px-3 xl:px-5 py-4">Trạng Thái</th>
+              <th class="px-3 xl:px-5 py-4">Hiển Thị</th>
+              <th class="px-3 xl:px-5 py-4 text-right">Thao Tác</th>
             </tr>
           </thead>
           <tbody id="games-table-body" class="divide-y divide-arcade-800 text-slate-300">
@@ -530,23 +530,23 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
         // 1. Checkbox td
         const tdCb = document.createElement('td');
-        tdCb.className = 'w-12 px-4 py-4 text-center';
+        tdCb.className = 'w-10 px-3 py-4 text-center';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.dataset.id = game.id;
-        cb.className = 'game-checkbox w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer';
+        cb.className = 'game-checkbox w-5 h-5 sm:w-4 sm:h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer';
         if (selectedGameIds.has(game.id)) cb.checked = true;
         tdCb.appendChild(cb);
         tr.appendChild(tdCb);
 
         // 2. Game Info (Icon, Name, Slug)
         const tdName = document.createElement('td');
-        tdName.className = 'px-6 py-4';
+        tdName.className = 'px-3 xl:px-5 py-4';
         const flexBox = document.createElement('div');
-        flexBox.className = 'flex items-center gap-3';
+        flexBox.className = 'flex items-center gap-2.5 min-w-0';
 
         const iconContainer = document.createElement('div');
-        iconContainer.className = 'w-10 h-10 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700';
+        iconContainer.className = 'w-9 h-9 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700';
         if (game.cover_url) {
           const img = document.createElement('img');
           img.src = game.cover_url;
@@ -562,11 +562,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         flexBox.appendChild(iconContainer);
 
         const titleBox = document.createElement('div');
+        titleBox.className = 'min-w-0';
         const nameSpan = document.createElement('span');
         nameSpan.className = 'font-bold text-slate-100 block';
         nameSpan.textContent = game.name;
         const slugSpan = document.createElement('span');
-        slugSpan.className = 'text-[10px] text-slate-500 font-mono';
+        slugSpan.className = 'block max-w-[12rem] truncate text-[10px] text-slate-500 font-mono';
+        slugSpan.title = `/game/${game.slug}`;
         slugSpan.textContent = `/game/${game.slug}`;
         titleBox.appendChild(nameSpan);
         titleBox.appendChild(slugSpan);
@@ -576,7 +578,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
         // 3. Homepage Game ưa thích
         const tdFeatured = document.createElement('td');
-        tdFeatured.className = 'px-4 py-4 text-center';
+        tdFeatured.className = 'px-3 py-4 text-center';
         const featuredBtn = document.createElement('button');
         featuredBtn.type = 'button';
         featuredBtn.dataset.id = game.id;
@@ -623,19 +625,19 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
         // 4. Category
         const tdCat = document.createElement('td');
-        tdCat.className = 'px-6 py-4 font-medium text-slate-300';
+        tdCat.className = 'px-3 xl:px-5 py-4 font-medium text-slate-300';
         tdCat.textContent = game.category_name || 'N/A';
         tr.appendChild(tdCat);
 
         // 5. Developer / Year
         const tdDev = document.createElement('td');
-        tdDev.className = 'px-6 py-4 text-slate-400';
+        tdDev.className = 'px-3 xl:px-5 py-4 text-slate-400';
         tdDev.textContent = `${game.developer || 'N/A'} (${game.release_year || 'N/A'})`;
         tr.appendChild(tdDev);
 
         // 6. Status Badge
         const tdStatus = document.createElement('td');
-        tdStatus.className = 'px-6 py-4';
+        tdStatus.className = 'px-3 xl:px-5 py-4';
         const statusBadge = document.createElement('span');
         statusBadge.textContent = game.status;
         if (isPublished) {
@@ -650,17 +652,17 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
         // 7. Visibility
         const tdVis = document.createElement('td');
-        tdVis.className = 'px-6 py-4 font-mono text-[10px] text-slate-400';
+        tdVis.className = 'px-3 xl:px-5 py-4 font-mono text-[10px] text-slate-400';
         tdVis.textContent = game.visibility;
         tr.appendChild(tdVis);
 
         // 8. Actions
         const tdActions = document.createElement('td');
-        tdActions.className = 'px-6 py-4 text-right space-x-1.5';
+        tdActions.className = 'px-3 xl:px-5 py-4 text-right space-x-1 whitespace-nowrap';
 
         const editBtn = document.createElement('button');
         editBtn.dataset.id = game.id;
-        editBtn.className = 'edit-game-btn px-2.5 py-1 bg-arcade-750 hover:bg-neon-cyan/20 text-slate-200 hover:text-neon-cyan border border-arcade-600 hover:border-neon-cyan/50 rounded text-xs font-bold transition-all';
+        editBtn.className = 'edit-game-btn px-1.5 2xl:px-2 py-1 bg-arcade-750 hover:bg-neon-cyan/20 text-slate-200 hover:text-neon-cyan border border-arcade-600 hover:border-neon-cyan/50 rounded text-xs font-bold transition-all';
         editBtn.title = 'Chỉnh sửa thông tin game';
         editBtn.textContent = '✏️ Sửa';
         tdActions.appendChild(editBtn);
@@ -668,7 +670,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         const uploadJarBtn = document.createElement('button');
         uploadJarBtn.dataset.id = game.id;
         uploadJarBtn.dataset.name = game.name;
-        uploadJarBtn.className = 'upload-jar-btn px-2.5 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-xs font-bold transition-all';
+        uploadJarBtn.className = 'upload-jar-btn px-1.5 2xl:px-2 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-xs font-bold transition-all';
         uploadJarBtn.title = 'Tải file .JAR lên cho game này để chạy giả lập';
         uploadJarBtn.textContent = '+ Nạp JAR';
         tdActions.appendChild(uploadJarBtn);
@@ -676,7 +678,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         const testLink = document.createElement('a');
         testLink.href = `/play/${encodeURIComponent(game.slug)}`;
         testLink.target = '_blank';
-        testLink.className = 'px-2.5 py-1 bg-arcade-800 text-slate-200 border border-arcade-700 hover:border-neon-cyan hover:text-neon-cyan rounded text-xs font-bold transition-all';
+        testLink.className = 'px-1.5 2xl:px-2 py-1 bg-arcade-800 text-slate-200 border border-arcade-700 hover:border-neon-cyan hover:text-neon-cyan rounded text-xs font-bold transition-all';
         testLink.title = 'Kiểm thử chạy game trong Web Emulator';
         testLink.textContent = 'Test ▶';
         tdActions.appendChild(testLink);
@@ -684,13 +686,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         if (!isPublished) {
           const publishBtn = document.createElement('button');
           publishBtn.dataset.id = game.id;
-          publishBtn.className = 'publish-btn px-2.5 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-xs font-bold transition-all';
+          publishBtn.className = 'publish-btn px-1.5 2xl:px-2 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-xs font-bold transition-all';
           publishBtn.textContent = 'Xuất bản';
           tdActions.appendChild(publishBtn);
         } else {
           const hideBtn = document.createElement('button');
           hideBtn.dataset.id = game.id;
-          hideBtn.className = 'hide-btn px-2.5 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40 hover:bg-neon-yellow hover:text-arcade-950 rounded text-xs font-bold transition-all';
+          hideBtn.className = 'hide-btn px-1.5 2xl:px-2 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40 hover:bg-neon-yellow hover:text-arcade-950 rounded text-xs font-bold transition-all';
           hideBtn.textContent = 'Ẩn';
           tdActions.appendChild(hideBtn);
         }
@@ -698,7 +700,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         const deleteBtn = document.createElement('button');
         deleteBtn.dataset.id = game.id;
         deleteBtn.dataset.name = game.name;
-        deleteBtn.className = 'delete-btn px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all';
+        deleteBtn.className = 'delete-btn px-1.5 2xl:px-2 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all';
         deleteBtn.textContent = 'Xóa';
         tdActions.appendChild(deleteBtn);
 

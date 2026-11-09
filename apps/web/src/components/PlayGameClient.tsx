@@ -100,15 +100,15 @@ export default function PlayGameClient({ slug, initialGame, initialVersions }: P
   const jarUrl = activeVersion?.jar_url || '';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
       {/* Breadcrumb & Back */}
-      <div className="flex items-center justify-between pb-4 border-b border-arcade-800 mb-6">
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+      <div className="flex items-center justify-between gap-3 pb-2 sm:pb-3 border-b border-arcade-800 mb-3 sm:mb-4">
+        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400 min-w-0 whitespace-nowrap">
           <a href="/" className="hover:text-neon-cyan">
             Trang chủ
           </a>
           <span>/</span>
-          <a href={`/game/${game.slug}`} className="hover:text-neon-cyan">
+          <a href={`/game/${game.slug}`} className="hover:text-neon-cyan truncate max-w-[16rem]" title={game.name}>
             {game.name}
           </a>
           <span>/</span>
@@ -117,7 +117,7 @@ export default function PlayGameClient({ slug, initialGame, initialVersions }: P
 
         <a
           href={`/game/${game.slug}`}
-          className="text-xs text-slate-400 hover:text-neon-cyan flex items-center gap-1 transition-colors"
+          className="py-1 text-xs text-slate-400 hover:text-neon-cyan flex items-center gap-1 transition-colors whitespace-nowrap flex-shrink-0"
         >
           <span>← Quay lại chi tiết game</span>
         </a>

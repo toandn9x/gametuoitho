@@ -164,54 +164,67 @@ export default function EmulatorPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative flex flex-col items-center justify-center p-4 transition-all ${
-        isFullscreen ? 'bg-black w-screen h-screen' : 'w-full'
+      className={`relative flex flex-col items-center transition-all ${
+        isFullscreen
+          ? 'bg-black w-screen h-screen justify-center p-4'
+          : 'w-full justify-center p-1 sm:p-4 lg:p-0 lg:flex-row lg:items-start lg:gap-8'
       }`}
     >
+      {/* Side panel: toolbar, error banner and key guide. On small screens its children flow
+          around the player (display: contents + order); on laptops it becomes a right-hand column. */}
+      <div
+        className={
+          isFullscreen
+            ? 'contents'
+            : 'contents lg:flex lg:flex-col lg:order-2 lg:w-[380px] lg:flex-shrink-0'
+        }
+      >
       {/* Top Toolbar */}
       {!isFullscreen && (
-        <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 mb-4 bg-arcade-900/90 border border-arcade-800 p-3 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-neon-green animate-pulse" />
-            <span className="font-bold text-sm text-slate-200 truncate">{effectiveGameName}</span>
+        <div className="order-1 w-full max-w-4xl flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 sm:mb-4 bg-arcade-900/90 border border-arcade-800 p-2.5 sm:p-3 rounded-2xl">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <span className="w-2.5 h-2.5 flex-shrink-0 rounded-full bg-neon-green animate-pulse" />
+            <span className="font-bold text-sm text-slate-200 truncate" title={effectiveGameName}>{effectiveGameName}</span>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            {/* Skin Selector */}
-            <div className="flex w-full max-w-full items-center bg-arcade-800 rounded-lg p-0.5 text-[10px] sm:text-xs font-mono sm:w-auto">
-              <button
-                onClick={() => setSkin('nokia')}
-                className={`whitespace-nowrap px-2 sm:px-3 py-1 rounded transition-colors ${
-                  skin === 'nokia' ? 'bg-neon-cyan text-arcade-950 font-bold' : 'text-slate-400'
-                }`}
-              >
-                📱 Nokia 1280
-              </button>
-              <button
-                onClick={() => setSkin('arcade')}
-                className={`whitespace-nowrap px-2 sm:px-3 py-1 rounded transition-colors ${
-                  skin === 'arcade' ? 'bg-neon-pink text-white font-bold' : 'text-slate-400'
-                }`}
-              >
-                🕹️ Arcade
-              </button>
-              <button
-                onClick={() => setSkin('clean')}
-                className={`whitespace-nowrap px-2 sm:px-3 py-1 rounded transition-colors ${
-                  skin === 'clean' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'
-                }`}
-              >
-                🖥️ Màn hình rộng
-              </button>
-            </div>
+          {/* Skin Selector */}
+          <div className="order-3 sm:order-2 lg:order-3 flex w-full sm:w-auto lg:w-full items-center bg-arcade-800 rounded-lg p-0.5 text-[11px] sm:text-xs font-mono">
+            <button
+              onClick={() => setSkin('nokia')}
+              className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
+                skin === 'nokia' ? 'bg-neon-cyan text-arcade-950 font-bold' : 'text-slate-400'
+              }`}
+            >
+              📱 Nokia 1280
+            </button>
+            <button
+              onClick={() => setSkin('arcade')}
+              className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
+                skin === 'arcade' ? 'bg-neon-pink text-white font-bold' : 'text-slate-400'
+              }`}
+            >
+              🕹️ Arcade
+            </button>
+            <button
+              onClick={() => setSkin('clean')}
+              className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
+                skin === 'clean' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'
+              }`}
+            >
+              🖥️ Màn hình rộng
+            </button>
+          </div>
 
+          <div className="order-2 sm:order-3 lg:order-2 flex items-center gap-2 flex-shrink-0">
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 bg-arcade-800 hover:bg-arcade-700 border border-arcade-700 rounded-lg text-xs font-bold text-slate-300 hover:text-neon-cyan transition-all flex items-center gap-1"
+              className="h-9 sm:h-auto px-3 py-1.5 bg-arcade-800 hover:bg-arcade-700 border border-arcade-700 rounded-lg text-xs font-bold text-slate-300 hover:text-neon-cyan transition-all flex items-center gap-1"
+              aria-label="Toàn màn hình"
+              title="Toàn màn hình"
             >
-              <span>⛶</span>
-              <span>Toàn màn hình</span>
+              <span aria-hidden="true">⛶</span>
+              <span className="hidden sm:inline">Toàn màn hình</span>
             </button>
 
             {/* Report Bug / Crash Button */}
@@ -220,10 +233,11 @@ export default function EmulatorPlayer({
                 setShowReportModal(true);
                 setReportSuccessMsg(null);
               }}
-              className="px-3 py-1.5 bg-arcade-800 hover:bg-red-500/20 border border-arcade-700 hover:border-red-500/50 rounded-lg text-xs font-bold text-slate-300 hover:text-red-400 transition-all flex items-center gap-1"
+              className="h-9 sm:h-auto px-3 py-1.5 bg-arcade-800 hover:bg-red-500/20 border border-arcade-700 hover:border-red-500/50 rounded-lg text-xs font-bold text-slate-300 hover:text-red-400 transition-all flex items-center gap-1"
+              aria-label="Báo lỗi"
               title="Báo cáo game không chạy được, bị văng hoặc lỗi hiển thị"
             >
-              <span>🚨</span>
+              <span aria-hidden="true">🚨</span>
               <span>Báo Lỗi</span>
             </button>
           </div>
@@ -232,7 +246,7 @@ export default function EmulatorPlayer({
 
       {/* Emulator Error Alert Banner */}
       {emulatorError && (
-        <div className="w-full max-w-4xl mb-4 p-4 bg-red-950/90 border-2 border-red-500 rounded-2xl flex flex-wrap items-center justify-between gap-4 text-red-200 shadow-lg animate-fadeIn">
+        <div className="order-2 w-full max-w-4xl mb-4 p-4 bg-red-950/90 border-2 border-red-500 rounded-2xl flex flex-wrap items-center justify-between gap-4 text-red-200 shadow-lg animate-fadeIn">
           <div className="flex items-center gap-3">
             <span className="text-2xl">⚠️</span>
             <div>
@@ -268,6 +282,53 @@ export default function EmulatorPlayer({
           </div>
         </div>
       )}
+
+      {/* Keyboard Controls Guide */}
+      {!isFullscreen && (
+        <div className="order-4 w-full max-w-4xl mt-4 sm:mt-6 lg:mt-0 bg-arcade-900/80 border border-arcade-800 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base">⌨️</span>
+              <h3 className="font-bold text-sm text-slate-200">Hướng dẫn phím điều khiển trên bàn phím</h3>
+            </div>
+            <button
+              onClick={() => setShowKeyGuide((v) => !v)}
+              className="flex-shrink-0 whitespace-nowrap px-2 py-1.5 text-xs text-neon-cyan hover:underline md:hidden"
+            >
+              {showKeyGuide ? 'Thu gọn ▲' : 'Xem chi tiết ▼'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mb-3">
+            <strong className="text-neon-cyan">{KEYBOARD_HINT_MESSAGE}</strong>. {DEFAULT_KEYS_NOTE}
+          </p>
+
+          <div className={`${showKeyGuide ? 'block' : 'hidden md:block'} overflow-x-auto`}>
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-arcade-800 text-slate-400 font-mono">
+                  <th className="py-2 px-2 sm:px-3 font-semibold">Phím trên bàn phím</th>
+                  <th className="py-2 px-2 sm:px-3 font-semibold">Chức năng</th>
+                  <th className="py-2 px-2 sm:px-3 font-semibold">Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-arcade-800/60 font-mono text-slate-300">
+                {DEFAULT_KEY_MAPPINGS.map((item) => (
+                  <tr key={item.key} className="hover:bg-arcade-800/40">
+                    <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
+                      <kbd className="px-2 py-0.5 bg-arcade-800 border border-arcade-700 rounded text-neon-cyan font-bold">
+                        {item.key}
+                      </kbd>
+                    </td>
+                    <td className="py-2 px-2 sm:px-3 font-bold text-slate-200">{item.action}</td>
+                    <td className="py-2 px-2 sm:px-3 text-slate-400">{item.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      </div>
 
       {/* User Crash / Bug Report Modal */}
       {showReportModal && (
@@ -378,7 +439,7 @@ export default function EmulatorPlayer({
 
       {/* Screen Presentation according to Skin */}
       {skin === 'nokia' ? (
-        <div className="nokia1280" role="group" aria-label="Điện thoại Nokia 1280">
+        <div className="nokia1280 order-3 lg:order-1" role="group" aria-label="Điện thoại Nokia 1280">
           <div className="nokia1280__top" aria-hidden="true">
             <div className="nokia1280__speaker" />
             <span className="nokia1280__brand">NOKIA</span>
@@ -466,7 +527,7 @@ export default function EmulatorPlayer({
           <div className="nokia1280__bottom" aria-hidden="true"><span /><span /><span /></div>
         </div>
       ) : skin === 'arcade' ? (
-        <div className="relative w-full max-w-2xl bg-arcade-900 border-4 border-neon-pink rounded-3xl p-6 shadow-neon-pink">
+        <div className="order-3 lg:order-1 relative w-full max-w-2xl lg:max-w-[min(42rem,calc((100dvh_-_220px)*4/3_+_56px))] lg:min-w-0 lg:flex-1 bg-arcade-900 border-4 border-neon-pink rounded-3xl p-3 sm:p-6 shadow-neon-pink">
           <div className="aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border-2 border-neon-cyan shadow-inner">
             <iframe
               ref={iframeRef}
@@ -479,7 +540,7 @@ export default function EmulatorPlayer({
           </div>
         </div>
       ) : (
-        <div className="relative w-full max-w-3xl aspect-[4/3] bg-black border border-arcade-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="order-3 lg:order-1 relative w-full max-w-3xl lg:max-w-[min(48rem,calc((100dvh_-_170px)*4/3))] lg:min-w-0 lg:flex-1 aspect-[4/3] bg-black border border-arcade-800 rounded-2xl overflow-hidden shadow-2xl">
           <iframe
             ref={iframeRef}
             onLoad={handleEmulatorLoad}
@@ -488,159 +549,6 @@ export default function EmulatorPlayer({
             sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
             title={effectiveGameName}
           />
-        </div>
-      )}
-
-      {/* Keyboard Controls Guide */}
-      {!isFullscreen && (
-        <div className="w-full max-w-4xl mt-6 bg-arcade-900/80 border border-arcade-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-base">⌨️</span>
-              <h3 className="font-bold text-sm text-slate-200">Hướng dẫn phím điều khiển trên bàn phím</h3>
-            </div>
-            <button
-              onClick={() => setShowKeyGuide((v) => !v)}
-              className="text-xs text-neon-cyan hover:underline md:hidden"
-            >
-              {showKeyGuide ? 'Thu gọn ▲' : 'Xem chi tiết ▼'}
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 mb-3">
-            <strong className="text-neon-cyan">{KEYBOARD_HINT_MESSAGE}</strong>. {DEFAULT_KEYS_NOTE}
-          </p>
-
-          <div className={`${showKeyGuide ? 'block' : 'hidden md:block'} overflow-x-auto`}>
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-arcade-800 text-slate-400 font-mono">
-                  <th className="py-2 px-3 font-semibold">Phím trên bàn phím</th>
-                  <th className="py-2 px-3 font-semibold">Chức năng</th>
-                  <th className="py-2 px-3 font-semibold">Ghi chú</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-arcade-800/60 font-mono text-slate-300">
-                {DEFAULT_KEY_MAPPINGS.map((item) => (
-                  <tr key={item.key} className="hover:bg-arcade-800/40">
-                    <td className="py-2 px-3">
-                      <kbd className="px-2 py-0.5 bg-arcade-800 border border-arcade-700 rounded text-neon-cyan font-bold">
-                        {item.key}
-                      </kbd>
-                    </td>
-                    <td className="py-2 px-3 font-bold text-slate-200">{item.action}</td>
-                    <td className="py-2 px-3 text-slate-400">{item.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* User Crash / Bug Report Modal */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-arcade-900 border border-red-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-arcade-800 pb-3">
-              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                <span>🚨</span>
-                <span>Báo Cáo Sự Cố Game</span>
-              </h3>
-              <button
-                onClick={() => setShowReportModal(false)}
-                className="w-7 h-7 rounded-full bg-arcade-800 hover:bg-arcade-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-400">
-              Trò chơi: <strong className="text-neon-cyan">{effectiveGameName}</strong>
-            </p>
-
-            {reportSuccessMsg ? (
-              <div className="p-4 bg-neon-green/15 border border-neon-green/40 rounded-2xl text-neon-green text-xs font-bold text-center space-y-2">
-                <div>✓ {reportSuccessMsg}</div>
-                <button
-                  onClick={() => setShowReportModal(false)}
-                  className="px-4 py-1.5 bg-neon-green text-arcade-950 rounded-xl text-xs font-black"
-                >
-                  Đóng
-                </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setIsSendingReport(true);
-                  try {
-                    const response = await reportGameCrash({
-                      game_id: effectiveGameId || undefined,
-                      game_version_id: activeVersion?.id,
-                      game_name: effectiveGameName,
-                      game_slug: game?.slug || undefined,
-                      error_type: reportType,
-                      error_message: reportDetails || `Người chơi báo cáo sự cố (${reportType})`,
-                    });
-                    if (!response.success) throw new Error(response.error?.message || 'Không thể gửi báo cáo lỗi');
-                    setReportSuccessMsg('Đã gửi báo cáo lỗi thành công! Cảm ơn bạn đã phản hồi.');
-                  } catch (err: any) {
-                    alert(err.message || 'Lỗi gửi báo cáo');
-                  } finally {
-                    setIsSendingReport(false);
-                  }
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Vấn đề bạn đang gặp phải:
-                  </label>
-                  <select
-                    value={reportType}
-                    onChange={(e) => setReportType(e.target.value)}
-                    className="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none"
-                  >
-                    <option value="CRASH">Game bị văng / đứng hình khi đang chơi (CRASH)</option>
-                    <option value="LOAD_FAILED">Không tải được game hoặc màn hình đen</option>
-                    <option value="EMULATOR_ERROR">Lỗi âm thanh, hình ảnh bị vỡ</option>
-                    <option value="USER_REPORT">Bàn phím ảo không nhận diện phím</option>
-                    <option value="CORRUPT_JAR">File game bị lỗi / thiếu dữ liệu</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Mô tả chi tiết thêm (tuỳ chọn):
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={reportDetails}
-                    onChange={(e) => setReportDetails(e.target.value)}
-                    placeholder="Ví dụ: Vừa chơi qua màn 2 thì màn hình bị trắng xóa..."
-                    className="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowReportModal(false)}
-                    className="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 text-slate-300 rounded-xl text-xs font-bold"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSendingReport}
-                    className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg"
-                  >
-                    {isSendingReport ? 'Đang gửi...' : 'Gửi Báo Cáo'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
         </div>
       )}
     </div>

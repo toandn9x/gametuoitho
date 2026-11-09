@@ -36,7 +36,7 @@ export default function GameCard({ game }: GameCardProps) {
           <img
             src={game.cover_url}
             alt={game.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover [image-rendering:pixelated] group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
@@ -48,7 +48,7 @@ export default function GameCard({ game }: GameCardProps) {
 
         {/* Category tag */}
         {game.category_name && (
-          <span className="absolute top-2 left-2 bg-arcade-900/90 text-neon-yellow border border-neon-yellow/30 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm">
+          <span className="absolute top-2 left-2 max-w-[60%] truncate bg-arcade-900/90 text-neon-yellow border border-neon-yellow/30 text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded backdrop-blur-sm">
             {game.category_name}
           </span>
         )}
@@ -62,25 +62,25 @@ export default function GameCard({ game }: GameCardProps) {
       </a>
 
       {/* Content */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
-        <div>
+      <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between min-w-0">
+        <div className="min-w-0">
           <a href={`/game/${game.slug}`} className="block">
-            <h3 className="font-bold text-slate-100 group-hover:text-neon-cyan transition-colors line-clamp-1 text-base">
+            <h3 className="font-bold text-slate-100 group-hover:text-neon-cyan transition-colors line-clamp-2 sm:line-clamp-1 text-sm sm:text-base leading-snug">
               {game.name}
             </h3>
           </a>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-1 truncate">
             {game.developer || 'Nokia / J2ME'}
           </p>
           {game.description && (
-            <p className="text-xs text-slate-400/80 mt-2 line-clamp-2 leading-relaxed">
+            <p className="hidden sm:line-clamp-2 text-xs text-slate-400/80 mt-2 leading-relaxed">
               {game.description}
             </p>
           )}
         </div>
 
         {/* Actions */}
-        <div className="mt-4 pt-3 border-t border-arcade-700/50 flex items-center gap-2">
+        <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-arcade-700/50 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
           <a
             href={`/play/${game.slug}`}
             className="flex-1 text-center py-2 px-3 bg-neon-cyan text-arcade-950 font-bold text-xs rounded hover:bg-neon-yellow transition-all shadow-sm"
@@ -91,7 +91,7 @@ export default function GameCard({ game }: GameCardProps) {
             onClick={handleAddToLibrary}
             disabled={added || loading}
             title={added ? 'Đã có trong thư viện' : 'Lưu vào thư viện cá nhân'}
-            className={`px-3 py-2 border rounded text-xs transition-colors ${
+            className={`px-3 py-2 border rounded text-xs whitespace-nowrap transition-colors ${
               added
                 ? 'bg-neon-green/20 border-neon-green text-neon-green'
                 : 'border-arcade-600 hover:border-neon-cyan text-slate-300 hover:text-neon-cyan bg-arcade-700/50'

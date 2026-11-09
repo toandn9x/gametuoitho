@@ -36,7 +36,7 @@ export default function UserLibraryView() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 animate-pulse">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 animate-pulse">
         {[1, 2, 3].map((n) => (
           <div key={n} className="h-64 bg-arcade-850 rounded-2xl border border-arcade-800" />
         ))}
@@ -71,7 +71,7 @@ export default function UserLibraryView() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
       {items.map((item: any) => {
         const playUrl =
           item.source_type === 'CATALOG' && item.catalog_game_slug
@@ -83,8 +83,8 @@ export default function UserLibraryView() {
             key={item.id}
             className="bg-arcade-800/90 border border-arcade-700/80 rounded-2xl overflow-hidden hover:border-neon-cyan/60 transition-all flex flex-col justify-between"
           >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="p-3 sm:p-4 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-3">
                 <span
                   className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                     item.source_type === 'CATALOG'
@@ -99,17 +99,17 @@ export default function UserLibraryView() {
                 </span>
               </div>
 
-              <h3 className="font-bold text-slate-100 text-base line-clamp-1 mb-1">
+              <h3 className="font-bold text-slate-100 text-sm sm:text-base line-clamp-2 sm:line-clamp-1 mb-1 break-words">
                 {item.custom_name}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 {item.source_type === 'CATALOG'
                   ? 'Game từ hệ thống'
                   : `File: ${item.custom_original_filename || 'Custom JAR'}`}
               </p>
             </div>
 
-            <div className="p-4 pt-0 border-t border-arcade-700/40 flex items-center gap-2 mt-4">
+            <div className="p-3 sm:p-4 pt-3 sm:pt-0 border-t border-arcade-700/40 flex items-center gap-2 mt-2 sm:mt-4">
               <a
                 href={playUrl}
                 className="flex-1 py-2 text-center bg-neon-cyan text-arcade-950 font-bold text-xs rounded hover:bg-neon-yellow transition-all"
