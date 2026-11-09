@@ -1,0 +1,169 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Quản Lý Game Catalog" activeNav="games">
+  <div class="space-y-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
+      <div>
+        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+          <span>🎮</span>
+          <span>Danh Sách Game Trong Catalog</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          Quản lý xuất bản, chỉnh sửa metadata và kiểm thử game trước khi công khai
+        </p>
+      </div>
+
+      <a
+        href="/admin/games/create"
+        class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all shadow-neon-pink flex items-center gap-1.5"
+      >
+        <span>➕</span>
+        <span>Thêm Game Mới</span>
+      </a>
+    </div>
+
+    <!-- Games Table Container -->
+    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
+            <tr>
+              <th class="px-6 py-4">Tên Game</th>
+              <th class="px-6 py-4">Thể Loại</th>
+              <th class="px-6 py-4">Nhà Phát Triển</th>
+              <th class="px-6 py-4">Trạng Thái</th>
+              <th class="px-6 py-4">Hiển Thị</th>
+              <th class="px-6 py-4 text-right">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="games-table-body" class="divide-y divide-arcade-800 text-slate-300">
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
+                Đang tải dữ liệu...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getAdminGames, publishAdminGame, hideAdminGame, deleteAdminGame } from '../../../lib/api';
+
+    async function loadGames() {
+      const tbody = document.getElementById('games-table-body')!;
+      const res = await getAdminGames(1, 100);
+
+      if (!res.success || !res.data || res.data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
+              Chưa có game nào trong catalog. Bấm "Thêm Game Mới" để tạo.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = res.data
+        .map((game: any) => {
+          const isPublished = game.status === 'PUBLISHED';
+          const isDraft = game.status === 'DRAFT';
+          const isHidden = game.status === 'HIDDEN';
+
+          const statusBadge = isPublished
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40">PUBLISHED</span>'
+            : isDraft
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40">DRAFT</span>'
+            : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-400">HIDDEN</span>';
+
+          return `
+            <tr class="hover:bg-arcade-850/60 transition-colors">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700">
+                    ${game.cover_url ? `<img src="${game.cover_url}" class="w-full h-full object-cover" />` : '<span class="w-full h-full flex items-center justify-center text-sm">🎮</span>'}
+                  </div>
+                  <div>
+                    <span class="font-bold text-slate-100 block">${game.name}</span>
+                    <span class="text-[10px] text-slate-500 font-mono">/game/${game.slug}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 font-medium text-slate-300">
+                ${game.category_name || 'N/A'}
+              </td>
+              <td class="px-6 py-4 text-slate-400">
+                ${game.developer || 'N/A'} (${game.release_year || 'N/A'})
+              </td>
+              <td class="px-6 py-4">
+                ${statusBadge}
+              </td>
+              <td class="px-6 py-4 font-mono text-[10px] text-slate-400">
+                ${game.visibility}
+              </td>
+              <td class="px-6 py-4 text-right space-x-2">
+                <a
+                  href="/play/${game.slug}"
+                  target="_blank"
+                  class="px-2.5 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-xs font-bold transition-all"
+                  title="Kiểm thử chạy game trong Web Emulator"
+                >
+                  Test ▶
+                </a>
+                ${
+                  !isPublished
+                    ? `<button data-id="${game.id}" class="publish-btn px-2.5 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-xs font-bold transition-all">Xuất bản</button>`
+                    : `<button data-id="${game.id}" class="hide-btn px-2.5 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40 hover:bg-neon-yellow hover:text-arcade-950 rounded text-xs font-bold transition-all">Ẩn</button>`
+                }
+                <button data-id="${game.id}" data-name="${game.name}" class="delete-btn px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all">
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      // Attach event listeners
+      document.querySelectorAll('.publish-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+          try {
+            const res = await publishAdminGame(id);
+            if (res.success) {
+              loadGames();
+            } else {
+              alert(res.error?.message || 'Lỗi xuất bản: Game cần có ít nhất 1 phiên bản file JAR!');
+            }
+          } catch (err: any) {
+            alert(err.message);
+          }
+        });
+      });
+
+      document.querySelectorAll('.hide-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+          await hideAdminGame(id);
+          loadGames();
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+          const name = (e.currentTarget as HTMLElement).getAttribute('data-name')!;
+          if (!confirm(`Bạn có chắc chắn muốn xóa game "${name}" khỏi Catalog?`)) return;
+          await deleteAdminGame(id);
+          loadGames();
+        });
+      });
+    }
+
+    loadGames();
+  </script>
+</AdminLayout>

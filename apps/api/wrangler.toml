@@ -1,0 +1,18 @@
+name = "gametuoitho-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+JWT_SECRET = "super-secret-jwt-key-gametuoitho-prod"
+ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gametuoitho-d1"
+database_id = "gametuoitho-d1-prod-id"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "gametuoitho-assets"
+preview_bucket_name = "gametuoitho-assets-preview"

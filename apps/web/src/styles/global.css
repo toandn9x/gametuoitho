@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-arcade-900 text-slate-100 font-sans antialiased min-h-screen selection:bg-neon-pink selection:text-white;
+  }
+}
+
+/* Custom retro arcade scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1d1d2d;
+  border: 1px solid #00ffff;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ffff;
+}
+
+/* Glowing text helpers */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}
+
+.text-glow-pink {
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+}
+
+.text-glow-yellow {
+  text-shadow: 0 0 10px rgba(255, 230, 0, 0.6);
+}
+
+/* Retro CRT / Arcade scanlines overlay (subtle) */
+.scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+}

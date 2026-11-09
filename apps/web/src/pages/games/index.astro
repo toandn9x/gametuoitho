@@ -1,0 +1,159 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import GameCard from '../../components/GameCard';
+import { getGames, getCategories } from '../../lib/api';
+
+const search = Astro.url.searchParams.get('search') || '';
+const categorySlug = Astro.url.searchParams.get('category') || '';
+const sort = Astro.url.searchParams.get('sort') || 'newest';
+const page = Number(Astro.url.searchParams.get('page') || '1');
+
+const [gamesRes, catRes] = await Promise.all([
+  getGames({ search, categorySlug, sort, page, limit: 16 }),
+  getCategories(),
+]);
+
+const games = gamesRes.success && gamesRes.data ? gamesRes.data : [];
+const pagination = gamesRes.pagination || { page: 1, limit: 16, total: 0, totalPages: 1 };
+const categories = catRes.success && catRes.data ? catRes.data : [];
+---
+
+<Layout title="Kho Game Java ME (J2ME) Tuổi Thơ --- Danh Sách Đầy Đủ">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Header -->
+    <div class="border-b border-arcade-800 pb-8 mb-8">
+      <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
+        <span class="text-neon-cyan">🕹️</span>
+        <span>Kho Game Tuổi Thơ</span>
+      </h1>
+      <p class="text-slate-400 text-sm mt-2">
+        Duyệt và tìm kiếm hàng trăm tựa game Java Nokia huyền thoại sẵn sàng chơi ngay
+      </p>
+
+      <!-- Search & Filters Bar -->
+      <div class="mt-6 flex flex-col md:flex-row gap-4 justify-between items-center bg-arcade-900 p-4 rounded-2xl border border-arcade-800">
+        <!-- Search form -->
+        <form method="GET" class="w-full md:w-96 relative">
+          {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
+          {sort && <input type="hidden" name="sort" value={sort} />}
+          <input
+            type="text"
+            name="search"
+            value={search}
+            placeholder="Tìm theo tên game, nhà phát hành..."
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
+          />
+          <button type="submit" class="absolute right-3 top-2.5 text-slate-400 hover:text-neon-cyan">
+            🔍
+          </button>
+        </form>
+
+        <!-- Sorting -->
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end text-xs">
+          <span class="text-slate-400">Sắp xếp:</span>
+          <a
+            href={`/games?sort=newest${categorySlug ? `&category=${categorySlug}` : ''}${search ? `&search=${search}` : ''}`}
+            class={`px-3 py-1.5 rounded-lg border transition-all ${
+              sort === 'newest'
+                ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan font-bold'
+                : 'border-arcade-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Mới nhất
+          </a>
+          <a
+            href={`/games?sort=popular${categorySlug ? `&category=${categorySlug}` : ''}${search ? `&search=${search}` : ''}`}
+            class={`px-3 py-1.5 rounded-lg border transition-all ${
+              sort === 'popular'
+                ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan font-bold'
+                : 'border-arcade-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Phổ biến
+          </a>
+          <a
+            href={`/games?sort=name${categorySlug ? `&category=${categorySlug}` : ''}${search ? `&search=${search}` : ''}`}
+            class={`px-3 py-1.5 rounded-lg border transition-all ${
+              sort === 'name'
+                ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan font-bold'
+                : 'border-arcade-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            A-Z
+          </a>
+        </div>
+      </div>
+
+      <!-- Categories row -->
+      <div class="flex items-center gap-2 overflow-x-auto mt-4 pt-2 pb-2">
+        <a
+          href="/games"
+          class={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            !categorySlug
+              ? 'bg-neon-yellow text-arcade-950 font-bold'
+              : 'bg-arcade-800 text-slate-400 hover:text-slate-200 border border-arcade-700'
+          }`}
+        >
+          Tất cả thể loại
+        </a>
+        {categories.map((cat) => (
+          <a
+            href={`/games?category=${cat.slug}${sort ? `&sort=${sort}` : ''}`}
+            class={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              categorySlug === cat.slug
+                ? 'bg-neon-yellow text-arcade-950 font-bold'
+                : 'bg-arcade-800 text-slate-400 hover:text-slate-200 border border-arcade-700'
+            }`}
+          >
+            {cat.name}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- Games grid -->
+    {games.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {games.map((game) => (
+          <GameCard client:visible game={game} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20 bg-arcade-900/60 rounded-3xl border border-arcade-800">
+        <span class="text-5xl">🔍</span>
+        <h3 class="text-lg font-bold text-slate-300 mt-4">Không tìm thấy game phù hợp</h3>
+        <p class="text-xs text-slate-500 mt-1">Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc thể loại</p>
+        <a href="/games" class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
+          Xóa bộ lọc
+        </a>
+      </div>
+    )}
+
+    <!-- Pagination -->
+    {pagination.totalPages > 1 && (
+      <div class="mt-12 flex justify-center items-center gap-2">
+        {pagination.page > 1 && (
+          <a
+            href={`/games?page=${pagination.page - 1}${categorySlug ? `&category=${categorySlug}` : ''}${sort ? `&sort=${sort}` : ''}${search ? `&search=${search}` : ''}`}
+            class="px-4 py-2 bg-arcade-800 border border-arcade-700 rounded-lg text-xs font-bold text-slate-300 hover:border-neon-cyan hover:text-neon-cyan transition-all"
+          >
+            ← Trang trước
+          </a>
+        )}
+
+        <span class="px-4 py-2 bg-arcade-900 border border-arcade-800 rounded-lg text-xs font-mono text-slate-400">
+          Trang {pagination.page} / {pagination.totalPages}
+        </span>
+
+        {pagination.page < pagination.totalPages && (
+          <a
+            href={`/games?page=${pagination.page + 1}${categorySlug ? `&category=${categorySlug}` : ''}${sort ? `&sort=${sort}` : ''}${search ? `&search=${search}` : ''}`}
+            class="px-4 py-2 bg-arcade-800 border border-arcade-700 rounded-lg text-xs font-bold text-slate-300 hover:border-neon-cyan hover:text-neon-cyan transition-all"
+          >
+            Trang sau →
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</Layout>

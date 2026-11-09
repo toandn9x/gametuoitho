@@ -1,0 +1,165 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dashboard Quản Trị Hệ Thống" activeNav="dashboard">
+  <div class="space-y-8" id="admin-dashboard">
+    <!-- Top Summary Banner -->
+    <div class="bg-gradient-to-r from-neon-pink/15 via-arcade-850 to-neon-cyan/15 border border-arcade-800 rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+          <span>🎮</span>
+          <span>Tổng Quan Nền Tảng Game Tuổi Thơ</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          Theo dõi trạng thái Game Catalog, người dùng, lượt import và dung lượng R2
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/games/create"
+          class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-neon-pink"
+        >
+          <span>➕</span>
+          <span>Tạo Game Mới</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Stat Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
+          <span>TỔNG SỐ GAME</span>
+          <span>🕹️</span>
+        </div>
+        <div id="stat-total-games" class="text-3xl font-black text-neon-cyan font-mono">--</div>
+        <div class="text-[11px] text-slate-500 mt-2 flex items-center gap-2">
+          <span id="stat-published" class="text-neon-green">-- Đã xuất bản</span>
+          <span>•</span>
+          <span id="stat-draft" class="text-neon-yellow">-- Bản nháp</span>
+        </div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
+          <span>NGƯỜI DÙNG</span>
+          <span>👥</span>
+        </div>
+        <div id="stat-total-users" class="text-3xl font-black text-neon-yellow font-mono">--</div>
+        <div class="text-[11px] text-slate-500 mt-2">Tài khoản đã đăng ký trên hệ thống</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
+          <span>USER IMPORTS</span>
+          <span>📥</span>
+        </div>
+        <div id="stat-total-imports" class="text-3xl font-black text-neon-pink font-mono">--</div>
+        <div class="text-[11px] text-slate-500 mt-2">File JAR do người dùng tải lên riêng tư</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
+          <span>DUNG LƯỢNG R2</span>
+          <span>💾</span>
+        </div>
+        <div id="stat-total-storage" class="text-3xl font-black text-neon-green font-mono">--</div>
+        <div class="text-[11px] text-slate-500 mt-2">Tổng tài nguyên trên Cloudflare R2</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions & Guidelines -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-neon-cyan mb-4 flex items-center gap-2">
+          <span>⚡</span>
+          <span>Hành Động Quản Trị Nhanh</span>
+        </h3>
+        <div class="grid grid-cols-2 gap-3">
+          <a
+            href="/admin/games"
+            class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">🎮</span>
+            <span class="font-bold text-xs text-slate-200 group-hover:text-neon-cyan block">
+              Duyệt & Quản Lý Game
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Xuất bản, ẩn hoặc xóa game</span>
+          </a>
+
+          <a
+            href="/admin/games/create"
+            class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">📤</span>
+            <span class="font-bold text-xs text-slate-200 group-hover:text-neon-pink block">
+              Upload Game Mới
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Nhập metadata và file JAR</span>
+          </a>
+
+          <a
+            href="/admin/categories"
+            class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">🏷️</span>
+            <span class="font-bold text-xs text-slate-200 group-hover:text-neon-yellow block">
+              Thể Loại Game
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Thêm hoặc sắp xếp thể loại</span>
+          </a>
+
+          <a
+            href="/admin/user-imports"
+            class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">🛡️</span>
+            <span class="font-bold text-xs text-slate-200 group-hover:text-neon-green block">
+              Kiểm Soát Imports
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Giám sát dung lượng và file</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-neon-pink mb-4 flex items-center gap-2">
+          <span>📋</span>
+          <span>Nguyên Tắc Xuất Bản & Bảo Mật (PLAN.md)</span>
+        </h3>
+        <ul class="space-y-3 text-xs text-slate-300">
+          <li class="flex items-start gap-2">
+            <span class="text-neon-green font-bold">✓</span>
+            <span>Không tự động xuất bản game ngay khi upload: Game luôn lưu ở trạng thái DRAFT để kiểm thử trước khi Publish.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-neon-green font-bold">✓</span>
+            <span>Quyền riêng tư: File do người dùng import luôn mặc định ở chế độ PRIVATE, không hiển thị ra Catalog công khai.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-neon-green font-bold">✓</span>
+            <span>An toàn máy chủ: Tuyệt đối không thực thi file JAR trên máy chủ backend; file chỉ chạy an toàn trong sandbox trình duyệt.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getAdminStats } from '../../lib/api';
+
+    getAdminStats().then((res) => {
+      if (res.success && res.data) {
+        const d = res.data;
+        document.getElementById('stat-total-games')!.textContent = String(d.totalGames);
+        document.getElementById('stat-published')!.textContent = `${d.publishedGames} Đã xuất bản`;
+        document.getElementById('stat-draft')!.textContent = `${d.draftGames} Bản nháp`;
+        document.getElementById('stat-total-users')!.textContent = String(d.totalUsers);
+        document.getElementById('stat-total-imports')!.textContent = String(d.totalImports);
+        document.getElementById('stat-total-storage')!.textContent = d.storageFormatted;
+      }
+    });
+  </script>
+</AdminLayout>

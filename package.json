@@ -1,0 +1,16 @@
+{
+  "name": "game-tuoi-tho-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nền tảng lưu trữ, quản lý và chơi game Java ME (J2ME) đa thiết bị",
+  "scripts": {
+    "dev:api": "pnpm --filter @gametuoitho/api dev",
+    "dev:web": "pnpm --filter @gametuoitho/web dev",
+    "build": "pnpm --filter \"@gametuoitho/*\" build",
+    "test": "pnpm --filter \"@gametuoitho/*\" test",
+    "lint": "pnpm --filter \"@gametuoitho/*\" lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

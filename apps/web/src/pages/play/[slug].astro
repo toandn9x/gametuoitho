@@ -1,0 +1,82 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EmulatorPlayer from '../../components/EmulatorPlayer';
+import { getGameDetail, getGames } from '../../lib/api';
+
+export async function getStaticPaths() {
+  const gamesRes = await getGames({ limit: 100 });
+  const games = gamesRes.success && gamesRes.data && gamesRes.data.length > 0 ? gamesRes.data : [
+    { slug: 'ninja-school' },
+    { slug: 'diamond-rush' },
+    { slug: 'bounce-tales' },
+    { slug: 'avatar' },
+    { slug: 'asphalt-3' },
+    { slug: 'space-impact' },
+  ];
+  return games.map((game) => ({
+    params: { slug: game.slug },
+  }));
+}
+
+const { slug } = Astro.params;
+const detailRes = await getGameDetail(slug || '');
+
+if (!detailRes.success || !detailRes.data) {
+  return Astro.redirect('/404');
+}
+
+const { game, versions } = detailRes.data;
+const activeVersion = versions[0];
+const jarUrl = activeVersion?.jar_url || '';
+---
+
+<Layout
+  title={`Đang Chơi: ${game.name} --- Game Tuổi Thơ Web Player`}
+  description={`Chơi ${game.name} J2ME trực tiếp trên trình duyệt web.`}
+  image={game.cover_url || '/favicon.svg'}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Breadcrumb & Back -->
+    <div class="flex items-center justify-between pb-4 border-b border-arcade-800 mb-6">
+      <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+        <a href="/" class="hover:text-neon-cyan">Trang chủ</a>
+        <span>/</span>
+        <a href={`/game/${game.slug}`} class="hover:text-neon-cyan">{game.name}</a>
+        <span>/</span>
+        <span class="text-neon-cyan font-bold">Chơi game</span>
+      </div>
+
+      <a
+        href={`/game/${game.slug}`}
+        class="text-xs text-slate-400 hover:text-neon-cyan flex items-center gap-1 font-semibold"
+      >
+        <span>← Về trang thông tin</span>
+      </a>
+    </div>
+
+    <!-- Interactive Web Emulator -->
+    {jarUrl ? (
+      <EmulatorPlayer
+        client:load
+        gameId={game.id}
+        gameName={game.name}
+        jarUrl={jarUrl}
+      />
+    ) : (
+      <div class="text-center py-20 bg-arcade-900 rounded-3xl border border-arcade-800 max-w-xl mx-auto">
+        <span class="text-4xl">⚠️</span>
+        <h3 class="text-lg font-bold text-slate-200 mt-3">Chưa có file JAR cho game này</h3>
+        <p class="text-xs text-slate-400 mt-1">Quản trị viên đang cập nhật file chạy cho trò chơi.</p>
+        <a href={`/game/${game.slug}`} class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
+          Quay lại trang chi tiết
+        </a>
+      </div>
+    )}
+
+    <!-- Keyboard shortcuts footnote -->
+    <div class="mt-8 max-w-2xl mx-auto text-center border-t border-arcade-800/80 pt-6 text-xs text-slate-500 font-mono space-y-1">
+      <p>💡 Mẹo: Nhấn <kbd class="px-1.5 py-0.5 bg-arcade-800 border border-slate-700 rounded text-slate-300">Esc</kbd> để vào Menu cài đặt của Emulator.</p>
+      <p>Dùng các phím <kbd class="px-1.5 py-0.5 bg-arcade-800 border border-slate-700 rounded text-slate-300">Q</kbd> / <kbd class="px-1.5 py-0.5 bg-arcade-800 border border-slate-700 rounded text-slate-300">W</kbd> tương ứng với 2 phím mềm Trái / Phải của điện thoại Nokia.</p>
+    </div>
+  </div>
+</Layout>

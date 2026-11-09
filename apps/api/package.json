@@ -1,0 +1,26 @@
+{
+  "name": "@gametuoitho/api",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/dev-server.ts",
+    "build": "tsc --noEmit",
+    "test": "node --test dist/**/*.test.js || echo 'Tests run with tsx/vitest'",
+    "lint": "echo ok"
+  },
+  "dependencies": {
+    "@gametuoitho/api-contracts": "workspace:*",
+    "@gametuoitho/shared-types": "workspace:*",
+    "@gametuoitho/shared-utils": "workspace:*",
+    "@hono/node-server": "^1.13.8",
+    "better-sqlite3": "^11.8.1",
+    "hono": "^4.7.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,156 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCategories } from '../../../lib/api';
+
+const catRes = await getCategories();
+const categories = catRes.success && catRes.data ? catRes.data : [];
+---
+
+<AdminLayout title="Quản Lý Thể Loại Game" activeNav="categories">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Categories List -->
+    <div class="lg:col-span-7 space-y-4">
+      <div class="border-b border-arcade-800 pb-4">
+        <h2 class="text-xl font-black text-slate-100 flex items-center gap-2">
+          <span>🏷️</span>
+          <span>Danh Sách Thể Loại ({categories.length})</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Các danh mục phân loại game hiển thị trên trang chủ</p>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
+            <tr>
+              <th class="px-5 py-3">Thứ Tự</th>
+              <th class="px-5 py-3">Tên Danh Mục</th>
+              <th class="px-5 py-3">Slug</th>
+              <th class="px-5 py-3">Trạng Thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-arcade-800 text-slate-300">
+            {categories.map((c) => (
+              <tr class="hover:bg-arcade-850/50 transition-colors">
+                <td class="px-5 py-3 font-mono text-neon-yellow">{c.sort_order}</td>
+                <td class="px-5 py-3 font-bold text-slate-100">{c.name}</td>
+                <td class="px-5 py-3 font-mono text-slate-400 text-[11px]">{c.slug}</td>
+                <td class="px-5 py-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40">
+                    {c.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add Category Form -->
+    <div class="lg:col-span-5">
+      <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-6 shadow-xl sticky top-6">
+        <h3 class="text-base font-black text-slate-100 mb-4 flex items-center gap-2">
+          <span>➕</span>
+          <span>Thêm Thể Loại Mới</span>
+        </h3>
+
+        <form id="add-cat-form" class="space-y-4">
+          <div id="cat-alert" class="hidden p-3 rounded-lg text-xs font-medium"></div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              Tên Thể Loại
+            </label>
+            <input
+              type="text"
+              id="cat-name"
+              required
+              placeholder="vd: Chiến thuật & Bắn súng"
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              Slug
+            </label>
+            <input
+              type="text"
+              id="cat-slug"
+              required
+              placeholder="vd: chien-thuat"
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              Thứ Tự Sắp Xếp
+            </label>
+            <input
+              type="number"
+              id="cat-order"
+              value="10"
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none font-mono"
+            />
+          </div>
+
+          <button
+            type="submit"
+            id="cat-submit"
+            class="w-full py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-neon-pink mt-2"
+          >
+            Tạo Thể Loại
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { apiRequest } from '../../../lib/api';
+    import { slugify } from '@gametuoitho/shared-utils';
+
+    const nameInput = document.getElementById('cat-name') as HTMLInputElement;
+    const slugInput = document.getElementById('cat-slug') as HTMLInputElement;
+    const orderInput = document.getElementById('cat-order') as HTMLInputElement;
+    const form = document.getElementById('add-cat-form') as HTMLFormElement;
+    const alertBox = document.getElementById('cat-alert') as HTMLDivElement;
+
+    nameInput?.addEventListener('input', () => {
+      slugInput.value = slugify(nameInput.value);
+    });
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.classList.add('hidden');
+
+      try {
+        const res = await apiRequest('/admin/categories', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: nameInput.value.trim(),
+            slug: slugInput.value.trim(),
+            sort_order: Number(orderInput.value) || 0,
+            status: 'ACTIVE',
+          }),
+        });
+
+        if (res.success) {
+          alertBox.className = 'p-3 rounded-lg text-xs font-medium bg-neon-green/20 border border-neon-green text-neon-green';
+          alertBox.textContent = 'Đã thêm thể loại mới thành công!';
+          alertBox.classList.remove('hidden');
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          alertBox.className = 'p-3 rounded-lg text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
+          alertBox.textContent = res.error?.message || 'Lỗi thêm thể loại';
+          alertBox.classList.remove('hidden');
+        }
+      } catch (err: any) {
+        alertBox.className = 'p-3 rounded-lg text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
+        alertBox.textContent = err.message || 'Lỗi kết nối';
+        alertBox.classList.remove('hidden');
+      }
+    });
+  </script>
+</AdminLayout>

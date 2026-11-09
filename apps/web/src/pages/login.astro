@@ -1,0 +1,135 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Đăng Nhập --- Game Tuổi Thơ">
+  <div class="max-w-md mx-auto px-4 py-16">
+    <div class="bg-arcade-900 border border-arcade-800 rounded-3xl p-8 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="text-4xl">🕹️</span>
+        <h1 class="text-2xl font-black text-slate-100 mt-2">Đăng Nhập</h1>
+        <p class="text-xs text-slate-400 mt-1">
+          Lưu trữ game yêu thích, lịch sử chơi và import game của riêng bạn
+        </p>
+      </div>
+
+      <!-- Quick Fill Buttons for Demo / Testing -->
+      <div class="mb-6 p-3 bg-arcade-800/80 border border-neon-cyan/30 rounded-xl text-xs space-y-2">
+        <div class="text-[11px] font-mono font-bold text-neon-cyan uppercase">
+          Tài Khoản Mẫu Có Sẵn:
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            id="fill-admin"
+            class="py-1.5 px-2 bg-neon-pink/20 text-neon-pink border border-neon-pink/40 rounded hover:bg-neon-pink/30 font-mono text-[11px] font-bold text-center"
+          >
+            Quản trị viên (admin)
+          </button>
+          <button
+            type="button"
+            id="fill-user"
+            class="py-1.5 px-2 bg-neon-green/20 text-neon-green border border-neon-green/40 rounded hover:bg-neon-green/30 font-mono text-[11px] font-bold text-center"
+          >
+            Game thủ (gamer9x)
+          </button>
+        </div>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div id="error-alert" class="hidden p-3 bg-red-500/20 border border-red-500 text-red-200 text-xs rounded-lg font-medium"></div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Tên đăng nhập hoặc Email
+          </label>
+          <input
+            type="text"
+            id="usernameOrEmail"
+            required
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+            placeholder="admin hoặc email@..."
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Mật khẩu
+          </label>
+          <input
+            type="password"
+            id="password"
+            required
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full py-3 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-sm transition-all shadow-neon-cyan tracking-wider uppercase mt-2"
+        >
+          ĐĂNG NHẬP
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-xs text-slate-400">
+        Chưa có tài khoản?{' '}
+        <a href="/register" class="text-neon-cyan hover:underline font-bold">
+          Đăng ký ngay
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { loginUser } from '../lib/api';
+
+    const fillAdminBtn = document.getElementById('fill-admin');
+    const fillUserBtn = document.getElementById('fill-user');
+    const usernameInput = document.getElementById('usernameOrEmail') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const form = document.getElementById('login-form') as HTMLFormElement;
+    const errorAlert = document.getElementById('error-alert') as HTMLDivElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+    fillAdminBtn?.addEventListener('click', () => {
+      usernameInput.value = 'admin';
+      passwordInput.value = 'admin123';
+    });
+
+    fillUserBtn?.addEventListener('click', () => {
+      usernameInput.value = 'gamer9x';
+      passwordInput.value = 'test123456';
+    });
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorAlert.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'ĐANG XỬ LÝ...';
+
+      try {
+        const res = await loginUser({
+          usernameOrEmail: usernameInput.value.trim(),
+          password: passwordInput.value,
+        });
+
+        if (res.success) {
+          window.location.href = res.data?.user.role === 'ADMIN' ? '/admin' : '/';
+        } else {
+          errorAlert.textContent = res.error?.message || 'Đăng nhập thất bại';
+          errorAlert.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'ĐĂNG NHẬP';
+        }
+      } catch (err: any) {
+        errorAlert.textContent = err.message || 'Lỗi kết nối';
+        errorAlert.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ĐĂNG NHẬP';
+      }
+    });
+  </script>
+</Layout>

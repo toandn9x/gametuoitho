@@ -1,0 +1,93 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Quản Lý Lưu Trữ R2 Assets" activeNav="storage">
+  <div class="space-y-6">
+    <div class="border-b border-arcade-800 pb-4">
+      <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+        <span>🗄️</span>
+        <span>Danh Sách File Trên Cloudflare R2</span>
+      </h2>
+      <p class="text-xs text-slate-400 mt-1">
+        Toàn bộ tài nguyên file JAR, JAD, Cover và Screenshot theo cấu trúc PLAN.md Section 4.4
+      </p>
+    </div>
+
+    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
+            <tr>
+              <th class="px-6 py-4">Loại Asset</th>
+              <th class="px-6 py-4">Storage Key (R2)</th>
+              <th class="px-6 py-4">Tên File Ban Đầu</th>
+              <th class="px-6 py-4">Dung Lượng</th>
+              <th class="px-6 py-4">Trạng Thái</th>
+            </tr>
+          </thead>
+          <tbody id="assets-table-body" class="divide-y divide-arcade-800 text-slate-300">
+            <tr>
+              <td colspan="5" class="px-6 py-8 text-center text-slate-500 font-mono">
+                Đang tải danh sách tài nguyên...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getAdminAssets } from '../../lib/api';
+
+    async function loadAssets() {
+      const tbody = document.getElementById('assets-table-body')!;
+      const res = await getAdminAssets(1, 100);
+
+      if (!res.success || !res.data || res.data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="px-6 py-8 text-center text-slate-500 font-mono">
+              Chưa có asset nào trong kho lưu trữ.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = res.data
+        .map((a: any) => {
+          const typeBadge =
+            a.asset_type === 'JAR'
+              ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40">JAR FILE</span>'
+              : a.asset_type === 'COVER'
+              ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-pink/20 text-neon-pink border border-neon-pink/40">COVER</span>'
+              : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-300">' + a.asset_type + '</span>';
+
+          return `
+            <tr class="hover:bg-arcade-850/50 transition-colors">
+              <td class="px-6 py-4">${typeBadge}</td>
+              <td class="px-6 py-4 font-mono text-[11px] text-slate-300">
+                <a href="${a.url}" target="_blank" class="hover:text-neon-cyan hover:underline">
+                  ${a.storage_key}
+                </a>
+              </td>
+              <td class="px-6 py-4 text-slate-400 font-mono text-[11px]">
+                ${a.original_filename}
+              </td>
+              <td class="px-6 py-4 font-mono text-neon-yellow">
+                ${((a.file_size || 0) / 1024).toFixed(0)} KB
+              </td>
+              <td class="px-6 py-4 font-mono text-[10px] text-neon-green">
+                ${a.status}
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
+
+    loadAssets();
+  </script>
+</AdminLayout>

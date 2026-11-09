@@ -1,0 +1,103 @@
+---
+import Layout from '../layouts/Layout.astro';
+import HeroBanner from '../components/HeroBanner.astro';
+import GameCard from '../components/GameCard';
+import { getGames, getCategories } from '../lib/api';
+
+// Fetch initial data for SSR/Prerender
+const [gamesRes, catRes] = await Promise.all([
+  getGames({ limit: 12 }),
+  getCategories(),
+]);
+
+const games = gamesRes.success && gamesRes.data ? gamesRes.data : [];
+const categories = catRes.success && catRes.data ? catRes.data : [];
+---
+
+<Layout title="Game Tuổi Thơ --- Chơi Game Java ME Nokia Kinh Điển Trực Tiếp Trên Web">
+  <HeroBanner />
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+    <!-- Categories section -->
+    {categories.length > 0 && (
+      <section>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+            <span class="text-neon-cyan">📁</span>
+            <span>Thể Loại Game</span>
+          </h2>
+          <a href="/games" class="text-xs text-neon-cyan hover:underline font-mono">
+            Xem tất cả →
+          </a>
+        </div>
+
+        <div class="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none">
+          {categories.map((cat) => (
+            <a
+              href={`/categories/${cat.slug}`}
+              class="flex-shrink-0 px-4 py-2.5 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 hover:border-neon-cyan/60 rounded-xl transition-all text-xs font-semibold text-slate-200 hover:text-neon-cyan flex items-center gap-2 group"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-neon-cyan group-hover:scale-125 transition-transform" />
+              <span>{cat.name}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Featured Games -->
+    <section>
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+            <span class="text-neon-yellow">⭐</span>
+            <span>Game Nổi Bật Tuổi Thơ</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Những tựa game Java gắn liền với ký ức thời học sinh</p>
+        </div>
+        <a
+          href="/games"
+          class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-cyan hover:border-neon-cyan transition-all"
+        >
+          Xem kho game →
+        </a>
+      </div>
+
+      {games.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {games.slice(0, 8).map((game) => (
+            <GameCard client:visible game={game} />
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-16 bg-arcade-900 rounded-2xl border border-arcade-800">
+          <p class="text-slate-400 text-sm">Chưa có game nào trong kho lưu trữ.</p>
+        </div>
+      )}
+    </section>
+
+    <!-- Import Promo Box -->
+    <section class="relative overflow-hidden bg-gradient-to-r from-arcade-850 via-arcade-800 to-arcade-850 border-2 border-neon-cyan/40 rounded-3xl p-8 sm:p-12 shadow-neon-cyan">
+      <div class="max-w-2xl space-y-4">
+        <span class="px-3 py-1 bg-neon-cyan/20 text-neon-cyan text-xs font-mono font-bold rounded-full border border-neon-cyan/40">
+          TÍNH NĂNG ĐỘC QUYỀN
+        </span>
+        <h3 class="text-2xl sm:text-3xl font-black text-slate-100">
+          Bạn Có File Game Java Riêng Của Mình?
+        </h3>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          Tải trực tiếp file <code class="text-neon-yellow font-mono font-bold">.JAR</code> hoặc <code class="text-neon-yellow font-mono font-bold">.JAD</code> từ máy tính hoặc điện thoại lên hệ thống để lưu trữ an toàn trong tài khoản riêng và chơi lại bất cứ lúc nào!
+        </p>
+        <div class="pt-2">
+          <a
+            href="/me/imports"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-neon-cyan text-arcade-950 font-bold rounded-lg hover:bg-neon-yellow transition-all text-sm shadow-md"
+          >
+            <span>Tải Lên Game JAR Của Bạn Ngay</span>
+            <span>→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>

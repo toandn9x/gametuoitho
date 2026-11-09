@@ -1,0 +1,46 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const {
+  title = 'Game Tuổi Thơ --- Chơi Game Java ME (J2ME) Trực Tiếp Trên Trình Duyệt',
+  description = 'Nền tảng lưu trữ, quản lý và trải nghiệm các game Java Nokia, Motorola, Sony Ericsson huyền thoại trên trình duyệt web. Ninja School, Diamond Rush, Bounce Tales, Avatar.',
+  image = '/favicon.svg',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="vi" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta property="og:type" content="website" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#0a0a0f" />
+  </head>
+  <body class="bg-arcade-950 text-slate-100 flex flex-col min-h-screen">
+    <Header />
+    <main class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

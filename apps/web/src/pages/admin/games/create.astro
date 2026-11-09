@@ -1,0 +1,189 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCategories } from '../../../lib/api';
+
+const catRes = await getCategories();
+const categories = catRes.success && catRes.data ? catRes.data : [];
+---
+
+<AdminLayout title="Thêm Game Mới Vào Catalog" activeNav="create-game">
+  <div class="max-w-3xl space-y-6">
+    <div class="border-b border-arcade-800 pb-4">
+      <a href="/admin/games" class="text-xs text-neon-cyan hover:underline flex items-center gap-1 mb-2 font-mono">
+        <span>←</span>
+        <span>Quay lại danh sách game</span>
+      </a>
+      <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+        <span>➕</span>
+        <span>Thêm Game Mới</span>
+      </h2>
+      <p class="text-xs text-slate-400 mt-1">
+        Game sẽ được tạo ở trạng thái DRAFT. Bạn có thể kiểm thử trước khi quyết định xuất bản công khai.
+      </p>
+    </div>
+
+    <form id="create-game-form" class="bg-arcade-900 border border-arcade-800 rounded-3xl p-6 sm:p-8 space-y-6">
+      <div id="alert-box" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Tên Game <span class="text-neon-pink">*</span>
+          </label>
+          <input
+            type="text"
+            id="game-name"
+            required
+            placeholder="vd: Ninja School 2"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            URL Slug <span class="text-neon-pink">*</span>
+          </label>
+          <input
+            type="text"
+            id="game-slug"
+            required
+            placeholder="vd: ninja-school-2"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Thể Loại <span class="text-neon-pink">*</span>
+          </label>
+          <select
+            id="game-category"
+            required
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none"
+          >
+            {categories.map((c) => (
+              <option value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Nhà Phát Triển
+          </label>
+          <input
+            type="text"
+            id="game-developer"
+            placeholder="vd: Teamobi, Gameloft"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Năm Phát Hành
+          </label>
+          <input
+            type="number"
+            id="game-year"
+            min="1995"
+            max="2030"
+            placeholder="2008"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">
+          Mô Tả Trò Chơi
+        </label>
+        <textarea
+          id="game-desc"
+          rows="4"
+          placeholder="Giới thiệu nội dung, cốt truyện, tính năng nổi bật của game..."
+          class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+        ></textarea>
+      </div>
+
+      <div class="border-t border-arcade-800 pt-6 flex justify-end gap-3">
+        <a
+          href="/admin/games"
+          class="px-5 py-2.5 bg-arcade-800 hover:bg-arcade-700 border border-arcade-700 rounded-xl text-xs font-bold text-slate-300 transition-colors"
+        >
+          Hủy bỏ
+        </a>
+        <button
+          type="submit"
+          id="submit-btn"
+          class="px-6 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-neon-pink"
+        >
+          Tạo Game (DRAFT)
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    import { createAdminGame } from '../../../lib/api';
+    import { slugify } from '@gametuoitho/shared-utils';
+
+    const nameInput = document.getElementById('game-name') as HTMLInputElement;
+    const slugInput = document.getElementById('game-slug') as HTMLInputElement;
+    const categorySelect = document.getElementById('game-category') as HTMLSelectElement;
+    const devInput = document.getElementById('game-developer') as HTMLInputElement;
+    const yearInput = document.getElementById('game-year') as HTMLInputElement;
+    const descInput = document.getElementById('game-desc') as HTMLTextAreaElement;
+    const form = document.getElementById('create-game-form') as HTMLFormElement;
+    const alertBox = document.getElementById('alert-box') as HTMLDivElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+    // Auto-slugify on title input
+    nameInput?.addEventListener('input', () => {
+      slugInput.value = slugify(nameInput.value);
+    });
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'ĐANG TẠO...';
+
+      try {
+        const res = await createAdminGame({
+          name: nameInput.value.trim(),
+          slug: slugInput.value.trim(),
+          category_id: categorySelect.value,
+          developer: devInput.value.trim() || undefined,
+          release_year: yearInput.value ? Number(yearInput.value) : undefined,
+          description: descInput.value.trim() || undefined,
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+        });
+
+        if (res.success) {
+          alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-neon-green/20 border border-neon-green text-neon-green';
+          alertBox.textContent = 'Tạo game thành công! Đang chuyển hướng về danh sách...';
+          alertBox.classList.remove('hidden');
+          setTimeout(() => {
+            window.location.href = '/admin/games';
+          }, 1000);
+        } else {
+          alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
+          alertBox.textContent = res.error?.message || 'Tạo game thất bại';
+          alertBox.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Tạo Game (DRAFT)';
+        }
+      } catch (err: any) {
+        alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
+        alertBox.textContent = err.message || 'Lỗi kết nối';
+        alertBox.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Tạo Game (DRAFT)';
+      }
+    });
+  </script>
+</AdminLayout>

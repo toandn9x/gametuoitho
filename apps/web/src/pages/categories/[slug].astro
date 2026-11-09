@@ -1,0 +1,72 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import GameCard from '../../components/GameCard';
+import { getGames, getCategories } from '../../lib/api';
+
+export async function getStaticPaths() {
+  const catRes = await getCategories();
+  const categories = catRes.success && catRes.data && catRes.data.length > 0 ? catRes.data : [
+    { slug: 'nhap-vai' },
+    { slug: 'hanh-dong' },
+    { slug: 'tri-tue' },
+    { slug: 'the-thao-dua-xe' },
+    { slug: 'doi-song' },
+    { slug: 'ban-sung' },
+  ];
+  return categories.map((cat) => ({
+    params: { slug: cat.slug },
+  }));
+}
+
+const { slug } = Astro.params;
+const page = Number(Astro.url.searchParams.get('page') || '1');
+
+const [gamesRes, catRes] = await Promise.all([
+  getGames({ categorySlug: slug, page, limit: 16 }),
+  getCategories(),
+]);
+
+const games = gamesRes.success && gamesRes.data ? gamesRes.data : [];
+const categories = catRes.success && catRes.data ? catRes.data : [];
+const currentCat = categories.find((c) => c.slug === slug);
+const categoryName = currentCat ? currentCat.name : slug;
+---
+
+<Layout title={`Thể loại: ${categoryName} --- Game Tuổi Thơ`}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="border-b border-arcade-800 pb-6 mb-8">
+      <div class="flex items-center gap-2 text-xs text-slate-400 mb-2 font-mono">
+        <a href="/" class="hover:text-neon-cyan">Trang chủ</a>
+        <span>/</span>
+        <a href="/games" class="hover:text-neon-cyan">Thể loại</a>
+        <span>/</span>
+        <span class="text-neon-cyan font-bold">{categoryName}</span>
+      </div>
+
+      <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
+        <span class="text-neon-yellow">📁</span>
+        <span>Thể Loại: {categoryName}</span>
+      </h1>
+      {currentCat?.description && (
+        <p class="text-slate-400 text-sm mt-2">{currentCat.description}</p>
+      )}
+    </div>
+
+    {games.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {games.map((game) => (
+          <GameCard client:visible game={game} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20 bg-arcade-900/60 rounded-3xl border border-arcade-800">
+        <span class="text-5xl">🎮</span>
+        <h3 class="text-lg font-bold text-slate-300 mt-4">Chưa có game thuộc thể loại này</h3>
+        <p class="text-xs text-slate-500 mt-1">Quản trị viên sẽ sớm cập nhật thêm các tựa game mới!</p>
+        <a href="/games" class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
+          Khám phá thể loại khác
+        </a>
+      </div>
+    )}
+  </div>
+</Layout>

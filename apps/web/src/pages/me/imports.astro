@@ -1,0 +1,20 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import UserImportsView from '../../components/UserImportsView';
+---
+
+<Layout title="Import File JAR Riêng --- Game Tuổi Thơ">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="border-b border-arcade-800 pb-6 mb-8">
+      <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
+        <span class="text-neon-yellow">📥</span>
+        <span>Quản Lý Game Đã Import</span>
+      </h1>
+      <p class="text-slate-400 text-sm mt-1">
+        Tải lên file JAR/JAD từ máy tính để lưu trữ riêng tư và chơi trực tiếp trên trình duyệt
+      </p>
+    </div>
+
+    <UserImportsView client:load />
+  </div>
+</Layout>

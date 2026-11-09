@@ -1,0 +1,30 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import UserLibraryView from '../../components/UserLibraryView';
+---
+
+<Layout title="Thư Viện Của Tôi --- Game Tuổi Thơ">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="border-b border-arcade-800 pb-6 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
+          <span class="text-neon-cyan">📚</span>
+          <span>Thư Viện Của Tôi</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Danh sách các tựa game bạn đã thêm từ Catalog và game do chính bạn import
+        </p>
+      </div>
+
+      <a
+        href="/me/imports"
+        class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-neon-cyan/50 text-neon-cyan font-bold rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5"
+      >
+        <span>➕</span>
+        <span>Import Thêm File JAR</span>
+      </a>
+    </div>
+
+    <UserLibraryView client:load />
+  </div>
+</Layout>

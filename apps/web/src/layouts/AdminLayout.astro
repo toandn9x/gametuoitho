@@ -1,0 +1,143 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  activeNav?: string;
+}
+
+const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'dashboard' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="vi" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="bg-arcade-950 text-slate-100 min-h-screen flex">
+    <!-- Admin Sidebar -->
+    <aside class="w-64 bg-arcade-900 border-r border-arcade-800 flex flex-col justify-between hidden md:flex">
+      <div>
+        <!-- Admin header -->
+        <div class="h-16 px-6 border-b border-arcade-800 flex items-center gap-3">
+          <span class="text-2xl">⚡</span>
+          <div>
+            <h1 class="font-extrabold text-sm tracking-wider text-neon-pink">ADMIN PORTAL</h1>
+            <p class="text-[10px] text-slate-500 font-mono">Game Tuổi Thơ Control Center</p>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="p-4 space-y-1">
+          <a
+            href="/admin"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'dashboard'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>📊</span>
+            <span>Dashboard</span>
+          </a>
+
+          <a
+            href="/admin/games"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'games'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>🎮</span>
+            <span>Quản lý Game Catalog</span>
+          </a>
+
+          <a
+            href="/admin/games/create"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'create-game'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>➕</span>
+            <span>Thêm Game Mới</span>
+          </a>
+
+          <a
+            href="/admin/categories"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'categories'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>🏷️</span>
+            <span>Quản lý Thể Loại</span>
+          </a>
+
+          <a
+            href="/admin/user-imports"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'imports'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>📥</span>
+            <span>Game User Import</span>
+          </a>
+
+          <a
+            href="/admin/storage"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'storage'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>🗄️</span>
+            <span>Lưu Trữ R2 Assets</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Bottom User / Exit Link -->
+      <div class="p-4 border-t border-arcade-800">
+        <a
+          href="/"
+          class="flex items-center gap-2 text-xs text-slate-400 hover:text-neon-cyan transition-colors"
+        >
+          <span>←</span>
+          <span>Quay lại trang người dùng</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Top header bar -->
+      <header class="h-16 bg-arcade-900 border-b border-arcade-800 px-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="/" class="md:hidden text-neon-cyan font-bold text-sm">← Về trang chủ</a>
+          <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">{title}</h2>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="w-2 h-2 rounded-full bg-neon-green"></span>
+          <span class="text-xs font-mono text-slate-400">ADMIN MODE</span>
+        </div>
+      </header>
+
+      <!-- Content slot -->
+      <main class="flex-1 overflow-y-auto p-6 bg-arcade-950">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
