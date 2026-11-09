@@ -106,6 +106,18 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
           </a>
 
           <a
+            href="/admin/reports"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'reports'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>🚨</span>
+            <span>Báo Cáo & Log Lỗi</span>
+          </a>
+
+          <a
             href="/admin/storage"
             class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeNav === 'storage'
@@ -113,8 +125,8 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
                 : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
             }`}
           >
-            <span>🗄️</span>
-            <span>Lưu Trữ R2 Assets</span>
+            <span>🧹</span>
+            <span>Quản Lý & Dọn Dẹp</span>
           </a>
         </nav>
       </div>

@@ -38,6 +38,7 @@ export const GameQuerySchema = z.object({
   search: z.string().optional(),
   categoryId: z.string().optional(),
   categorySlug: z.string().optional(),
+  featured: z.enum(['true', 'false']).transform(value => value === 'true').optional(),
   sort: z.enum(['newest', 'popular', 'name']).default('newest'),
 });
 export type GameQueryInput = z.infer<typeof GameQuerySchema>;
@@ -54,6 +55,7 @@ export const CreateGameSchema = z.object({
   cover_asset_id: z.string().optional(),
   status: z.enum(['DRAFT', 'PUBLISHED', 'HIDDEN', 'ARCHIVED']).default('DRAFT'),
   visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
+  is_featured: z.boolean().optional(),
 });
 export type CreateGameInput = z.infer<typeof CreateGameSchema>;
 
@@ -103,3 +105,21 @@ export const RecordActivitySchema = z.object({
   activity_type: z.enum(['PLAY', 'FAVORITE']),
 });
 export type RecordActivityInput = z.infer<typeof RecordActivitySchema>;
+
+// Bulk Delete Assets Schema
+export const BulkDeleteAssetsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 asset ID').max(100, 'Tối đa 100 ID mỗi lần xóa'),
+});
+export type BulkDeleteAssetsInput = z.infer<typeof BulkDeleteAssetsSchema>;
+
+// Crash Report Schema
+export const CreateCrashReportSchema = z.object({
+  game_id: z.string().max(100).optional().nullable(),
+  game_version_id: z.string().max(100).optional().nullable(),
+  game_slug: z.string().max(200).optional().nullable(),
+  game_name: z.string().max(200).optional().nullable(),
+  error_type: z.enum(['LOAD_FAILED', 'CRASH', 'EMULATOR_ERROR', 'CORRUPT_JAR', 'USER_REPORT']).default('CRASH'),
+  error_message: z.string().min(1, 'Nội dung lỗi không được để trống').max(1000, 'Nội dung lỗi tối đa 1000 ký tự'),
+  stack_trace: z.string().max(8000, 'Stack trace tối đa 8000 ký tự').optional().nullable(),
+});
+export type CreateCrashReportInput = z.infer<typeof CreateCrashReportSchema>;

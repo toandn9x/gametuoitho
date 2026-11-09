@@ -192,7 +192,7 @@ export default function UserImportsView() {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {item.jar_url && (
                     <a
-                      href={`/play/custom?jar=${encodeURIComponent(item.jar_url)}&title=${encodeURIComponent(item.custom_name)}`}
+                      href={`/play/custom?importId=${encodeURIComponent(item.id)}`}
                       className="flex-1 sm:flex-none px-4 py-2 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-bold text-xs rounded-lg transition-all text-center"
                     >
                       ▶ Chơi ngay

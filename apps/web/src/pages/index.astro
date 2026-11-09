@@ -24,13 +24,30 @@ import CategoryList from '../components/CategoryList';
       <CategoryList client:load />
     </section>
 
-    <!-- Featured Games -->
+    <!-- Admin-curated favorite games -->
+    <section aria-labelledby="favorite-games-heading">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div>
+          <h2 id="favorite-games-heading" class="text-2xl font-black text-slate-100 flex items-center gap-2">
+            <span class="text-neon-yellow" aria-hidden="true">★</span>
+            <span>Game ưa thích</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Ghé lại những tựa game được yêu thích trong kho tuổi thơ</p>
+        </div>
+        <a href="/games?featured=true" class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-600 rounded-lg text-xs font-bold text-neon-yellow hover:border-neon-yellow transition-colors">
+          Xem tất cả →
+        </a>
+      </div>
+      <FeaturedGames client:load featuredOnly />
+    </section>
+
+    <!-- Latest Games -->
     <section>
       <div class="flex items-center justify-between mb-8">
         <div>
           <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
             <span class="text-neon-yellow">⭐</span>
-            <span>Game Nổi Bật Tuổi Thơ</span>
+            <span>Game mới cập nhật</span>
           </h2>
           <p class="text-xs text-slate-400 mt-1">Những tựa game Java gắn liền với ký ức thời học sinh</p>
         </div>

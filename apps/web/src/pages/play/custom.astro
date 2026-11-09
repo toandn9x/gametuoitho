@@ -1,46 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import EmulatorPlayer from '../../components/EmulatorPlayer';
-
-const jarUrl = Astro.url.searchParams.get('jar') || '';
-const title = Astro.url.searchParams.get('title') || 'Game Đã Import';
+import PlayCustomClient from '../../components/PlayCustomClient';
 ---
 
-<Layout title={`Đang Chơi: ${title} --- Game Tuổi Thơ Web Player`}>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="flex items-center justify-between pb-4 border-b border-arcade-800 mb-6">
-      <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
-        <a href="/" class="hover:text-neon-cyan">Trang chủ</a>
-        <span>/</span>
-        <a href="/me/imports" class="hover:text-neon-cyan">Game Import</a>
-        <span>/</span>
-        <span class="text-neon-yellow font-bold">{title}</span>
-      </div>
-
-      <a
-        href="/me/imports"
-        class="text-xs text-slate-400 hover:text-neon-cyan flex items-center gap-1 font-semibold"
-      >
-        <span>← Về danh sách import</span>
-      </a>
-    </div>
-
-    {jarUrl ? (
-      <EmulatorPlayer
-        client:load
-        gameId=""
-        gameName={title}
-        jarUrl={jarUrl}
-      />
-    ) : (
-      <div class="text-center py-20 bg-arcade-900 rounded-3xl border border-arcade-800 max-w-xl mx-auto">
-        <span class="text-4xl">⚠️</span>
-        <h3 class="text-lg font-bold text-slate-200 mt-3">Không tìm thấy URL file JAR</h3>
-        <p class="text-xs text-slate-400 mt-1">Vui lòng kiểm tra lại đường dẫn file.</p>
-        <a href="/me/imports" class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
-          Quay lại danh sách import
-        </a>
-      </div>
-    )}
-  </div>
+<Layout title="Chơi Game Import Riêng Tư --- Game Tuổi Thơ Web Player">
+  <PlayCustomClient client:load />
 </Layout>

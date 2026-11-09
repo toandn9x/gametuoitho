@@ -3,6 +3,7 @@ import { getCrawlerGames, importCrawlerGame, batchImportCrawlerGames } from '../
 
 interface SourceGame {
   id: string;
+  source_key?: string;
   name: string;
   developer: string;
   category: string;
@@ -17,6 +18,8 @@ interface SourceGame {
   is_imported?: boolean;
   imported_slug?: string;
 }
+
+const getGameKey = (g: SourceGame): string => g.source_key || g.id;
 
 export default function AdminCrawlerView() {
   const [games, setGames] = useState<SourceGame[]>([]);
@@ -97,21 +100,21 @@ export default function AdminCrawlerView() {
   // Select / Deselect all unimported games on the current page
   const unimportedOnPage = games.filter((g) => !g.is_imported);
   const allPageSelected =
-    unimportedOnPage.length > 0 && unimportedOnPage.every((g) => selectedIds.has(g.id));
+    unimportedOnPage.length > 0 && unimportedOnPage.every((g) => selectedIds.has(getGameKey(g)));
 
   const toggleSelectAllPage = () => {
     if (allPageSelected) {
       // Uncheck all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        unimportedOnPage.forEach((g) => next.delete(g.id));
+        unimportedOnPage.forEach((g) => next.delete(getGameKey(g)));
         return next;
       });
     } else {
       // Check all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        unimportedOnPage.forEach((g) => next.add(g.id));
+        unimportedOnPage.forEach((g) => next.add(getGameKey(g)));
         return next;
       });
     }
@@ -121,28 +124,30 @@ export default function AdminCrawlerView() {
   const selectFirst10 = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      unimportedOnPage.slice(0, 10).forEach((g) => next.add(g.id));
+      unimportedOnPage.slice(0, 10).forEach((g) => next.add(getGameKey(g)));
       return next;
     });
   };
 
   // Single game import
   const handleImportSingle = async (sourceGame: SourceGame) => {
-    setImportingId(sourceGame.id);
+    const key = getGameKey(sourceGame);
+    setImportingId(key);
     try {
-      const res = await importCrawlerGame(sourceGame.id);
-      if (res.success && res.data) {
+      const res = await importCrawlerGame(key);
+      const importedData = res.data;
+      if (res.success && importedData) {
         showToast(`Đã nhập thành công game "${sourceGame.name}" vào Catalog!`, 'success');
         setGames((prev) =>
           prev.map((g) =>
-            g.id === sourceGame.id
-              ? { ...g, is_imported: true, imported_slug: res.data.game.slug }
+            getGameKey(g) === key
+              ? { ...g, is_imported: true, imported_slug: importedData.game.slug }
               : g
           )
         );
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          next.delete(sourceGame.id);
+          next.delete(key);
           return next;
         });
       } else {
@@ -179,12 +184,13 @@ export default function AdminCrawlerView() {
 
       try {
         const res = await importCrawlerGame(id);
-        if (res.success && res.data) {
+        const importedData = res.data;
+        if (res.success && importedData) {
           successCount++;
           // Mark game as imported in local state immediately
           setGames((prev) =>
             prev.map((g) =>
-              g.id === id ? { ...g, is_imported: true, imported_slug: res.data.game.slug } : g
+              g.id === id ? { ...g, is_imported: true, imported_slug: importedData.game.slug } : g
             )
           );
         } else {
@@ -443,20 +449,21 @@ export default function AdminCrawlerView() {
       ) : games.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {games.map((g) => {
-            const isImporting = importingId === g.id;
-            const isSelected = selectedIds.has(g.id);
+            const key = getGameKey(g);
+            const isImporting = importingId === key;
+            const isSelected = selectedIds.has(key);
             const fullIconUrl = g.icon.startsWith('http')
               ? g.icon
               : `https://gametuoitho.cc${g.icon}`;
 
             return (
               <div
-                key={g.id}
+                key={key}
                 onClick={(e) => {
                   // If clicking on buttons or links, don't toggle card
                   if ((e.target as HTMLElement).closest('button, a')) return;
                   if (!g.is_imported) {
-                    toggleSelectGame(g.id, g.is_imported);
+                    toggleSelectGame(key, g.is_imported);
                   }
                 }}
                 className={`relative bg-arcade-900 border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none ${
@@ -480,7 +487,7 @@ export default function AdminCrawlerView() {
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => toggleSelectGame(g.id, g.is_imported)}
+                      onChange={() => toggleSelectGame(key, g.is_imported)}
                       onClick={(e) => e.stopPropagation()}
                       className="w-5 h-5 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
                     />
@@ -549,7 +556,7 @@ export default function AdminCrawlerView() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleSelectGame(g.id, g.is_imported);
+                          toggleSelectGame(key, g.is_imported);
                         }}
                         className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
                           isSelected

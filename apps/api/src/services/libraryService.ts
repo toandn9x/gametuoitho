@@ -33,6 +33,20 @@ export class LibraryService {
     const game = await this.gameRepo.findById(gameId);
     if (!game) throw new Error('Game không tồn tại');
 
+    // Security (R06-B): Catalog item only accepts PUBLISHED + PUBLIC games
+    if (game.status !== 'PUBLISHED' || game.visibility !== 'PUBLIC') {
+      throw new Error('Game này chưa được xuất bản hoặc không khả dụng công khai');
+    }
+
+    // Verify version if provided
+    if (gameVersionId) {
+      const versions = await this.gameRepo.findVersionsByGameId(gameId);
+      const version = versions.find((v) => v.id === gameVersionId && v.status === 'ACTIVE');
+      if (!version) {
+        throw new Error('Phiên bản game không hợp lệ hoặc không thuộc game này');
+      }
+    }
+
     // Check if already in library
     const existing = await this.libraryRepo.findUserCatalogEntry(userId, gameId);
     if (existing) {
@@ -45,6 +59,7 @@ export class LibraryService {
       user_id: userId,
       game_id: gameId,
       game_version_id: gameVersionId || null,
+      custom_asset_id: null,
       custom_name: game.name,
       source_type: 'CATALOG',
     });
@@ -61,14 +76,30 @@ export class LibraryService {
       throw new Error('Bạn không có quyền sở hữu file này');
     }
 
+    if (asset.status !== 'ACTIVE') {
+      throw new Error('Asset không ở trạng thái khả dụng');
+    }
+
     if (asset.asset_type !== 'JAR') {
       throw new Error('File phải là định dạng JAR');
+    }
+
+    if (!asset.storage_key.startsWith(`users/${userId}/`)) {
+      throw new Error('Đường dẫn lưu trữ file không hợp lệ');
+    }
+
+    // Anti-duplication (R06-B / Plan 4.3): Each import asset can only be added once
+    const existing = await this.libraryRepo.findUserImportEntry(userId, jarAssetId);
+    if (existing) {
+      throw new Error('Asset này đã có trong thư viện của bạn');
     }
 
     const id = generateId();
     await this.libraryRepo.addToLibrary({
       id,
       user_id: userId,
+      game_id: null,
+      game_version_id: null,
       custom_asset_id: jarAssetId,
       custom_name: customName,
       source_type: 'IMPORT',
@@ -90,6 +121,22 @@ export class LibraryService {
   }
 
   async recordPlay(userId: string, gameId?: string, userLibraryId?: string) {
+    // Security (R06-B): userLibraryId must belong to userId
+    if (userLibraryId) {
+      const item = await this.libraryRepo.findById(userLibraryId);
+      if (!item || item.user_id !== userId) {
+        throw new Error('Mục thư viện không tồn tại hoặc không thuộc quyền sở hữu của bạn');
+      }
+    }
+
+    // Security (R06-B): gameId must be a public published game
+    if (gameId) {
+      const game = await this.gameRepo.findById(gameId);
+      if (!game || game.status !== 'PUBLISHED' || game.visibility !== 'PUBLIC') {
+        throw new Error('Game không tồn tại hoặc chưa được xuất bản công khai');
+      }
+    }
+
     await this.libraryRepo.recordPlay(userId, gameId, userLibraryId);
     return { success: true };
   }
@@ -103,6 +150,12 @@ export class LibraryService {
   }
 
   async toggleFavorite(userId: string, gameId: string) {
+    // Security (R06-B): Only public published games can be favorited
+    const game = await this.gameRepo.findById(gameId);
+    if (!game || game.status !== 'PUBLISHED' || game.visibility !== 'PUBLIC') {
+      throw new Error('Game không tồn tại hoặc chưa được xuất bản công khai');
+    }
+
     return this.libraryRepo.toggleFavorite(userId, gameId);
   }
 

@@ -8,6 +8,7 @@ export default function GameCatalogView() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [featuredOnly, setFeaturedOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
@@ -17,7 +18,8 @@ export default function GameCatalogView() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('search')) setSearch(params.get('search')!);
+      if (params.get('search')) setSearch(params.get('search')!.trim());
+      setFeaturedOnly(params.get('featured') === 'true');
       if (params.get('category')) setSelectedCategory(params.get('category')!);
       if (params.get('sort')) setSort(params.get('sort')!);
       if (params.get('page')) setPage(Number(params.get('page')) || 1);
@@ -39,7 +41,8 @@ export default function GameCatalogView() {
     setLoading(true);
 
     getGames({
-      search: search || undefined,
+      search: search.trim() || undefined,
+      featured: featuredOnly ? true : undefined,
       categorySlug: selectedCategory || undefined,
       sort,
       page,
@@ -47,7 +50,7 @@ export default function GameCatalogView() {
     })
       .then((res) => {
         if (isMounted && res.success && res.data) {
-          setGames(res.data);
+          setGames(featuredOnly ? res.data.filter(game => game.is_featured === true) : res.data);
           if (res.pagination) {
             setPagination(res.pagination);
           }
@@ -60,7 +63,7 @@ export default function GameCatalogView() {
     return () => {
       isMounted = false;
     };
-  }, [search, selectedCategory, sort, page]);
+  }, [search, featuredOnly, selectedCategory, sort, page]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +120,16 @@ export default function GameCatalogView() {
 
       {/* Categories row */}
       <div className="flex items-center gap-2 overflow-x-auto mt-4 pt-2 pb-2">
+        <button
+          type="button"
+          aria-pressed={featuredOnly}
+          onClick={() => { setFeaturedOnly(value => !value); setPage(1); }}
+          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+            featuredOnly ? 'bg-neon-yellow text-arcade-950 border-neon-yellow' : 'bg-arcade-800 text-slate-400 border-arcade-700 hover:text-neon-yellow'
+          }`}
+        >
+          ★ Game ưa thích
+        </button>
         <button
           type="button"
           onClick={() => handleCategorySelect('')}
@@ -178,6 +191,7 @@ export default function GameCatalogView() {
               type="button"
               onClick={() => {
                 setSearch('');
+                setFeaturedOnly(false);
                 setSelectedCategory('');
                 setPage(1);
               }}

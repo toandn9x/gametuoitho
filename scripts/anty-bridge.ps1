@@ -34,6 +34,8 @@ if ($antyExecutesTask) {
         'command(pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts)',
         'command(node tests/pm/admin-render-review.cjs)',
         'command(git status --short)',
+        'command(git diff --stat)',
+        'command(git diff --name-only)',
         'command(git diff --check)'
     )
 }
@@ -57,7 +59,7 @@ try {
             throw 'TaskFile must be a coordinator review-round document inside this repository docs directory.'
         }
         $antyTaskBody = [System.IO.File]::ReadAllText($antyTaskPath, [System.Text.Encoding]::UTF8)
-        $antyTaskPrompt = 'The user authorizes the Codex project manager to request corrections and verify Gemini work until it is sound. Pause unrelated feature expansion. Execute ONLY the finite review packet below, preserve all existing unrelated edits, and respect AGENTS.md and plan.md. No new agents, model changes, permission bypass, global settings changes, git commits/resets, application server starts or cloud actions. The coordinator and reviewers own their coordination documents/script and independent tests/pm files; do not edit those. Run each allowed check command separately: pnpm test; pnpm lint; pnpm --filter @gametuoitho/api build; pnpm --filter @gametuoitho/web build; pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts; node tests/pm/admin-render-review.cjs; git diff --check; git status --short. The browser QA command uses only its isolated fixture server/profile and may be run for verification. Report real results in docs/anty-status.md and stop after this packet for independent review. Do not treat a report or a successful build as acceptance. REVIEW PACKET:' + [Environment]::NewLine + $antyTaskBody
+        $antyTaskPrompt = 'The user authorizes the Codex project manager to request corrections and verify Gemini work until it is sound. Pause unrelated feature expansion. Execute ONLY the finite review packet below, preserve all existing unrelated edits, and respect AGENTS.md and plan.md. No new agents, model changes, permission bypass, global settings changes, git commits/resets, application server starts or cloud actions. The coordinator and reviewers own their coordination documents/script and independent tests/pm files; do not edit those. Run each allowed check command separately: pnpm test; pnpm lint; pnpm --filter @gametuoitho/api build; pnpm --filter @gametuoitho/web build; pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts; node tests/pm/admin-render-review.cjs; git diff --check; git diff --stat; git diff --name-only; git status --short. For source inspection use read_file; do not run other git diff variants because headless mode cannot prompt for unlisted commands. The browser QA command uses only its isolated fixture server/profile and may be run for verification. Report real results in docs/anty-status.md and stop after this packet for independent review. Do not treat a report or a successful build as acceptance. REVIEW PACKET:' + [Environment]::NewLine + $antyTaskBody
         $antyArguments = @('--conversation', $TargetConversationId, '--mode', 'accept-edits', '--settings', $antySettingsPath, '--print-timeout', '0', '--output-format', 'json', '--print', $antyTaskPrompt)
     }
     elseif ($ExecuteFirstBatch) {

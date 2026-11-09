@@ -11,11 +11,17 @@ export const gameRoutes = (getService: (c: Context<AppEnv>) => GameService) => {
     const query = c.req.query();
     const parsed = GameQuerySchema.safeParse(query);
 
-    const filter = parsed.success
-      ? parsed.data
-      : { page: 1, limit: 20, sort: 'newest' as const };
+    if (!parsed.success || (c.req.queries('featured')?.length ?? 0) > 1) {
+      return c.json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: !parsed.success ? parsed.error.errors[0]?.message : 'Chỉ được truyền featured một lần',
+        },
+      }, 400);
+    }
 
-    const res = await gameService.getPublicGames(filter);
+    const res = await gameService.getPublicGames(parsed.data);
 
     return c.json({
       success: true,

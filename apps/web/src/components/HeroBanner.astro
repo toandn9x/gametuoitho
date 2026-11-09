@@ -28,6 +28,22 @@
           Không cần cài đặt giả lập phức tạp! Thưởng thức lại trọn vẹn Ninja School, Diamond Rush, Bounce Tales, Avatar và hàng trăm tựa game tuổi thơ với âm thanh MIDI và bàn phím bấm kinh điển.
         </p>
 
+        <form action="/games" method="GET" role="search" class="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto lg:mx-0">
+          <label for="home-game-search" class="sr-only">Tìm kiếm game</label>
+          <input
+            id="home-game-search"
+            type="search"
+            name="search"
+            placeholder="Bạn muốn chơi game gì?"
+            maxlength="200"
+            class="min-w-0 flex-1 px-4 py-3 bg-arcade-800 border border-arcade-600 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20"
+          />
+          <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-neon-cyan text-arcade-950 font-bold text-sm rounded-xl hover:bg-neon-yellow transition-colors">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+            Tìm game
+          </button>
+        </form>
+
         <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
           <a
             href="/games"

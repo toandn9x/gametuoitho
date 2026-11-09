@@ -128,6 +128,21 @@
           0 0 60px rgba(255,0,255,0.3);
     }
 
+    html[data-skin="nokia1280"] body {
+        background: #111811;
+    }
+
+    html[data-skin="nokia1280"] #screen-area {
+        padding: 0;
+        background: #111811;
+    }
+
+    html[data-skin="nokia1280"] #display,
+    html[data-skin="nokia1280"] #display:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
     #loading {
         position: absolute;
         display: flex;
@@ -473,6 +488,12 @@
             <button data-key="Maximize" class="key ok-key" aria-label="Maximize">⛶</button>
         </div>
     </div>
+    <script>
+      if (new URLSearchParams(location.search).get('skin') === 'nokia1280') {
+        document.documentElement.dataset.skin = 'nokia1280';
+      }
+    </script>
+    <script src="src/diagnostics.js"></script>
     <script src="https://cjrtnc.leaningtech.com/4.1/loader.js"></script>
     <script type="module" src="src/main.js"></script>
     <script>
@@ -496,7 +517,7 @@
         }
 
         try {
-          const registration = await navigator.serviceWorker.register("sw.js");
+          const registration = await navigator.serviceWorker.register("sw.js", { updateViaCache: 'none' });
           console.log("[App] Service Worker registered:", registration.scope);
         } catch (error) {
           console.error("[App] Service Worker registration failed:", error);

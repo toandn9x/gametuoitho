@@ -1,0 +1,10 @@
+{
+  "sourceUrl": "https://raw.githubusercontent.com/zb3/freej2me-web/master/src/javax/microedition/lcdui/List.java",
+  "retrievedOn": "2026-11-09",
+  "originalSourceSha256": "64543c98c7cd42222d23c59fe10a71b770c2c5f8dbe52939229faeb0491c0bd8",
+  "patchedSourceSha256": "735fad7a10b214ff4ccae1bb8b8e5a3aa93b0ae48978421240f7617c0f7a7d82",
+  "upstreamJarSha256": "c9fcc5faca09f184e7a056855d1c244ce6909fde1b166cb3fd6e15e22db0fd0a",
+  "patchedJarSha256": "36d880b9a3069bc16fffe89a6339b6594d1dd0e22ae8c529a2fa1aaf875be5c6",
+  "license": "GPL-3.0-or-later",
+  "change": "List.renderScreen skips null optional menu icons; all other class behavior is preserved."
+}

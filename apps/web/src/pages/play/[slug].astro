@@ -5,22 +5,20 @@ import { getGameDetail, getGames } from '../../lib/api';
 
 export async function getStaticPaths() {
   const gamesRes = await getGames({ limit: 100 });
-  const games = gamesRes.success && gamesRes.data && gamesRes.data.length > 0 ? gamesRes.data : [
-    { slug: 'ninja-school' },
-    { slug: 'diamond-rush' },
-    { slug: 'bounce-tales' },
-    { slug: 'avatar' },
-    { slug: 'asphalt-3' },
-    { slug: 'space-impact' },
-  ];
-  return games.map((game) => ({
-    params: { slug: game.slug },
-  }));
+  const games = gamesRes.success && Array.isArray(gamesRes.data) ? gamesRes.data : [];
+  const paths = [{ params: { slug: '_shell' } }];
+  for (const game of games) {
+    if (game.slug && game.slug !== '_shell') {
+      paths.push({ params: { slug: game.slug } });
+    }
+  }
+  return paths;
 }
 
 const { slug } = Astro.params;
-const detailRes = await getGameDetail(slug || '');
-const gameName = detailRes.success && detailRes.data?.game?.name ? detailRes.data.game.name : slug;
+const isShell = !slug || slug === '_shell';
+const detailRes = isShell ? { success: false, data: null } : await getGameDetail(slug);
+const gameName = detailRes.success && detailRes.data?.game?.name ? detailRes.data.game.name : (isShell ? 'Trò chơi' : slug);
 ---
 
 <Layout

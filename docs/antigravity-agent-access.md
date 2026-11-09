@@ -70,10 +70,12 @@ pnpm --filter @gametuoitho/web build
 pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts
 node tests/pm/admin-render-review.cjs
 git diff --check
+git diff --stat
+git diff --name-only
 git status --short
 ```
 
-Agent phải chạy từng lệnh riêng. Quyền chỉ áp dụng cho lượt CLI, không sửa cấu hình quyền toàn cục và không dùng `--dangerously-skip-permissions`. Nếu thực sự cần thêm lệnh, PM review và thêm đúng lệnh hữu hạn; không mở `command(*)` để cho task chạy qua.
+Agent phải chạy từng lệnh riêng. Đọc source bằng tool `read_file`; biến thể như `git diff <file>` chưa có allowance có thể làm headless dừng ngay trước bàn giao, dù code đã sửa. Quyền chỉ áp dụng cho lượt CLI, không sửa cấu hình quyền toàn cục và không dùng `--dangerously-skip-permissions`. Nếu thực sự cần thêm lệnh, PM review và thêm đúng lệnh hữu hạn; không mở `command(*)` để cho task chạy qua.
 
 `-ExecuteFirstBatch` là lệnh cũ dành riêng cho đợt T01/S5 sửa runner/typecheck. Đợt đó đã có bàn giao; **không dùng flag này để giao công việc mới**. Dùng packet mới với `-TaskFile`.
 

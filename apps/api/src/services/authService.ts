@@ -39,7 +39,7 @@ export class AuthService {
     };
 
     const token = await createJwt(
-      { userId: user.id, username: user.username, role: user.role, email: user.email },
+      { userId: user.id, username: user.username, role: user.role, email: user.email, tokenVersion: 0 },
       this.jwtSecret
     );
 
@@ -62,12 +62,22 @@ export class AuthService {
     }
 
     const token = await createJwt(
-      { userId: user.id, username: user.username, role: user.role, email: user.email },
+      {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        tokenVersion: user.token_version ?? 0,
+      },
       this.jwtSecret
     );
 
     const { password_hash, ...safeUser } = user;
     return { user: safeUser, token };
+  }
+
+  async logout(userId: string): Promise<void> {
+    await this.userRepo.incrementTokenVersion(userId);
   }
 
   async getCurrentUser(userId: string): Promise<Omit<User, 'password_hash'> | null> {

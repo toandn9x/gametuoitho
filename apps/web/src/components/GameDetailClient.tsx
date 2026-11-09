@@ -12,35 +12,51 @@ interface GameDetailClientProps {
 }
 
 export default function GameDetailClient({ slug, initialData }: GameDetailClientProps) {
+  const effectiveSlug =
+    slug && slug !== '_shell'
+      ? slug
+      : typeof window !== 'undefined'
+        ? window.location.pathname.replace(/^\/game\/?/, '').replace(/\/$/, '')
+        : slug;
+
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!initialData) {
-      let isMounted = true;
-      getGameDetail(slug)
-        .then((res) => {
-          if (isMounted) {
-            if (res.success && res.data) {
-              setData(res.data);
-            } else {
-              setError(res.error?.message || 'Không tìm thấy thông tin game');
-            }
-          }
-        })
-        .catch((err) => {
-          if (isMounted) setError(err.message || 'Lỗi khi tải dữ liệu game');
-        })
-        .finally(() => {
-          if (isMounted) setLoading(false);
-        });
+    let isMounted = true;
+    if (!data) setLoading(true);
 
-      return () => {
-        isMounted = false;
-      };
+    getGameDetail(effectiveSlug)
+      .then((res) => {
+        if (isMounted) {
+          if (res.success && res.data) {
+            setData(res.data);
+            if (typeof document !== 'undefined' && res.data.game?.name) {
+              document.title = `${res.data.game.name} --- Chơi Game Java ME Online | Game Tuổi Thơ`;
+            }
+          } else {
+            setError(res.error?.message || 'Không tìm thấy thông tin game');
+          }
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Lỗi khi tải dữ liệu game');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveSlug]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && data?.game?.name) {
+      document.title = `${data.game.name} --- Chơi Game Java ME Online | Game Tuổi Thơ`;
     }
-  }, [slug, initialData]);
+  }, [data?.game?.name]);
 
   if (loading) {
     return (

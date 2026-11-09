@@ -76,7 +76,10 @@ export const authRoutes = (getService: (c: Context<AppEnv>) => AuthService) => {
     return c.json({ success: true, data: safeUser });
   });
 
-  router.post('/logout', async (c) => {
+  router.post('/logout', requireAuth, async (c) => {
+    const authService = getService(c);
+    const user = c.get('user')!;
+    await authService.logout(user.id);
     return c.json({ success: true, message: 'Đăng xuất thành công' });
   });
 

@@ -75,11 +75,24 @@ export interface GameEmulatorInstance {
 }
 ```
 
-### Cơ chế Sandbox bảo mật:
+### Cơ chế nạp JAR và lưu trữ RMS hiện tại
+1. **Nạp nhị phân JAR vào Runtime:**
+   - Trình duyệt tải dữ liệu file JAR dưới dạng byte stream hoặc `ArrayBuffer` từ endpoint phát asset (`/api/v1/assets/raw/...`).
+   - Sử dụng API hệ thống tệp ảo của CheerpJ: `cheerpOSAddStringFile('/str/<appId>.jar', jarBinary)` để nạp trực tiếp file nhị phân vào bộ nhớ ảo.
+   - Khởi chạy FreeJ2ME thông qua lớp thực thi Java: gọi `FreeJ2ME.main` hoặc `CheerpJ.run('com.freej2me.FreeJ2ME', ['-jar', '/str/<appId>.jar', ...])`.
+2. **Cơ chế cô lập lưu trữ RMS (Record Management System):**
+   - Dữ liệu lưu game (RMS) được lưu trữ vào IndexedDB của trình duyệt thông qua phân vùng ảo `/files/`.
+   - Mỗi tựa game được cấp một namespace định danh riêng biệt (ví dụ `/files/rms/<appId>/` hoặc dựa trên hash/slug của trò chơi).
+   - Cơ chế này đảm bảo dữ liệu RMS của các game khác nhau không bị ghi đè hay xung đột khi chơi nhiều trò trên cùng một trình duyệt.
+
+### Cơ chế Sandbox và Giới hạn hiện tại
 - Emulator được chạy bên trong thẻ `<iframe>` với các thuộc tính sandbox:
   `sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"`
 - Tuyệt đối **không truyền Authorization Token hay JWT** của Admin/User vào context của Emulator iframe.
-- Giao tiếp giữa Host Website và Emulator iframe thông qua cơ chế `postMessage` có kiểm tra `origin` an toàn.
+- Giao tiếp giữa Host Website và Emulator iframe thông qua cơ chế `postMessage` có kiểm tra `origin`.
+
+> [!WARNING]
+> **Hạn chế bảo mật F3 (Người dùng đã tạm hoãn):** Trên thực tế, do emulator hiện chạy trên **cùng origin** với website chính, việc kết hợp giữa `allow-scripts` và `allow-same-origin` không thể cô lập hoàn toàn `localStorage`, IndexedDB hay cookie của trang chính. Đây là hạn chế kỹ thuật đã được ghi nhận; người dùng đã quyết định tạm hoãn việc phân tách tên miền/origin riêng cho emulator sang giai đoạn sau. Không tuyên bố cấu hình hiện tại là đã cô lập origin an toàn.
 
 ---
 

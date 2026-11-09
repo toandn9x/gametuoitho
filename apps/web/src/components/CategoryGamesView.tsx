@@ -8,14 +8,38 @@ interface CategoryGamesViewProps {
 }
 
 export default function CategoryGamesView({ categorySlug }: CategoryGamesViewProps) {
+  const [actualCategorySlug, setActualCategorySlug] = useState<string>(() => {
+    if (categorySlug && categorySlug !== '_shell') return categorySlug;
+    if (typeof window !== 'undefined') {
+      const match = window.location.pathname.match(/\/categories\/([^/?#]+)/);
+      if (match && match[1] && match[1] !== '_shell') return match[1];
+    }
+    return categorySlug;
+  });
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && (!categorySlug || categorySlug === '_shell')) {
+      const match = window.location.pathname.match(/\/categories\/([^/?#]+)/);
+      if (match && match[1] && match[1] !== '_shell') {
+        setActualCategorySlug(match[1]);
+      }
+    } else {
+      setActualCategorySlug(categorySlug);
+    }
+  }, [categorySlug]);
+
+  useEffect(() => {
+    if (!actualCategorySlug || actualCategorySlug === '_shell') {
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
     setLoading(true);
 
-    getGames({ categorySlug, limit: 24 })
+    getGames({ categorySlug: actualCategorySlug, limit: 24 })
       .then((res) => {
         if (isMounted && res.success && res.data) {
           setGames(res.data);
@@ -28,7 +52,7 @@ export default function CategoryGamesView({ categorySlug }: CategoryGamesViewPro
     return () => {
       isMounted = false;
     };
-  }, [categorySlug]);
+  }, [actualCategorySlug]);
 
   if (loading) {
     return (

@@ -46,6 +46,10 @@ export class LocalStorageDriver implements StorageDriver {
     }
   }
 
+  getBaseDir(): string {
+    return this.baseDir;
+  }
+
   private getSafeFilePath(key: string): string | null {
     if (!key || typeof key !== 'string') return null;
     if (key.includes('\0') || key.includes('\\')) return null;

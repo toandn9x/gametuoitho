@@ -76,7 +76,7 @@ export default function UserLibraryView() {
         const playUrl =
           item.source_type === 'CATALOG' && item.catalog_game_slug
             ? `/play/${item.catalog_game_slug}`
-            : `/play/custom?jar=${encodeURIComponent(item.custom_jar_url || '')}&title=${encodeURIComponent(item.custom_name)}`;
+            : `/play/custom?id=${encodeURIComponent(item.id)}`;
 
         return (
           <div

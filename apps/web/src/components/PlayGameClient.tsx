@@ -10,6 +10,13 @@ interface PlayGameClientProps {
 }
 
 export default function PlayGameClient({ slug, initialGame, initialVersions }: PlayGameClientProps) {
+  const effectiveSlug =
+    slug && slug !== '_shell'
+      ? slug
+      : typeof window !== 'undefined'
+        ? window.location.pathname.replace(/^\/play\/?/, '').replace(/\/$/, '')
+        : slug;
+
   const [game, setGame] = useState<Game | undefined>(initialGame);
   const [versions, setVersions] = useState<GameVersion[]>(initialVersions || []);
   const [activeVersion, setActiveVersion] = useState<GameVersion | undefined>(
@@ -18,35 +25,45 @@ export default function PlayGameClient({ slug, initialGame, initialVersions }: P
   const [loading, setLoading] = useState(!initialGame);
   const [error, setError] = useState<string | null>(null);
 
+  // Always fetch fresh game data at runtime to ensure up-to-date version & asset URLs
   useEffect(() => {
-    if (!initialGame) {
-      let isMounted = true;
-      getGameDetail(slug)
-        .then((res) => {
-          if (isMounted) {
-            if (res.success && res.data) {
-              setGame(res.data.game);
-              setVersions(res.data.versions);
-              if (res.data.versions.length > 0) {
-                setActiveVersion(res.data.versions[0]);
-              }
-            } else {
-              setError(res.error?.message || 'Không tìm thấy game');
-            }
-          }
-        })
-        .catch((err) => {
-          if (isMounted) setError(err.message || 'Lỗi khi tải dữ liệu game');
-        })
-        .finally(() => {
-          if (isMounted) setLoading(false);
-        });
+    let isMounted = true;
+    if (!game) setLoading(true);
 
-      return () => {
-        isMounted = false;
-      };
+    getGameDetail(effectiveSlug)
+      .then((res) => {
+        if (isMounted) {
+          if (res.success && res.data) {
+            setGame(res.data.game);
+            setVersions(res.data.versions);
+            if (res.data.versions.length > 0) {
+              setActiveVersion(res.data.versions[0]);
+            }
+            if (typeof document !== 'undefined' && res.data.game?.name) {
+              document.title = `Đang Chơi: ${res.data.game.name} --- Game Tuổi Thơ Web Player`;
+            }
+          } else {
+            setError(res.error?.message || 'Không tìm thấy game');
+          }
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || 'Lỗi khi tải dữ liệu game');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveSlug]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && game?.name) {
+      document.title = `Đang Chơi: ${game.name} --- Game Tuổi Thơ Web Player`;
     }
-  }, [slug, initialGame]);
+  }, [game?.name]);
 
   // Record play event
   useEffect(() => {
@@ -109,6 +126,8 @@ export default function PlayGameClient({ slug, initialGame, initialVersions }: P
       {/* Emulator Player Component */}
       <EmulatorPlayer
         game={game}
+        gameId={game.id}
+        gameName={game.name}
         activeVersion={activeVersion}
         versions={versions}
         jarUrl={jarUrl}

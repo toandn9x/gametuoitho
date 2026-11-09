@@ -25,21 +25,22 @@ jobs:
           version: 10
 
       - name: Install Dependencies
-        run: |
-          pnpm approve-builds --all || true
-          pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Typecheck Packages
-        run: |
-          pnpm --filter "@gametuoitho/shared-types" build
-          pnpm --filter "@gametuoitho/api-contracts" build
-          pnpm --filter "@gametuoitho/shared-utils" build
-          pnpm --filter "@gametuoitho/api" build
+      - name: Lint Monorepo
+        run: pnpm lint
 
       - name: Run Automated API Tests
-        run: |
-          pnpm --filter @gametuoitho/api exec tsx ../../tests/api.test.ts
+        run: pnpm test
+
+      - name: Build API Application
+        run: pnpm --filter @gametuoitho/api build
 
       - name: Build Web Application
-        run: |
-          pnpm --filter @gametuoitho/web build
+        run: pnpm --filter @gametuoitho/web build
+
+      - name: Run PM Asset Review
+        run: pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts
+
+      - name: Run PM Admin Render Review
+        run: node tests/pm/admin-render-review.cjs

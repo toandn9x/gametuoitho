@@ -7,6 +7,7 @@ export interface GameFilter {
   search?: string;
   categoryId?: string;
   categorySlug?: string;
+  featured?: boolean;
   status?: Game['status'];
   visibility?: Game['visibility'];
   sort?: 'newest' | 'popular' | 'name';
@@ -14,6 +15,10 @@ export interface GameFilter {
 
 export class GameRepository {
   constructor(private db: DatabaseClient) {}
+
+  private normalizeGame(game: Game): Game {
+    return { ...game, is_featured: Boolean(game.is_featured) };
+  }
 
   async findGames(filter: GameFilter): Promise<{ games: Game[]; total: number }> {
     const page = Math.max(1, filter.page || 1);
@@ -30,6 +35,10 @@ export class GameRepository {
     if (filter.visibility) {
       whereClauses.push('g.visibility = ?');
       params.push(filter.visibility);
+    }
+    if (filter.featured !== undefined) {
+      whereClauses.push('g.is_featured = ?');
+      params.push(filter.featured ? 1 : 0);
     }
     if (filter.categoryId) {
       whereClauses.push('g.category_id = ?');
@@ -90,7 +99,7 @@ export class GameRepository {
 
     const games = await this.db.query<Game>(selectSql, [...params, limit, offset]);
 
-    return { games, total };
+    return { games: games.map(game => this.normalizeGame(game)), total };
   }
 
   async findBySlug(slug: string): Promise<Game | null> {
@@ -113,7 +122,8 @@ export class GameRepository {
       ) a ON g.cover_asset_id = a.id
       WHERE g.slug = ?
     `;
-    return this.db.queryFirst<Game>(sql, [slug]);
+    const game = await this.db.queryFirst<Game>(sql, [slug]);
+    return game ? this.normalizeGame(game) : null;
   }
 
   async findById(id: string): Promise<Game | null> {
@@ -136,13 +146,17 @@ export class GameRepository {
       ) a ON g.cover_asset_id = a.id
       WHERE g.id = ?
     `;
-    return this.db.queryFirst<Game>(sql, [id]);
+    const game = await this.db.queryFirst<Game>(sql, [id]);
+    return game ? this.normalizeGame(game) : null;
   }
 
   async createGame(game: Game): Promise<void> {
+    // Default false comes from migration 0005. Omitting that default also keeps
+    // older schema-only test fixtures valid when they do not use this feature.
+    const featured = game.is_featured === true;
     await this.db.execute(
-      `INSERT INTO games (id, name, slug, description, developer, publisher, release_year, category_id, cover_asset_id, status, visibility, source_type, created_by, published_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      `INSERT INTO games (id, name, slug, description, developer, publisher, release_year, category_id, cover_asset_id, status, visibility, source_type, created_by, published_at${featured ? ', is_featured' : ''}, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${featured ? ', ?' : ''}, datetime('now'), datetime('now'))`,
       [
         game.id,
         game.name,
@@ -158,6 +172,7 @@ export class GameRepository {
         game.source_type,
         game.created_by,
         game.status === 'PUBLISHED' ? new Date().toISOString() : null,
+        ...(featured ? [1] : []),
       ]
     );
   }
@@ -177,12 +192,13 @@ export class GameRepository {
       'cover_asset_id',
       'status',
       'visibility',
+      'is_featured',
     ];
 
     for (const key of allowedFields) {
       if ((updates as any)[key] !== undefined) {
         fields.push(`${key} = ?`);
-        params.push((updates as any)[key]);
+        params.push(key === 'is_featured' ? (updates.is_featured ? 1 : 0) : (updates as any)[key]);
       }
     }
 
@@ -248,6 +264,29 @@ export class GameRepository {
       WHERE v.id = ?
     `;
     return this.db.queryFirst<GameVersion>(sql, [versionId]);
+  }
+
+  async findGameByJarSha256(sha256: string): Promise<Game | null> {
+    const sql = `
+      SELECT g.*
+      FROM game_versions v
+      JOIN games g ON v.game_id = g.id
+      WHERE v.jar_sha256 = ?
+      LIMIT 1
+    `;
+    const game = await this.db.queryFirst<Game>(sql, [sha256]);
+    if (game) return this.normalizeGame(game);
+
+    const assetSql = `
+      SELECT g.*
+      FROM game_assets a
+      JOIN game_versions v ON (v.jar_asset_id = a.id)
+      JOIN games g ON v.game_id = g.id
+      WHERE a.sha256 = ?
+      LIMIT 1
+    `;
+    const assetGame = await this.db.queryFirst<Game>(assetSql, [sha256]);
+    return assetGame ? this.normalizeGame(assetGame) : null;
   }
 
   async createVersion(version: GameVersion): Promise<void> {

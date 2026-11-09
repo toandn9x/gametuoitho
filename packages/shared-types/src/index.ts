@@ -8,6 +8,7 @@ export interface User {
   password_hash?: string;
   role: UserRole;
   status: UserStatus;
+  token_version?: number;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +43,7 @@ export interface Game {
   cover_url?: string | null;
   status: GameStatus;
   visibility: GameVisibility;
+  is_featured?: boolean;
   source_type: GameSourceType;
   created_by: string | null;
   published_at: string | null;

@@ -1,6 +1,6 @@
 import { Hono, Context } from 'hono';
 import { UploadService } from '../services/uploadService';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, getJwtSecret } from '../middleware/auth';
 import { AssetType } from '@gametuoitho/shared-types';
 import { AppEnv } from '../types';
 
@@ -12,6 +12,16 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
     try {
       const uploadService = getService(c);
       const user = c.get('user')!;
+
+      // 1. Check Content-Length before parsing full body
+      const contentLength = c.req.header('content-length');
+      if (contentLength && Number(contentLength) > 50 * 1024 * 1024) {
+        return c.json(
+          { success: false, error: { message: 'Dung lượng payload vượt quá giới hạn 50MB cho phép' } },
+          413
+        );
+      }
+
       const body = await c.req.parseBody();
 
       const file = body['file'];
@@ -19,6 +29,14 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
         return c.json(
           { success: false, error: { message: 'Vui lòng chọn file cần tải lên' } },
           400
+        );
+      }
+
+      // Check file size before reading full arrayBuffer
+      if (file.size > 50 * 1024 * 1024) {
+        return c.json(
+          { success: false, error: { message: 'Dung lượng file vượt quá giới hạn 50MB cho phép' } },
+          413
         );
       }
 
@@ -41,6 +59,7 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
 
       const asset = await uploadService.uploadFile({
         userId: user.id,
+        userRole: user.role,
         fileBuffer: arrayBuffer,
         originalFilename: file.name,
         assetType,
@@ -51,7 +70,8 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
 
       return c.json({ success: true, data: asset }, 201);
     } catch (err: any) {
-      return c.json({ success: false, error: { message: err.message } }, 400);
+      const status = (err.status && typeof err.status === 'number') ? err.status : 400;
+      return c.json({ success: false, error: { message: err.message } }, status);
     }
   });
 
@@ -109,7 +129,10 @@ export const uploadRoutes = (getService: (c: Context<AppEnv>) => UploadService) 
       }
     }
 
-    const jwtSecret = c.env?.JWT_SECRET || 'gametuoitho-dev-secret';
+    const jwtSecret = getJwtSecret(
+      c.env?.JWT_SECRET || process.env.JWT_SECRET,
+      c.env?.ENVIRONMENT || process.env.NODE_ENV
+    );
     const authHeader = c.req.header('Authorization');
     const cookieHeader = c.req.header('Cookie');
 

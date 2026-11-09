@@ -56,11 +56,13 @@ flowchart TB
 
 ---
 
-## 3. Phân Tách Domain & Sandbox Security
+## 3. Cấu Trúc Định Tuyến & Giới Hạn Sandbox Hiện Tại
 - Website người dùng: `/`
 - Trang quản trị: `/admin` (kiểm tra `role = ADMIN` ở cả Client UI và Server Middleware)
 - API endpoint: `/api/v1/*`
 - Raw Asset Streaming: `/api/v1/assets/raw/:key` hỗ trợ tiêu đề `Range` (`Accept-Ranges: bytes`, `206 Partial Content`) phục vụ CheerpJ.
-- Web Emulator iframe: Cô lập trong thẻ `<iframe>` với các thuộc tính sandbox:
+- Web Emulator iframe: Được nhúng qua thẻ `<iframe>` với các thuộc tính sandbox:
   `sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"`
-  Không bao giờ truyền Auth Token hay Admin Token vào context iframe.
+  Không bao giờ truyền Auth Token hay Admin Session Cookie vào context iframe.
+  > [!NOTE]
+  > **Giới hạn bảo mật (F3 - Người dùng đã tạm hoãn):** Trên thực tế, do emulator hiện chạy **cùng origin** với website chính, sự kết hợp giữa `allow-scripts` và `allow-same-origin` không thể cô lập hoàn toàn `localStorage`, IndexedDB hoặc cookie của site chính. Đây là hạn chế đã được ghi nhận trong Phase 0; việc tách sang origin/domain riêng biệt được hoãn lại theo lựa chọn của người dùng. Không coi cấu hình hiện tại là đã hoàn toàn an toàn về mặt cô lập origin.

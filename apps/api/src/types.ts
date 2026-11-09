@@ -7,6 +7,11 @@ import { LibraryService } from './services/libraryService';
 import { UploadService } from './services/uploadService';
 import { AdminService } from './services/adminService';
 import { CrawlerService } from './services/crawlerService';
+import { StorageService } from './services/storageService';
+import { ReportRepository } from './repositories/reportRepository';
+import { UserRepository } from './repositories/userRepository';
+import { GameRepository } from './repositories/gameRepository';
+import { AuditRepository } from './repositories/auditRepository';
 
 export interface Bindings {
   DB: any;
@@ -26,6 +31,11 @@ export interface Variables {
     uploadService: UploadService;
     adminService: AdminService;
     crawlerService: CrawlerService;
+    storageService: StorageService;
+    reportRepo: ReportRepository;
+    userRepo: UserRepository;
+    gameRepo: GameRepository;
+    auditRepo: AuditRepository;
   };
 }
 

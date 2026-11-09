@@ -2,145 +2,585 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout title="Quản Lý Lưu Trữ R2 Assets" activeNav="storage">
+<AdminLayout title="Quản Lý & Dọn Dẹp Dung Lượng Lưu Trữ" activeNav="storage">
   <div class="space-y-6">
-    <div class="border-b border-arcade-800 pb-4">
-      <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
-        <span>🗄️</span>
-        <span>Danh Sách File Trên Cloudflare R2</span>
-      </h2>
-      <p class="text-xs text-slate-400 mt-1">
-        Toàn bộ tài nguyên file JAR, JAD, Cover và Screenshot theo cấu trúc PLAN.md Section 4.4
-      </p>
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
+      <div>
+        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+          <span>🧹</span>
+          <span>Quản Lý & Dọn Dẹp Dung Lượng Lưu Trữ</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          Phân tích ổ đĩa, phát hiện file mồ côi (orphans), giải phóng dung lượng và dọn dẹp tài nguyên rác
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          id="btn-scan"
+          class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-700 hover:border-neon-cyan/50 rounded-xl text-xs font-bold text-slate-200 transition-all flex items-center gap-1.5"
+        >
+          <span>🔍</span>
+          <span>Quét Ổ Đĩa</span>
+        </button>
+
+        <button
+          id="btn-clean-orphans"
+          class="px-4 py-2 bg-neon-yellow/20 hover:bg-neon-yellow text-neon-yellow hover:text-arcade-950 border border-neon-yellow/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          title="Xóa các file nằm trên ổ đĩa nhưng không có trong cơ sở dữ liệu"
+        >
+          <span>🧹</span>
+          <span>Dọn File Rác Mồ Côi</span>
+        </button>
+
+        <button
+          id="btn-purge-all"
+          class="px-4 py-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          title="Dọn sạch toàn bộ file rác và asset đã xóa để giải phóng dung lượng tối đa"
+        >
+          <span>⚡</span>
+          <span>Dọn Dẹp Toàn Diện</span>
+        </button>
+      </div>
     </div>
 
-    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
-            <tr>
-              <th class="px-6 py-4">Loại Asset</th>
-              <th class="px-6 py-4">Storage Key (R2)</th>
-              <th class="px-6 py-4">Tên File Ban Đầu</th>
-              <th class="px-6 py-4">Dung Lượng</th>
-              <th class="px-6 py-4">Trạng Thái</th>
-            </tr>
-          </thead>
-          <tbody id="assets-table-body" class="divide-y divide-arcade-800 text-slate-300">
-            <tr>
-              <td colspan="5" class="px-6 py-8 text-center text-slate-500 font-mono">
-                Đang tải danh sách tài nguyên...
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Cleanup Alert Toast -->
+    <div id="cleanup-result-box" class="hidden p-4 rounded-2xl border text-xs font-bold flex items-center justify-between">
+      <div id="cleanup-message"></div>
+      <button id="close-cleanup-alert" class="text-xs hover:opacity-75 ml-4">✕</button>
+    </div>
+
+    <!-- Storage Analysis Metric Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-arcade-900 border border-arcade-800 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">TỔNG DUNG LƯỢNG Ổ ĐĨA</div>
+        <div id="stat-total-disk" class="text-2xl font-black text-neon-cyan font-mono">-- MB</div>
+        <div class="text-[10px] text-slate-500 mt-1">Dung lượng thực tế trên thư mục uploads</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">FILE GAME JAR</div>
+        <div id="stat-jar-size" class="text-2xl font-black text-slate-100 font-mono">-- MB</div>
+        <div class="text-[10px] text-slate-500 mt-1">Tài nguyên mã nhị phân trò chơi</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">ẢNH BÌA & ICON</div>
+        <div id="stat-cover-size" class="text-2xl font-black text-slate-100 font-mono">-- KB</div>
+        <div class="text-[10px] text-slate-500 mt-1">Hình ảnh icon và cover games</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-neon-yellow/40 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-neon-yellow mb-1">FILE RÁC / MỒ CÔI</div>
+        <div id="stat-orphan-size" class="text-2xl font-black text-neon-yellow font-mono">0 B (0 file)</div>
+        <div class="text-[10px] text-neon-yellow/70 mt-1">File không có trong DB, có thể dọn dẹp</div>
+      </div>
+    </div>
+
+    <!-- Orphan Files Notice (If any) -->
+    <div id="orphans-container" class="hidden bg-arcade-900 border border-neon-yellow/40 rounded-2xl p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-neon-yellow font-bold text-xs uppercase tracking-wider">
+          <span>⚠️</span>
+          <span>Phát Hiện Các File Rác / Mồ Côi Cần Dọn Dẹp</span>
+        </div>
+        <button
+          id="btn-clean-orphans-inline"
+          class="px-3 py-1 bg-neon-yellow text-arcade-950 font-bold text-xs rounded-xl hover:bg-neon-cyan transition-all"
+        >
+          Xóa Toàn Bộ File Rác Này
+        </button>
+      </div>
+      <div id="orphans-list" class="space-y-1.5 max-h-48 overflow-y-auto font-mono text-[11px] text-slate-300"></div>
+    </div>
+
+    <!-- Bulk Action Toolbar -->
+    <div id="bulk-toolbar" class="hidden bg-arcade-900 border border-neon-cyan/40 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
+      <div class="flex items-center gap-3 text-xs font-mono">
+        <span class="text-neon-cyan font-bold">Đã chọn: <span id="bulk-selected-count">0</span> tài nguyên</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-slate-300">Tổng dung lượng: <span id="bulk-selected-size" class="font-bold text-slate-100">0 B</span></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-bulk-delete"
+          class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+        >
+          <span>🗑️</span>
+          <span>Xóa Đã Chọn</span>
+        </button>
+        <button
+          id="btn-clear-selection"
+          class="px-3 py-1.5 bg-arcade-800 hover:bg-arcade-700 text-slate-300 rounded-xl text-xs font-medium border border-arcade-700 transition-all"
+        >
+          Bỏ chọn
+        </button>
+      </div>
+    </div>
+
+    <!-- Assets List Table -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+          <span>📑</span>
+          <span>Danh Sách Tài Nguyên Đang Quản Lý (<span id="asset-count">0</span>)</span>
+        </h3>
+      </div>
+
+      <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs min-w-[850px]">
+            <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
+              <tr>
+                <th class="w-10 px-3 py-3 text-center">
+                  <input type="checkbox" id="check-all-assets" class="rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer" title="Chọn tất cả" />
+                </th>
+                <th class="px-4 py-3 whitespace-nowrap">Loại Asset</th>
+                <th class="px-4 py-3">Storage Key (Đường Dẫn)</th>
+                <th class="px-4 py-3">Tên File</th>
+                <th class="px-4 py-3 whitespace-nowrap">Dung Lượng</th>
+                <th class="px-4 py-3 whitespace-nowrap">Trạng Thái</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="assets-table-body" class="divide-y divide-arcade-800 text-slate-300">
+              <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-mono">
+                  Đang tải danh sách tài nguyên...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    import { getAdminAssets } from '../../lib/api';
+    import { getAdminAssets, apiRequest } from '../../lib/api';
 
-    function isSafeUrl(rawUrl: string): boolean {
+    const getStorageAnalysis = () => apiRequest<any>('/admin/storage/analysis');
+    const cleanupStorage = (body: any) =>
+      apiRequest<any>('/admin/storage/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    const deleteAdminAsset = (id: string) =>
+      apiRequest<any>(`/admin/assets/${id}`, { method: 'DELETE' });
+    const bulkDeleteAdminAssets = (ids: string[]) =>
+      apiRequest<{ results: Array<{ id: string; ok: boolean; status?: number; reason?: string }> }>(
+        '/admin/assets/bulk-delete',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        }
+      );
+
+    const tbody = document.getElementById('assets-table-body')!;
+    const alertBox = document.getElementById('cleanup-result-box')!;
+    const alertMsg = document.getElementById('cleanup-message')!;
+
+    let currentAssets: any[] = [];
+    const selectedAssets = new Map<string, { id: string; filename: string; size: number; key: string }>();
+
+    function formatBytes(bytes: number): string {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+    }
+
+    function updateBulkToolbar() {
+      const count = selectedAssets.size;
+      const toolbar = document.getElementById('bulk-toolbar');
+      const countEl = document.getElementById('bulk-selected-count');
+      const sizeEl = document.getElementById('bulk-selected-size');
+      const checkAll = document.getElementById('check-all-assets') as HTMLInputElement | null;
+
+      if (countEl) countEl.textContent = String(count);
+      if (sizeEl) {
+        const totalBytes = Array.from(selectedAssets.values()).reduce((sum, item) => sum + (item.size || 0), 0);
+        sizeEl.textContent = formatBytes(totalBytes);
+      }
+
+      if (toolbar) {
+        if (count > 0) {
+          toolbar.classList.remove('hidden');
+        } else {
+          toolbar.classList.add('hidden');
+        }
+      }
+
+      if (checkAll) {
+        if (currentAssets.length === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else {
+          const allSelected = currentAssets.every((a) => selectedAssets.has(a.id));
+          checkAll.checked = allSelected;
+          checkAll.indeterminate = count > 0 && !allSelected;
+        }
+      }
+    }
+
+    async function loadAnalysis() {
       try {
-        if (!rawUrl || typeof rawUrl !== 'string') return false;
-        if (rawUrl.startsWith('/api/v1/assets/raw/')) return true;
-        const parsed = new URL(rawUrl, window.location.origin);
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-      } catch {
-        return false;
+        const res = await getStorageAnalysis();
+        if (res.success && res.data) {
+          const d = res.data;
+          document.getElementById('stat-total-disk')!.textContent = d.totalDiskFormatted;
+          document.getElementById('stat-jar-size')!.textContent = formatBytes(d.breakdown?.jarBytes || 0);
+          document.getElementById('stat-cover-size')!.textContent = formatBytes(d.breakdown?.coverBytes || 0);
+          document.getElementById('stat-orphan-size')!.textContent = `${d.orphanFormatted} (${d.orphanCount} file)`;
+
+          // Show orphans box if found
+          const orphansContainer = document.getElementById('orphans-container')!;
+          const orphansList = document.getElementById('orphans-list')!;
+          if (d.orphanCount > 0 && Array.isArray(d.orphansList) && d.orphansList.length > 0) {
+            orphansContainer.classList.remove('hidden');
+            orphansList.replaceChildren();
+            for (const f of d.orphansList) {
+              const item = document.createElement('div');
+              item.className = 'flex items-center justify-between p-2 bg-arcade-950/80 rounded-lg';
+
+              const keySpan = document.createElement('span');
+              keySpan.className = 'text-slate-300 truncate max-w-lg';
+              keySpan.textContent = f.key || '';
+              item.appendChild(keySpan);
+
+              const sizeSpan = document.createElement('span');
+              sizeSpan.className = 'text-neon-yellow font-bold';
+              sizeSpan.textContent = f.sizeFormatted || '';
+              item.appendChild(sizeSpan);
+
+              orphansList.appendChild(item);
+            }
+          } else {
+            orphansContainer.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        console.warn('Lỗi phân tích dung lượng:', err);
       }
     }
 
     async function loadAssets() {
-      const tbody = document.getElementById('assets-table-body')!;
       tbody.replaceChildren();
 
-      const res = await getAdminAssets(1, 100);
+      let res;
+      try {
+        res = await getAdminAssets(1, 100);
+      } catch (err: any) {
+        res = { success: false, error: { message: err?.message || 'PM_LOAD_FAILED' } };
+      }
 
       if (!res.success) {
+        currentAssets = [];
+        updateBulkToolbar();
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 5;
+        td.colSpan = 7;
         td.className = 'px-6 py-8 text-center text-red-400 font-mono';
-        td.textContent = `Lỗi tải danh sách tài nguyên: ${res.error?.message || 'Không thể kết nối máy chủ'}`;
+        td.textContent = `Lỗi tải dữ liệu: ${res.error?.message || 'PM_LOAD_FAILED'}`;
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
       }
 
       if (!res.data || res.data.length === 0) {
+        currentAssets = [];
+        updateBulkToolbar();
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 5;
+        td.colSpan = 7;
         td.className = 'px-6 py-8 text-center text-slate-500 font-mono';
-        td.textContent = 'Chưa có asset nào trong kho lưu trữ.';
+        td.textContent = 'Chưa có tài nguyên nào trong kho lưu trữ.';
         tr.appendChild(td);
         tbody.appendChild(tr);
+        document.getElementById('asset-count')!.textContent = '0';
         return;
       }
+
+      currentAssets = res.data;
+      document.getElementById('asset-count')!.textContent = String(res.data.length);
+      updateBulkToolbar();
 
       for (const a of res.data) {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-arcade-850/50 transition-colors';
 
-        // 1. Loại Asset Badge
+        // 0. Checkbox
+        const tdCheck = document.createElement('td');
+        tdCheck.className = 'w-10 px-3 py-3 text-center';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.className = 'asset-row-checkbox rounded border-arcade-700 bg-arcade-900 text-neon-cyan focus:ring-0 cursor-pointer';
+        chk.checked = selectedAssets.has(a.id);
+        chk.addEventListener('change', () => {
+          if (chk.checked) {
+            selectedAssets.set(a.id, {
+              id: a.id,
+              filename: a.original_filename || '',
+              size: a.file_size || 0,
+              key: a.storage_key || '',
+            });
+          } else {
+            selectedAssets.delete(a.id);
+          }
+          updateBulkToolbar();
+        });
+        tdCheck.appendChild(chk);
+        tr.appendChild(tdCheck);
+
+        // 1. Loại Tài Nguyên (asset_type)
         const tdType = document.createElement('td');
-        tdType.className = 'px-6 py-4';
-        const badge = document.createElement('span');
-        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold';
-        if (a.asset_type === 'JAR') {
-          badge.className += ' bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40';
-          badge.textContent = 'JAR FILE';
-        } else if (a.asset_type === 'COVER') {
-          badge.className += ' bg-neon-pink/20 text-neon-pink border border-neon-pink/40';
-          badge.textContent = 'COVER';
-        } else {
-          badge.className += ' bg-slate-700 text-slate-300';
-          badge.textContent = String(a.asset_type || 'UNKNOWN');
-        }
-        tdType.appendChild(badge);
+        tdType.className = 'px-4 py-3 whitespace-nowrap';
+        const spanType = document.createElement('span');
+        spanType.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-300';
+        spanType.textContent = a.asset_type || '';
+        tdType.appendChild(spanType);
         tr.appendChild(tdType);
 
-        // 2. Storage Key with safe Link
+        // 2. Storage Key (Link tải an toàn nếu hợp lệ)
         const tdKey = document.createElement('td');
-        tdKey.className = 'px-6 py-4 font-mono text-[11px] text-slate-300';
-        if (a.url && isSafeUrl(a.url)) {
+        tdKey.className = 'px-4 py-3 font-mono text-[11px] text-slate-300';
+
+        const candidateUrl = a.url || `/api/v1/assets/raw/${encodeURIComponent(a.storage_key || '')}`;
+        let isSafeUrl = false;
+        try {
+          const parsed = new URL(candidateUrl, window.location.href);
+          if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            isSafeUrl = true;
+          }
+        } catch {}
+
+        if (isSafeUrl) {
           const link = document.createElement('a');
-          link.href = a.url;
+          link.href = candidateUrl;
           link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.className = 'hover:text-neon-cyan hover:underline';
+          link.className = 'hover:text-neon-cyan hover:underline truncate block max-w-[200px] xl:max-w-xs';
+          link.title = a.storage_key || '';
           link.textContent = a.storage_key || '';
           tdKey.appendChild(link);
         } else {
-          tdKey.textContent = a.storage_key || '';
+          const spanUnsafe = document.createElement('span');
+          spanUnsafe.className = 'truncate block max-w-[200px] xl:max-w-xs';
+          spanUnsafe.textContent = a.storage_key || '';
+          tdKey.appendChild(spanUnsafe);
         }
         tr.appendChild(tdKey);
 
-        // 3. Tên File Ban Đầu
-        const tdFilename = document.createElement('td');
-        tdFilename.className = 'px-6 py-4 text-slate-400 font-mono text-[11px]';
-        tdFilename.textContent = a.original_filename || '';
-        tr.appendChild(tdFilename);
+        // 3. Tên File Gốc (original_filename)
+        const tdFile = document.createElement('td');
+        tdFile.className = 'px-4 py-3 text-slate-200 font-medium max-w-[160px] xl:max-w-[220px] truncate';
+        tdFile.title = a.original_filename || '';
+        tdFile.textContent = a.original_filename || '';
+        tr.appendChild(tdFile);
 
-        // 4. Dung Lượng
+        // 4. Dung Lượng (file_size)
         const tdSize = document.createElement('td');
-        tdSize.className = 'px-6 py-4 font-mono text-neon-yellow';
-        const kb = ((a.file_size || 0) / 1024).toFixed(0);
-        tdSize.textContent = `${kb} KB`;
+        tdSize.className = 'px-4 py-3 font-mono text-slate-400 whitespace-nowrap';
+        tdSize.textContent = formatBytes(a.file_size || 0);
         tr.appendChild(tdSize);
 
-        // 5. Trạng Thái
+        // 5. Trạng Thái (status)
         const tdStatus = document.createElement('td');
-        tdStatus.className = 'px-6 py-4 font-mono text-[10px] text-neon-green';
-        tdStatus.textContent = a.status || '';
+        tdStatus.className = 'px-4 py-3 whitespace-nowrap';
+        const spanStatus = document.createElement('span');
+        spanStatus.className =
+          a.status === 'ACTIVE'
+            ? 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40'
+            : 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/40';
+        spanStatus.textContent = a.status || '';
+        tdStatus.appendChild(spanStatus);
         tr.appendChild(tdStatus);
+
+        // 6. Thao Tác
+        const tdAction = document.createElement('td');
+        tdAction.className = 'px-4 py-3 text-right whitespace-nowrap space-x-1.5';
+        if (isSafeUrl) {
+          const downloadLink = document.createElement('a');
+          downloadLink.href = candidateUrl;
+          downloadLink.download = a.original_filename || 'download';
+          downloadLink.className =
+            'px-2.5 py-1 bg-arcade-800 text-slate-300 hover:text-neon-cyan border border-arcade-700 hover:border-neon-cyan rounded text-xs font-bold transition-all';
+          downloadLink.textContent = 'Tải về';
+          tdAction.appendChild(downloadLink);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className =
+          'delete-asset-btn px-2.5 py-1 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/30 rounded text-xs font-bold transition-all';
+        deleteBtn.textContent = 'Xóa vĩnh viễn';
+        deleteBtn.addEventListener('click', async () => {
+          const isUserImport = (a.storage_key || '').startsWith('users/');
+          let confirmMsg = `Bạn có chắc muốn xóa vĩnh viễn asset "${a.original_filename}"? Hành động này sẽ xóa file vật lý khỏi ổ đĩa!`;
+          if (isUserImport) {
+            confirmMsg += '\n\n⚠️ CẢNH BÁO: Đây là tài nguyên game do người dùng tải lên (User Import). Việc xóa sẽ gỡ bỏ game tương ứng khỏi thư viện của người dùng!';
+          }
+          if (!confirm(confirmMsg)) return;
+
+          const delRes = await deleteAdminAsset(a.id);
+          if (delRes.success) {
+            let msg = 'Đã xóa tệp tin thành công!';
+            if (delRes.data?.affectedUsers?.length) {
+              const usersStr = delRes.data.affectedUsers.map((u: any) => u.username || u.userId).join(', ');
+              msg += ` Đã dọn dẹp game khỏi thư viện của user: ${usersStr}`;
+            } else if (delRes.data?.affectedUser) {
+              msg += ` Đã dọn dẹp game khỏi thư viện của user: ${delRes.data.affectedUser.username || delRes.data.affectedUser.userId}`;
+            }
+            showAlert(msg, 'success');
+            selectedAssets.delete(a.id);
+            updateBulkToolbar();
+            loadAll();
+          } else {
+            showAlert(delRes.error?.message || 'Xóa tệp tin thất bại', 'error');
+          }
+        });
+        tdAction.appendChild(deleteBtn);
+        tr.appendChild(tdAction);
 
         tbody.appendChild(tr);
       }
     }
 
-    loadAssets();
+    function showAlert(msg: string, type: 'success' | 'error') {
+      alertMsg.textContent = msg;
+      alertBox.className =
+        type === 'success'
+          ? 'p-4 rounded-2xl border bg-neon-green/15 border-neon-green text-neon-green text-xs font-bold flex items-center justify-between animate-fadeIn'
+          : 'p-4 rounded-2xl border bg-red-500/15 border-red-500 text-red-300 text-xs font-bold flex items-center justify-between animate-fadeIn';
+      alertBox.classList.remove('hidden');
+    }
+
+    document.getElementById('close-cleanup-alert')?.addEventListener('click', () => {
+      alertBox.classList.add('hidden');
+    });
+
+    // Check all checkbox
+    const checkAllInput = document.getElementById('check-all-assets') as HTMLInputElement | null;
+    checkAllInput?.addEventListener('change', () => {
+      const checked = checkAllInput.checked;
+      for (const a of currentAssets) {
+        if (checked) {
+          selectedAssets.set(a.id, {
+            id: a.id,
+            filename: a.original_filename || '',
+            size: a.file_size || 0,
+            key: a.storage_key || '',
+          });
+        } else {
+          selectedAssets.delete(a.id);
+        }
+      }
+      const rowCheckboxes = tbody.querySelectorAll<HTMLInputElement>('.asset-row-checkbox');
+      rowCheckboxes.forEach((cb) => {
+        cb.checked = checked;
+      });
+      updateBulkToolbar();
+    });
+
+    // Clear selection button
+    document.getElementById('btn-clear-selection')?.addEventListener('click', () => {
+      selectedAssets.clear();
+      const rowCheckboxes = tbody.querySelectorAll<HTMLInputElement>('.asset-row-checkbox');
+      rowCheckboxes.forEach((cb) => {
+        cb.checked = false;
+      });
+      updateBulkToolbar();
+    });
+
+    // Bulk delete button
+    document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
+      const count = selectedAssets.size;
+      if (count === 0) return;
+
+      const totalBytes = Array.from(selectedAssets.values()).reduce((sum, item) => sum + (item.size || 0), 0);
+      const hasUserImport = Array.from(selectedAssets.values()).some((item) => (item.key || '').startsWith('users/'));
+
+      let confirmMsg = `Bạn có chắc muốn xóa vĩnh viễn ${count} tài nguyên đã chọn (Tổng dung lượng: ${formatBytes(totalBytes)})? Hành động này sẽ xóa file vật lý khỏi ổ đĩa!`;
+      if (hasUserImport) {
+        confirmMsg += '\n\n⚠️ CẢNH BÁO: Trong danh sách có tài nguyên tải lên bởi người dùng (User Import). Việc xóa sẽ gỡ bỏ game tương ứng khỏi thư viện của người dùng!';
+      }
+
+      if (!confirm(confirmMsg)) return;
+
+      const ids = Array.from(selectedAssets.keys());
+      const res = await bulkDeleteAdminAssets(ids);
+      if (res.success && res.data?.results) {
+        const results = res.data.results;
+        const okItems = results.filter((r: any) => r.ok);
+        const failItems = results.filter((r: any) => !r.ok);
+
+        if (failItems.length === 0) {
+          showAlert(`Đã xóa thành công toàn bộ ${okItems.length} tài nguyên!`, 'success');
+        } else {
+          const reasons = failItems.map((f: any) => {
+            const item = selectedAssets.get(f.id);
+            const label = item?.filename || item?.key || f.id;
+            return `${label}: ${f.reason || 'Lỗi'}`;
+          }).join('; ');
+
+          if (okItems.length > 0) {
+            showAlert(`Đã xóa ${okItems.length}/${ids.length} tài nguyên. Thất bại ${failItems.length}: ${reasons}`, 'error');
+          } else {
+            showAlert(`Không thể xóa tài nguyên nào. Thất bại: ${reasons}`, 'error');
+          }
+        }
+        selectedAssets.clear();
+        updateBulkToolbar();
+        loadAll();
+      } else {
+        showAlert(res.error?.message || 'Xóa hàng loạt thất bại', 'error');
+      }
+    });
+
+    async function handleCleanup(cleanOrphans: boolean, purgeDeleted: boolean) {
+      const confirmText = cleanOrphans && purgeDeleted
+        ? 'Bạn có chắc chắn muốn DỌN DẸP TOÀN DIỆN? Tất cả file rác không có trong DB và các asset đã bị đánh dấu xóa sẽ bị xóa vĩnh viễn khỏi ổ cứng!'
+        : 'Bạn có chắc chắn muốn xóa tất cả file mồ côi (file không liên kết trong cơ sở dữ liệu)?';
+
+      if (!confirm(confirmText)) return;
+
+      try {
+        const res = await cleanupStorage({ cleanOrphans, purgeDeleted });
+        if (res.success && res.data) {
+          showAlert(res.data.message || 'Đã dọn dẹp dung lượng thành công!', 'success');
+          loadAll();
+        } else {
+          showAlert(res.error?.message || 'Lỗi khi dọn dẹp dung lượng', 'error');
+        }
+      } catch (err: any) {
+        showAlert(err.message || 'Lỗi khi gọi API dọn dẹp', 'error');
+      }
+    }
+
+    document.getElementById('btn-scan')?.addEventListener('click', () => {
+      loadAll();
+      showAlert('Đã quét lại ổ đĩa và cơ sở dữ liệu thành công!', 'success');
+    });
+
+    document.getElementById('btn-clean-orphans')?.addEventListener('click', () => {
+      handleCleanup(true, false);
+    });
+
+    document.getElementById('btn-clean-orphans-inline')?.addEventListener('click', () => {
+      handleCleanup(true, false);
+    });
+
+    document.getElementById('btn-purge-all')?.addEventListener('click', () => {
+      handleCleanup(true, true);
+    });
+
+    function loadAll() {
+      loadAnalysis();
+      loadAssets();
+    }
+
+    loadAll();
   </script>
 </AdminLayout>

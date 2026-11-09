@@ -1,5 +1,5 @@
 import { Hono, Context } from 'hono';
-import { CrawlerService } from '../services/crawlerService';
+import { CrawlerService, ConflictError } from '../services/crawlerService';
 import { requireAdmin } from '../middleware/auth';
 import { AppEnv } from '../types';
 
@@ -61,6 +61,19 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
         message: `Đã nhập game "${imported.game.name}" vào Catalog thành công!`,
       });
     } catch (err: any) {
+      if (err instanceof ConflictError || err.name === 'ConflictError') {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'CONFLICT',
+              message: err.message,
+              slug: err.slug,
+            },
+          },
+          409
+        );
+      }
       return c.json(
         { success: false, error: { message: err.message || 'Lỗi khi nhập game' } },
         400
@@ -83,25 +96,34 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
         );
       }
 
-      const imported: any[] = [];
-      const errors: { gameId: string; error: string }[] = [];
+      if (gameIds.length > 20) {
+        return c.json(
+          { success: false, error: { message: 'Số lượng game nhập mỗi lần tối đa là 20' } },
+          400
+        );
+      }
+
+      const results: { gameId: string; ok: boolean; slug?: string; error?: string }[] = [];
 
       for (const id of gameIds) {
         try {
           const res = await crawlerService.importGameFromSource(id, user.id);
-          imported.push(res);
+          results.push({ gameId: id, ok: true, slug: res.game.slug });
         } catch (e: any) {
-          errors.push({ gameId: id, error: e.message });
+          results.push({ gameId: id, ok: false, error: e.message });
         }
       }
+
+      const importedCount = results.filter((r) => r.ok).length;
+      const errorCount = results.filter((r) => !r.ok).length;
 
       return c.json({
         success: true,
         data: {
-          importedCount: imported.length,
-          errorCount: errors.length,
-          imported,
-          errors,
+          total: gameIds.length,
+          importedCount,
+          errorCount,
+          results,
         },
       });
     } catch (err: any) {

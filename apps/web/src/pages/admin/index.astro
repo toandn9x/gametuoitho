@@ -37,45 +37,101 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
     <!-- Stat Cards Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
-        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
-          <span>TỔNG SỐ GAME</span>
-          <span>🕹️</span>
+      <!-- Card: Total Games & Status Breakdown -->
+      <div class="bg-arcade-900 border border-arcade-800 hover:border-neon-cyan/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between">
+        <div>
+          <a href="/admin/games" class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-cyan transition-colors">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span>🕹️</span>
+              <span>TỔNG SỐ GAME</span>
+            </span>
+            <span class="text-[10px] text-slate-500 group-hover:text-neon-cyan flex items-center">Xem tất cả →</span>
+          </a>
+          <a href="/admin/games" id="stat-total-games" class="text-3xl font-black text-neon-cyan font-mono block hover:scale-105 transition-transform origin-left">
+            --
+          </a>
         </div>
-        <div id="stat-total-games" class="text-3xl font-black text-neon-cyan font-mono">--</div>
-        <div class="text-[11px] text-slate-500 mt-2 flex items-center gap-2">
-          <span id="stat-published" class="text-neon-green">-- Đã xuất bản</span>
-          <span>•</span>
-          <span id="stat-draft" class="text-neon-yellow">-- Bản nháp</span>
+        <div class="mt-4 pt-3 border-t border-arcade-800/80 flex flex-wrap items-center gap-2 text-[11px] font-mono">
+          <a
+            id="stat-published"
+            href="/admin/games?status=PUBLISHED"
+            class="px-2 py-0.5 rounded-lg bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-arcade-950 border border-neon-green/30 font-bold transition-all flex items-center gap-1"
+            title="Nhấn để xem danh sách game đã xuất bản"
+          >
+            <span>●</span>
+            <span id="stat-published-text">-- Đã xuất bản</span>
+          </a>
+          <a
+            id="stat-draft"
+            href="/admin/games?status=DRAFT"
+            class="px-2 py-0.5 rounded-lg bg-neon-yellow/10 text-neon-yellow hover:bg-neon-yellow hover:text-arcade-950 border border-neon-yellow/30 font-bold transition-all flex items-center gap-1"
+            title="Nhấn để xem danh sách game bản nháp"
+          >
+            <span>●</span>
+            <span id="stat-draft-text">-- Bản nháp</span>
+          </a>
         </div>
       </div>
 
-      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
-        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
-          <span>NGƯỜI DÙNG</span>
-          <span>👥</span>
+      <!-- Card: User Accounts -->
+      <a
+        href="/admin/user-imports"
+        class="bg-arcade-900 border border-arcade-800 hover:border-neon-yellow/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between block"
+      >
+        <div>
+          <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-yellow transition-colors">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span>👥</span>
+              <span>NGƯỜI DÙNG</span>
+            </span>
+            <span class="text-[10px] text-slate-500 group-hover:text-neon-yellow">Chi tiết →</span>
+          </div>
+          <div id="stat-total-users" class="text-3xl font-black text-neon-yellow font-mono group-hover:scale-105 transition-transform origin-left">--</div>
         </div>
-        <div id="stat-total-users" class="text-3xl font-black text-neon-yellow font-mono">--</div>
-        <div class="text-[11px] text-slate-500 mt-2">Tài khoản đã đăng ký trên hệ thống</div>
-      </div>
+        <div class="text-[11px] text-slate-500 mt-4 pt-3 border-t border-arcade-800/80">
+          Tài khoản thành viên trên hệ thống
+        </div>
+      </a>
 
-      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
-        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
-          <span>USER IMPORTS</span>
-          <span>📥</span>
+      <!-- Card: User Imports -->
+      <a
+        href="/admin/user-imports"
+        class="bg-arcade-900 border border-arcade-800 hover:border-neon-pink/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between block"
+      >
+        <div>
+          <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-pink transition-colors">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span>📥</span>
+              <span>USER IMPORTS</span>
+            </span>
+            <span class="text-[10px] text-slate-500 group-hover:text-neon-pink">Quản lý →</span>
+          </div>
+          <div id="stat-total-imports" class="text-3xl font-black text-neon-pink font-mono group-hover:scale-105 transition-transform origin-left">--</div>
         </div>
-        <div id="stat-total-imports" class="text-3xl font-black text-neon-pink font-mono">--</div>
-        <div class="text-[11px] text-slate-500 mt-2">File JAR do người dùng tải lên riêng tư</div>
-      </div>
+        <div class="text-[11px] text-slate-500 mt-4 pt-3 border-t border-arcade-800/80">
+          File JAR cá nhân do người dùng tải lên
+        </div>
+      </a>
 
-      <div class="bg-arcade-900 border border-arcade-800 p-6 rounded-2xl">
-        <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2">
-          <span>DUNG LƯỢNG R2</span>
-          <span>💾</span>
+      <!-- Card: R2 Storage -->
+      <a
+        href="/admin/storage"
+        class="bg-arcade-900 border border-arcade-800 hover:border-neon-green/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between block"
+      >
+        <div>
+          <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-green transition-colors">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span>💾</span>
+              <span>DUNG LƯỢNG R2</span>
+            </span>
+            <span class="text-[10px] text-slate-500 group-hover:text-neon-green">Quản lý kho →</span>
+          </div>
+          <div id="stat-total-storage" class="text-3xl font-black text-neon-green font-mono group-hover:scale-105 transition-transform origin-left">--</div>
         </div>
-        <div id="stat-total-storage" class="text-3xl font-black text-neon-green font-mono">--</div>
-        <div class="text-[11px] text-slate-500 mt-2">Tổng tài nguyên trên Cloudflare R2</div>
-      </div>
+        <div class="text-[11px] text-slate-500 mt-4 pt-3 border-t border-arcade-800/80">
+          Tổng tài nguyên nhị phân trên kho lưu trữ
+        </div>
+      </a>
     </div>
 
     <!-- Crawler Promo Banner -->
@@ -171,6 +227,28 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             </span>
             <span class="text-[10px] text-slate-400 block mt-1">Giám sát dung lượng và file</span>
           </a>
+
+          <a
+            href="/admin/reports"
+            class="p-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">🚨</span>
+            <span class="font-bold text-xs text-red-400 group-hover:text-red-300 block">
+              Báo Cáo & Log Lỗi
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Theo dõi lỗi crash & hỏng game</span>
+          </a>
+
+          <a
+            href="/admin/storage"
+            class="p-4 bg-neon-green/10 hover:bg-neon-green/20 border border-neon-green/30 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">🧹</span>
+            <span class="font-bold text-xs text-neon-green group-hover:text-neon-yellow block">
+              Dọn Dẹp Dung Lượng
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Quét & dọn file mồ côi (orphans)</span>
+          </a>
         </div>
       </div>
 
@@ -203,12 +281,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     getAdminStats().then((res) => {
       if (res.success && res.data) {
         const d = res.data;
-        document.getElementById('stat-total-games')!.textContent = String(d.totalGames);
-        document.getElementById('stat-published')!.textContent = `${d.publishedGames} Đã xuất bản`;
-        document.getElementById('stat-draft')!.textContent = `${d.draftGames} Bản nháp`;
-        document.getElementById('stat-total-users')!.textContent = String(d.totalUsers);
-        document.getElementById('stat-total-imports')!.textContent = String(d.totalImports);
-        document.getElementById('stat-total-storage')!.textContent = d.storageFormatted;
+        const totalEl = document.getElementById('stat-total-games');
+        const pubText = document.getElementById('stat-published-text');
+        const draftText = document.getElementById('stat-draft-text');
+        const usersEl = document.getElementById('stat-total-users');
+        const importsEl = document.getElementById('stat-total-imports');
+        const storageEl = document.getElementById('stat-total-storage');
+
+        if (totalEl) totalEl.textContent = String(d.totalGames);
+        if (pubText) pubText.textContent = `${d.publishedGames} Đã xuất bản`;
+        if (draftText) draftText.textContent = `${d.draftGames} Bản nháp`;
+        if (usersEl) usersEl.textContent = String(d.totalUsers);
+        if (importsEl) importsEl.textContent = String(d.totalImports);
+        if (storageEl) storageEl.textContent = d.storageFormatted;
       }
     });
   </script>

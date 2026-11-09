@@ -5,22 +5,28 @@ import GameCard from './GameCard';
 
 interface FeaturedGamesProps {
   initialGames?: Game[];
+  featuredOnly?: boolean;
 }
 
-export default function FeaturedGames({ initialGames = [] }: FeaturedGamesProps) {
+export default function FeaturedGames({ initialGames = [], featuredOnly = false }: FeaturedGamesProps) {
   const [games, setGames] = useState<Game[]>(initialGames);
   const [loading, setLoading] = useState(initialGames.length === 0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    getGames({ limit: 8, sort: 'newest' })
+    setError(null);
+    getGames({ limit: 8, sort: 'newest', featured: featuredOnly ? true : undefined })
       .then((res) => {
-        if (isMounted && res.success && res.data) {
-          setGames(res.data);
+        if (!isMounted) return;
+        if (res.success && Array.isArray(res.data)) {
+          setGames(featuredOnly ? res.data.filter(game => game.is_featured === true) : res.data);
+        } else {
+          setError(res.error?.message || 'Không thể tải danh sách game. Vui lòng tải lại trang.');
         }
       })
-      .catch((err) => {
-        console.error('Failed to load featured games:', err);
+      .catch(() => {
+        if (isMounted) setError('Không thể tải danh sách game. Vui lòng tải lại trang.');
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -29,7 +35,7 @@ export default function FeaturedGames({ initialGames = [] }: FeaturedGamesProps)
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [featuredOnly]);
 
   if (loading) {
     return (
@@ -50,10 +56,14 @@ export default function FeaturedGames({ initialGames = [] }: FeaturedGamesProps)
     );
   }
 
+  if (error) {
+    return <p role="alert" className="p-6 bg-arcade-900 border border-red-500/30 rounded-2xl text-sm text-red-300">{error}</p>;
+  }
+
   if (games.length === 0) {
     return (
       <div className="text-center py-16 bg-arcade-900 rounded-2xl border border-arcade-800">
-        <p className="text-slate-400 text-sm">Chưa có game nào trong kho lưu trữ.</p>
+        <p className="text-slate-400 text-sm">{featuredOnly ? 'Chưa có game ưa thích nào được chọn.' : 'Chưa có game nào trong kho lưu trữ.'}</p>
       </div>
     );
   }

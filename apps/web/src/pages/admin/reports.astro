@@ -1,0 +1,397 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Báo Cáo Sự Cố & Log Lỗi Game" activeNav="reports">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
+      <div>
+        <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
+          <span>🚨</span>
+          <span>Báo Cáo Sự Cố & Log Lỗi Game</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          Ghi nhận tự động lỗi crash, không tải được file JAR và phản hồi sự cố từ người chơi
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          id="refresh-reports-btn"
+          class="px-4 py-2 bg-arcade-800 hover:bg-arcade-700 border border-arcade-700 hover:border-neon-cyan/50 rounded-xl text-xs font-bold text-slate-200 transition-all flex items-center gap-1.5"
+        >
+          <span>🔄</span>
+          <span>Làm Mới</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Metric Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-arcade-900 border border-arcade-800 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">TỔNG SỐ LỖI</div>
+        <div id="stat-total" class="text-2xl font-black text-slate-100 font-mono">0</div>
+        <div class="text-[10px] text-slate-500 mt-1">Ghi nhận từ người chơi & emulator</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-red-500/30 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-red-400 mb-1">CHỜ XỬ LÝ (OPEN)</div>
+        <div id="stat-open" class="text-2xl font-black text-red-400 font-mono">0</div>
+        <div class="text-[10px] text-red-400/70 mt-1">Cần kiểm tra hoặc cập nhật file</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-neon-cyan/30 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-neon-cyan mb-1">ĐANG ĐIỀU TRA</div>
+        <div id="stat-investigating" class="text-2xl font-black text-neon-cyan font-mono">0</div>
+        <div class="text-[10px] text-neon-cyan/70 mt-1">Đang kiểm thử nhân giả lập</div>
+      </div>
+
+      <div class="bg-arcade-900 border border-neon-green/30 p-5 rounded-2xl">
+        <div class="text-[10px] uppercase font-mono font-bold text-neon-green mb-1">ĐÃ KHẮC PHỤC</div>
+        <div id="stat-resolved" class="text-2xl font-black text-neon-green font-mono">0</div>
+        <div class="text-[10px] text-neon-green/70 mt-1">Đã nạp JAR mới hoặc sửa xong</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <!-- Status Tabs -->
+      <div class="flex flex-wrap items-center gap-1.5" id="report-status-tabs">
+        <button
+          data-status="ALL"
+          class="report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-neon-cyan text-arcade-950 shadow-neon-cyan"
+        >
+          Tất Cả
+        </button>
+        <button
+          data-status="OPEN"
+          class="report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-red-500/50"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
+          Chờ Xử Lý
+        </button>
+        <button
+          data-status="INVESTIGATING"
+          class="report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-neon-cyan/50"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-neon-cyan mr-1.5"></span>
+          Đang Điều Tra
+        </button>
+        <button
+          data-status="RESOLVED"
+          class="report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-neon-green/50"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-neon-green mr-1.5"></span>
+          Đã Khắc Phục
+        </button>
+        <button
+          data-status="IGNORED"
+          class="report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-slate-500"
+        >
+          Bỏ Qua
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative flex-1 max-w-sm">
+        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 text-xs">
+          🔍
+        </span>
+        <input
+          type="text"
+          id="report-search-input"
+          placeholder="Tìm theo tên game, nội dung lỗi..."
+          class="w-full pl-9 pr-4 py-1.5 bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-colors"
+        />
+      </div>
+    </div>
+
+    <!-- Reports Table Container -->
+    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-arcade-850 text-slate-400 uppercase font-mono text-[10px] border-b border-arcade-800">
+            <tr>
+              <th class="px-5 py-3.5">Thời Gian</th>
+              <th class="px-5 py-3.5">Tên Game</th>
+              <th class="px-5 py-3.5">Loại Lỗi</th>
+              <th class="px-5 py-3.5">Thông Điệp & Sự Cố</th>
+              <th class="px-5 py-3.5">Trạng Thái</th>
+              <th class="px-5 py-3.5 text-right">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="reports-table-body" class="divide-y divide-arcade-800 text-slate-300">
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-slate-500 font-mono">
+                Đang tải dữ liệu báo cáo...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { getAdminCrashReports, updateAdminCrashReport, deleteAdminCrashReport } from '../../lib/api';
+
+    let currentStatus = 'ALL';
+    let currentSearch = '';
+
+    const tbody = document.getElementById('reports-table-body')!;
+    const searchInput = document.getElementById('report-search-input') as HTMLInputElement;
+
+    function createErrorTypeBadge(type: string): HTMLElement {
+      const span = document.createElement('span');
+      span.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold';
+      switch (type) {
+        case 'CRASH':
+          span.className += ' bg-red-500/20 text-red-400 border border-red-500/40';
+          span.textContent = 'CRASH';
+          break;
+        case 'LOAD_FAILED':
+          span.className += ' bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40';
+          span.textContent = 'LOAD FAILED';
+          break;
+        case 'EMULATOR_ERROR':
+          span.className += ' bg-neon-pink/20 text-neon-pink border border-neon-pink/40';
+          span.textContent = 'EMULATOR';
+          break;
+        case 'CORRUPT_JAR':
+          span.className += ' bg-purple-500/20 text-purple-400 border border-purple-500/40';
+          span.textContent = 'CORRUPT JAR';
+          break;
+        default:
+          span.className += ' bg-slate-700 text-slate-300';
+          span.textContent = 'USER REPORT';
+          break;
+      }
+      return span;
+    }
+
+    function createStatusBadge(status: string): HTMLElement {
+      const span = document.createElement('span');
+      span.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold';
+      switch (status) {
+        case 'OPEN':
+          span.className += ' bg-red-500/20 text-red-400 border border-red-500/40';
+          span.textContent = 'CHỜ XỬ LÝ';
+          break;
+        case 'INVESTIGATING':
+          span.className += ' bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40';
+          span.textContent = 'ĐANG ĐIỀU TRA';
+          break;
+        case 'RESOLVED':
+          span.className += ' bg-neon-green/20 text-neon-green border border-neon-green/40';
+          span.textContent = 'ĐÃ KHẮC PHỤC';
+          break;
+        default:
+          span.className += ' bg-slate-700 text-slate-400';
+          span.textContent = 'BỎ QUA';
+          break;
+      }
+      return span;
+    }
+
+    function showTableMessage(msg: string, isError = false) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      td.className = `px-6 py-8 text-center font-mono ${isError ? 'text-red-400' : 'text-slate-500'}`;
+      td.textContent = msg;
+      tr.appendChild(td);
+      tbody.replaceChildren(tr);
+    }
+
+    function updateTabsUI() {
+      document.querySelectorAll('.report-tab').forEach((tab) => {
+        const s = tab.getAttribute('data-status');
+        if (s === currentStatus) {
+          tab.className =
+            'report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-neon-cyan text-arcade-950 shadow-neon-cyan';
+        } else {
+          tab.className =
+            'report-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-arcade-600';
+        }
+      });
+    }
+
+    async function loadReports() {
+      updateTabsUI();
+      showTableMessage('Đang tải dữ liệu báo cáo...');
+
+      try {
+        const res = await getAdminCrashReports({
+          page: 1,
+          limit: 100,
+          status: currentStatus,
+          search: currentSearch,
+        });
+
+        if (!res.success) {
+          showTableMessage(`Lỗi tải báo cáo: ${res.error?.message || 'Không thể kết nối máy chủ'}`, true);
+          return;
+        }
+
+        // Update stats
+        const stats = (res as any).stats || (res.data as any)?.stats;
+        if (stats) {
+          document.getElementById('stat-total')!.textContent = String(stats.total || 0);
+          document.getElementById('stat-open')!.textContent = String(stats.open || 0);
+          document.getElementById('stat-investigating')!.textContent = String(stats.investigating || 0);
+          document.getElementById('stat-resolved')!.textContent = String(stats.resolved || 0);
+          const ignoredEl = document.getElementById('stat-ignored');
+          if (ignoredEl) ignoredEl.textContent = String(stats.ignored || 0);
+        }
+
+        const reports = Array.isArray(res.data) ? res.data : ((res.data as any)?.data || (res.data as any)?.reports || []);
+        if (reports.length === 0) {
+          showTableMessage(`Không có sự cố nào được ghi nhận${currentStatus !== 'ALL' ? ` trong trạng thái ${currentStatus}` : ''}. Hệ thống vận hành ổn định!`);
+          return;
+        }
+
+        tbody.replaceChildren();
+        for (const r of reports) {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-arcade-850/60 transition-colors';
+
+          // 1. Time
+          const tdTime = document.createElement('td');
+          tdTime.className = 'px-5 py-4 font-mono text-[11px] text-slate-400 whitespace-nowrap';
+          tdTime.textContent = r.created_at ? new Date(r.created_at).toLocaleString('vi-VN') : 'Vừa xong';
+          tr.appendChild(tdTime);
+
+          // 2. Game Info
+          const tdGame = document.createElement('td');
+          tdGame.className = 'px-5 py-4 font-medium text-slate-200';
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'font-bold text-slate-100';
+          titleDiv.textContent = r.game_name || 'Trò chơi không xác định';
+          tdGame.appendChild(titleDiv);
+          if (r.game_slug) {
+            const slugSpan = document.createElement('span');
+            slugSpan.className = 'text-[10px] text-slate-500 font-mono';
+            slugSpan.textContent = `/game/${r.game_slug}`;
+            tdGame.appendChild(slugSpan);
+          }
+          tr.appendChild(tdGame);
+
+          // 3. Error Type
+          const tdType = document.createElement('td');
+          tdType.className = 'px-5 py-4';
+          tdType.appendChild(createErrorTypeBadge(r.error_type));
+          tr.appendChild(tdType);
+
+          // 4. Message & UA
+          const tdError = document.createElement('td');
+          tdError.className = 'px-5 py-4 max-w-md';
+          const msgDiv = document.createElement('div');
+          msgDiv.className = 'text-xs text-red-300 font-mono font-semibold break-words';
+          msgDiv.textContent = r.error_message || '';
+          tdError.appendChild(msgDiv);
+          if (r.user_agent) {
+            const uaDiv = document.createElement('div');
+            uaDiv.className = 'text-[10px] text-slate-500 truncate mt-1';
+            uaDiv.textContent = `UA: ${r.user_agent}`;
+            uaDiv.title = r.user_agent;
+            tdError.appendChild(uaDiv);
+          }
+          tr.appendChild(tdError);
+
+          // 5. Status
+          const tdStatus = document.createElement('td');
+          tdStatus.className = 'px-5 py-4 whitespace-nowrap';
+          tdStatus.appendChild(createStatusBadge(r.status));
+          tr.appendChild(tdStatus);
+
+          // 6. Actions
+          const tdAction = document.createElement('td');
+          tdAction.className = 'px-5 py-4 text-right space-x-1.5 whitespace-nowrap';
+          if (r.game_slug) {
+            const testLink = document.createElement('a');
+            testLink.href = `/play/${encodeURIComponent(r.game_slug)}`;
+            testLink.target = '_blank';
+            testLink.className = 'px-2 py-1 bg-arcade-800 text-slate-300 hover:text-neon-cyan border border-arcade-700 hover:border-neon-cyan rounded text-[11px] font-bold transition-all';
+            testLink.title = 'Chơi thử để tái hiện lỗi';
+            testLink.textContent = 'Test ▶';
+            tdAction.appendChild(testLink);
+          }
+
+          if (r.status !== 'RESOLVED') {
+            const resolveBtn = document.createElement('button');
+            resolveBtn.className = 'status-btn px-2 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-[11px] font-bold transition-all';
+            resolveBtn.title = 'Đánh dấu đã sửa xong';
+            resolveBtn.textContent = '✓ Đã sửa';
+            resolveBtn.addEventListener('click', async () => {
+              await updateAdminCrashReport(r.id, { status: 'RESOLVED' });
+              loadReports();
+            });
+            tdAction.appendChild(resolveBtn);
+          }
+
+          if (r.status !== 'INVESTIGATING' && r.status !== 'RESOLVED') {
+            const investBtn = document.createElement('button');
+            investBtn.className = 'status-btn px-2 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-[11px] font-bold transition-all';
+            investBtn.title = 'Đang điều tra';
+            investBtn.textContent = '🔍 Điều tra';
+            investBtn.addEventListener('click', async () => {
+              await updateAdminCrashReport(r.id, { status: 'INVESTIGATING' });
+              loadReports();
+            });
+            tdAction.appendChild(investBtn);
+          }
+
+          if (r.status !== 'IGNORED' && r.status === 'OPEN') {
+            const ignoreBtn = document.createElement('button');
+            ignoreBtn.className = 'status-btn px-2 py-1 bg-slate-800 text-slate-400 hover:text-white border border-slate-700 rounded text-[11px] font-bold transition-all';
+            ignoreBtn.title = 'Bỏ qua';
+            ignoreBtn.textContent = 'Bỏ qua';
+            ignoreBtn.addEventListener('click', async () => {
+              await updateAdminCrashReport(r.id, { status: 'IGNORED' });
+              loadReports();
+            });
+            tdAction.appendChild(ignoreBtn);
+          }
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'delete-report-btn px-2 py-1 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/30 rounded text-[11px] font-bold transition-all';
+          deleteBtn.textContent = 'Xóa';
+          deleteBtn.addEventListener('click', async () => {
+            if (!confirm('Bạn có chắc muốn xóa bản ghi lỗi này?')) return;
+            await deleteAdminCrashReport(r.id);
+            loadReports();
+          });
+          tdAction.appendChild(deleteBtn);
+
+          tr.appendChild(tdAction);
+          tbody.appendChild(tr);
+        }
+      } catch (err: any) {
+        showTableMessage(`Lỗi hệ thống: ${err.message}`, true);
+      }
+    }
+
+    // Status Tab Listeners
+    document.querySelectorAll('.report-tab').forEach((tab) => {
+      tab.addEventListener('click', (e) => {
+        currentStatus = (e.currentTarget as HTMLElement).getAttribute('data-status') || 'ALL';
+        loadReports();
+      });
+    });
+
+    // Search Input Listener
+    let searchTimeout: any;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = searchInput.value.trim();
+        loadReports();
+      }, 300);
+    });
+
+    document.getElementById('refresh-reports-btn')?.addEventListener('click', loadReports);
+
+    loadReports();
+  </script>
+</AdminLayout>

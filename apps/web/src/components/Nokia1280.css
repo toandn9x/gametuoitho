@@ -1,0 +1,270 @@
+.nokia1280 {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 326px);
+  padding: 14px 20px 12px;
+  scroll-margin-top: 80px;
+  border: 4px solid #62686c;
+  border-bottom-width: 6px;
+  border-radius: 38px 38px 46px 46px / 31px 31px 44px 44px;
+  background:
+    radial-gradient(ellipse at 35% 0%, #3d4246 0, transparent 45%),
+    linear-gradient(100deg, #24282b, #16191b 45%, #222629);
+  box-shadow:
+    0 28px 50px -18px #000,
+    6px 7px 0 #101214,
+    inset 0 0 0 2px #111315,
+    inset 2px 0 3px #8c92954d,
+    inset -3px -3px 8px #000a;
+  color: #eee;
+  font-family: Arial, Helvetica, sans-serif;
+  flex-shrink: 0;
+}
+
+.nokia1280::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #747b7e38;
+  border-radius: 30px 30px 37px 37px;
+  pointer-events: none;
+}
+
+.nokia1280__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 1px 0 10px;
+}
+
+.nokia1280__speaker {
+  width: 66px;
+  height: 9px;
+  border: 1px solid #101214;
+  border-radius: 7px;
+  background: repeating-linear-gradient(90deg, #090b0c 0 3px, #393e40 3px 5px);
+  box-shadow: inset 0 2px 2px #000, 0 1px 0 #777b7e55;
+}
+
+.nokia1280__brand {
+  color: #d9dddf;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 1px #000;
+}
+
+.nokia1280__bezel {
+  padding: 10px 9px 12px;
+  border: 1px solid #080a0b;
+  border-radius: 9px 9px 17px 17px;
+  background: linear-gradient(135deg, #0c1112, #272d2e 45%, #0b0f10);
+  box-shadow: 0 1px 0 #626a6c77, inset 0 1px 4px #000;
+}
+
+.nokia1280__screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 2px solid #77806e;
+  border-radius: 2px;
+  background: #879b6f;
+  box-shadow: 0 0 0 2px #080c0a, 0 0 9px #a8ba8224;
+}
+
+.nokia1280__screen iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.nokia1280__controls {
+  display: grid;
+  grid-template-columns: 1fr 92px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin: 14px 1px 10px;
+  user-select: none;
+}
+
+.nokia1280__sidekeys {
+  display: grid;
+  gap: 5px;
+}
+
+.nokia1280 button {
+  position: relative;
+  min-width: 0;
+  padding: 0;
+  color: #eceff0;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.nokia1280__function,
+.nokia1280__number {
+  border: 1px solid #090b0c;
+  background: linear-gradient(#3d4245, #282d30 50%, #202427);
+  box-shadow: inset 0 1px 0 #737a7d80, inset 0 -2px 2px #1119, 0 2px 1px #080a0b;
+  text-shadow: 0 1px 1px #000;
+}
+
+.nokia1280__function {
+  display: flex;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px 8px 10px 11px;
+}
+
+.nokia1280__sidekeys:last-child .nokia1280__function {
+  border-radius: 8px 12px 11px 10px;
+}
+
+.nokia1280__softkey-mark {
+  width: 19px;
+  height: 3px;
+  border-radius: 3px;
+  background: #dfe2e3;
+  box-shadow: 0 1px 0 #000;
+}
+
+.nokia1280__function svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nokia1280 .nokia1280__call { color: #72c17b; }
+.nokia1280 .nokia1280__end { color: #df7a72; }
+
+.nokia1280__dpad {
+  display: grid;
+  grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr;
+  height: 92px;
+  padding: 3px;
+  border: 2px solid #9ca3a5;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #626a6d, #b0b7b9 35%, #353d40 75%);
+  box-shadow: 0 0 0 2px #090c0d, 0 2px 4px #000, inset 0 1px 1px #e1e7e6;
+}
+
+.nokia1280 .nokia1280__direction {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  background: #303639;
+  color: #d5d9d8;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.nokia1280__direction--up { grid-area: 1 / 1 / 2 / 4; }
+.nokia1280__direction--left { grid-area: 2 / 1; }
+.nokia1280__direction--right { grid-area: 2 / 3; }
+.nokia1280__direction--down { grid-area: 3 / 1 / 4 / 4; }
+
+.nokia1280 .nokia1280__select {
+  z-index: 2;
+  grid-area: 2 / 2;
+  margin: -5px;
+  border: 1px solid #121718;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #343b3e, #171e21);
+  box-shadow: 0 0 0 2px #7b8486, inset 0 1px 0 #626b6e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.nokia1280__numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 1px 1px 0;
+}
+
+.nokia1280__number {
+  display: flex;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 5px 5px 12px 12px / 5px 5px 9px 9px;
+}
+
+.nokia1280__digit {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.nokia1280__letters {
+  min-width: 21px;
+  color: #d3d8da;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: .4px;
+}
+
+.nokia1280__number:nth-child(5)::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  width: 11px;
+  height: 2px;
+  border-radius: 2px;
+  background: #b1b9bb;
+  box-shadow: 0 1px 0 #090b0c;
+}
+
+.nokia1280 button:hover {
+  filter: brightness(1.15);
+}
+
+.nokia1280 button:active {
+  transform: translateY(1px);
+  filter: brightness(.85);
+  box-shadow: inset 0 2px 4px #0008;
+}
+
+.nokia1280 button:focus-visible {
+  z-index: 3;
+  outline: 2px solid #d6dfb2;
+  outline-offset: 2px;
+}
+
+.nokia1280__bottom {
+  display: flex;
+  height: 14px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nokia1280__bottom span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #080a0b;
+  box-shadow: 0 1px 0 #6b737655;
+}
+
+@media (max-width: 360px) {
+  .nokia1280 { padding-right: 14px; padding-left: 14px; }
+  .nokia1280__controls { grid-template-columns: 1fr 86px 1fr; gap: 6px; }
+  .nokia1280__number { gap: 4px; }
+}

@@ -1,87 +1,97 @@
-// Service Worker for caching CheerpJ and app assets
-const CACHE_NAME = 'freej2me-cache-v1';
+// Bootstrap changes must reach players; only versioned CheerpJ files are immutable.
+const CACHE_PREFIX = 'freej2me-cache-';
+const CURRENT_PREFIX = `${CACHE_PREFIX}v2-`;
+const LOCAL_CACHE = `${CURRENT_PREFIX}bootstrap`;
+const scope = new URL(self.registration.scope);
 
-// Assets to cache immediately on install
-const STATIC_ASSETS = [
-  '/web/',
-  '/web/index.html',
-  '/web/run.html',
-  '/web/freej2me-web.jar'
-];
-
-// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching static assets');
-      return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('[SW] Failed to cache some assets:', err);
-      });
-    }).then(() => {
-      return self.skipWaiting();
-    })
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      return self.clients.claim();
-    })
-  );
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter(name => name.startsWith(CACHE_PREFIX) && !name.startsWith(CURRENT_PREFIX))
+      .map(name => caches.delete(name)));
+    await self.clients.claim();
+  })());
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+function forbidsCaching(headers) {
+  return /(?:^|,)\s*(?:no-store|no-cache|private)\b/i.test(headers.get('Cache-Control') || '');
+}
 
-  // Cache strategy for different resources
-  if (
-    // CheerpJ loader and runtime files
-    url.hostname === 'cjrtnc.leaningtech.com' ||
-    // Local JAR files
-    url.pathname.endsWith('.jar') ||
-    // Local JS/HTML files
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.html') ||
-    url.pathname.endsWith('.css')
-  ) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then((cache) => {
-        return cache.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            console.log('[SW] Serving from cache:', url.pathname);
-            return cachedResponse;
-          }
+function cacheable(response) {
+  return response.status === 200 &&
+    (response.type === 'basic' || response.type === 'cors') &&
+    !response.redirected && !forbidsCaching(response.headers) &&
+    !response.headers.has('Set-Cookie') && response.headers.get('Vary') !== '*';
+}
 
-          console.log('[SW] Fetching and caching:', url.pathname);
-          return fetch(event.request).then((networkResponse) => {
-            // Only cache successful responses
-            if (networkResponse.ok) {
-              cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-          }).catch(err => {
-            console.error('[SW] Fetch failed:', url.pathname, err);
-            throw err;
-          });
-        });
-      })
-    );
-  } else {
-    // For other requests, just use network
-    event.respondWith(fetch(event.request));
+async function readCache(name, request) {
+  try {
+    const cache = await caches.open(name);
+    const response = await cache.match(request);
+    return response && cacheable(response) ? response : undefined;
+  } catch {
+    return undefined;
   }
+}
+
+async function updateCache(name, request, response) {
+  try {
+    const cache = await caches.open(name);
+    if (cacheable(response)) {
+      await cache.put(request, response.clone());
+    } else {
+      // A new error/private response must not leave a formerly public fallback.
+      await cache.delete(request);
+    }
+  } catch (error) {
+    console.warn('[SW] Cache update failed:', error);
+  }
+}
+
+async function networkFirst(request) {
+  let response;
+  try {
+    response = await fetch(request, { cache: 'no-cache' });
+  } catch (error) {
+    const cached = await readCache(LOCAL_CACHE, request);
+    if (cached) return cached;
+    throw error;
+  }
+  // HTTP errors are responses, not an offline signal: never hide them with old JS.
+  await updateCache(LOCAL_CACHE, request, response);
+  return response;
+}
+
+async function runtimeFirst(request, version) {
+  const name = `${CURRENT_PREFIX}runtime-${version}`;
+  const cached = await readCache(name, request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  await updateCache(name, request, response);
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || request.headers.has('Range') ||
+      request.headers.has('Authorization') || request.headers.has('Cookie') ||
+      ['no-store', 'no-cache', 'reload'].includes(request.cache) ||
+      forbidsCaching(request.headers) || request.headers.get('Pragma') === 'no-cache' ||
+      url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
+
+  const version = url.origin === 'https://cjrtnc.leaningtech.com' &&
+    url.pathname.match(/^\/(\d+\.\d+(?:\.\d+)?)\//)?.[1];
+  if (version) {
+    event.respondWith(runtimeFirst(request, version));
+  } else if (url.origin === scope.origin && url.pathname.startsWith(scope.pathname) &&
+      (url.pathname === scope.pathname || /\.(?:html?|m?js|css)$/i.test(url.pathname))) {
+    event.respondWith(networkFirst(request));
+  }
+  // API calls, game JARs and files outside this registration are left to the browser.
 });

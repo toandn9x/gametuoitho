@@ -1,9 +1,5 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getCategories } from '../../../lib/api';
-
-const catRes = await getCategories();
-const categories = catRes.success && catRes.data ? catRes.data : [];
 ---
 
 <AdminLayout title="Thêm Game Mới Vào Catalog" activeNav="create-game">
@@ -15,16 +11,85 @@ const categories = catRes.success && catRes.data ? catRes.data : [];
       </a>
       <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
         <span>➕</span>
-        <span>Thêm Game Mới</span>
+        <span>Thêm Game Mới Thủ Công</span>
       </h2>
       <p class="text-xs text-slate-400 mt-1">
-        Game sẽ được tạo ở trạng thái DRAFT. Bạn có thể kiểm thử trước khi quyết định xuất bản công khai.
+        Tải lên file game <code class="text-neon-yellow font-mono font-bold">.JAR</code>, ảnh bìa và nhập metadata để game có thể chơi ngay lập tức trên trình giả lập.
       </p>
     </div>
 
     <form id="create-game-form" class="bg-arcade-900 border border-arcade-800 rounded-3xl p-6 sm:p-8 space-y-6">
       <div id="alert-box" class="hidden p-3 rounded-xl text-xs font-medium"></div>
 
+      <!-- File JAR Upload Box (Critical for running!) -->
+      <div class="p-5 bg-arcade-850 border-2 border-dashed border-neon-cyan/50 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold text-neon-cyan uppercase tracking-wider flex items-center gap-1.5">
+            <span>🎮</span>
+            <span>File Game JAR (Java Archive) <span class="text-neon-pink">* Bắt Buộc Để Chơi</span></span>
+          </label>
+          <span class="text-[10px] text-slate-400 font-mono">Định dạng: .jar</span>
+        </div>
+
+        <input
+          type="file"
+          id="game-jar-file"
+          accept=".jar"
+          required
+          class="block w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-neon-cyan file:text-arcade-950 hover:file:bg-neon-yellow file:cursor-pointer cursor-pointer"
+        />
+
+        <div id="jar-file-info" class="hidden text-[11px] font-mono text-neon-green flex items-center gap-2">
+          <span>✓ Đã chọn file:</span>
+          <strong id="jar-filename"></strong>
+          <span id="jar-filesize" class="text-slate-400"></span>
+        </div>
+
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          💡 <em>Lưu ý:</em> Trình giả lập chạy trực tiếp file <strong class="text-slate-200">.jar</strong>. Nếu bạn đang có file nén <strong class="text-slate-200">.rar</strong> hoặc <strong class="text-slate-200">.zip</strong>, hãy giải nén ở máy tính trước để lấy file <strong class="text-neon-yellow">.jar</strong> bên trong và tải lên đây.
+        </p>
+
+        <div class="pt-2">
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Tên Phiên Bản File (Version Name)
+          </label>
+          <input
+            type="text"
+            id="game-version-name"
+            value="1.0.0 (Bản Chuẩn 240x320)"
+            placeholder="vd: 1.0.0 (Bản Chuẩn 240x320)"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Cover Image Upload Box -->
+      <div class="p-5 bg-arcade-850 border border-arcade-800 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold text-neon-yellow uppercase tracking-wider flex items-center gap-1.5">
+            <span>🖼️</span>
+            <span>Ảnh Bìa / Icon Game (Cover)</span>
+          </label>
+          <span class="text-[10px] text-slate-400 font-mono">PNG, JPG, WEBP</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div id="cover-preview-box" class="w-16 h-16 rounded-xl bg-arcade-950 border border-arcade-700 flex items-center justify-center overflow-hidden flex-shrink-0 text-slate-500 text-2xl">
+            🕹️
+          </div>
+          <div class="flex-1">
+            <input
+              type="file"
+              id="game-cover-file"
+              accept="image/*"
+              class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-arcade-700 file:text-slate-200 hover:file:bg-arcade-600 file:cursor-pointer cursor-pointer"
+            />
+            <p class="text-[10px] text-slate-500 mt-1">Khuyến nghị tỉ lệ 1:1 hoặc 4:3 (ảnh chụp từ màn hình hoặc icon game)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metadata Fields -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">
@@ -55,18 +120,23 @@ const categories = catRes.success && catRes.data ? catRes.data : [];
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">
-            Thể Loại <span class="text-neon-pink">*</span>
-          </label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-300">
+              Thể Loại <span class="text-neon-pink">*</span>
+            </label>
+            <a href="/admin/categories" target="_blank" class="text-[10px] text-neon-cyan hover:underline font-mono">
+              + Quản lý thể loại
+            </a>
+          </div>
           <select
             id="game-category"
-            required
             class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none"
           >
-            {categories.map((c) => (
-              <option value={c.id}>{c.name}</option>
-            ))}
+            <option value="" disabled selected>Đang tải thể loại...</option>
           </select>
+          <p id="cat-empty-msg" class="hidden text-[11px] text-neon-yellow mt-1.5 leading-relaxed">
+            ⚠️ Chưa có thể loại nào trong hệ thống. <a href="/admin/categories" target="_blank" class="underline font-bold text-neon-cyan">Bấm vào đây để tạo thể loại trước</a>.
+          </p>
         </div>
 
         <div>
@@ -108,6 +178,24 @@ const categories = catRes.success && catRes.data ? catRes.data : [];
         ></textarea>
       </div>
 
+      <!-- Publish Immediately Checkbox -->
+      <div class="p-4 bg-arcade-850 rounded-xl border border-arcade-800 flex items-center justify-between">
+        <div>
+          <label for="publish-immediate" class="text-xs font-bold text-slate-200 cursor-pointer block">
+            Xuất bản công khai ngay lập tức (PUBLISHED)
+          </label>
+          <p class="text-[11px] text-slate-400 mt-0.5">
+            Nếu không tích chọn, game sẽ lưu ở chế độ Bản nháp (DRAFT) để bạn kiểm thử trước
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          id="publish-immediate"
+          checked
+          class="w-5 h-5 rounded text-neon-green bg-arcade-900 border-2 border-arcade-600 focus:ring-neon-green cursor-pointer"
+        />
+      </div>
+
       <div class="border-t border-arcade-800 pt-6 flex justify-end gap-3">
         <a
           href="/admin/games"
@@ -118,41 +206,130 @@ const categories = catRes.success && catRes.data ? catRes.data : [];
         <button
           type="submit"
           id="submit-btn"
-          class="px-6 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-neon-pink"
+          class="px-6 py-2.5 bg-gradient-to-r from-neon-pink to-neon-yellow text-arcade-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-neon-pink hover:scale-105"
         >
-          Tạo Game (DRAFT)
+          Lưu & Tải Game Lên Hệ Thống
         </button>
       </div>
     </form>
   </div>
 
   <script>
-    import { createAdminGame } from '../../../lib/api';
+    import { createAdminGame, updateAdminGame, addAdminGameVersion, publishAdminGame, apiRequest, getCategories } from '../../../lib/api';
     import { slugify } from '@gametuoitho/shared-utils';
 
     const nameInput = document.getElementById('game-name') as HTMLInputElement;
     const slugInput = document.getElementById('game-slug') as HTMLInputElement;
     const categorySelect = document.getElementById('game-category') as HTMLSelectElement;
+    const catEmptyMsg = document.getElementById('cat-empty-msg') as HTMLParagraphElement;
     const devInput = document.getElementById('game-developer') as HTMLInputElement;
     const yearInput = document.getElementById('game-year') as HTMLInputElement;
     const descInput = document.getElementById('game-desc') as HTMLTextAreaElement;
+    const jarFileInput = document.getElementById('game-jar-file') as HTMLInputElement;
+    const versionNameInput = document.getElementById('game-version-name') as HTMLInputElement;
+    const coverFileInput = document.getElementById('game-cover-file') as HTMLInputElement;
+    const publishCheckbox = document.getElementById('publish-immediate') as HTMLInputElement;
+
+    const jarInfoBox = document.getElementById('jar-file-info') as HTMLDivElement;
+    const jarFilename = document.getElementById('jar-filename') as HTMLElement;
+    const jarFilesize = document.getElementById('jar-filesize') as HTMLElement;
+    const coverPreviewBox = document.getElementById('cover-preview-box') as HTMLDivElement;
+
     const form = document.getElementById('create-game-form') as HTMLFormElement;
     const alertBox = document.getElementById('alert-box') as HTMLDivElement;
     const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+    // Load categories at runtime (R05F-A)
+    async function loadCategories() {
+      try {
+        categorySelect.innerHTML = '<option value="" disabled selected>Đang tải thể loại...</option>';
+        const res = await getCategories();
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          categorySelect.innerHTML = '<option value="" disabled selected>-- Chọn thể loại game --</option>';
+          for (const cat of res.data) {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.name;
+            categorySelect.appendChild(opt);
+          }
+          categorySelect.required = true;
+          catEmptyMsg?.classList.add('hidden');
+        } else {
+          categorySelect.innerHTML = '<option value="" disabled selected>-- Chưa có thể loại nào --</option>';
+          categorySelect.required = false;
+          catEmptyMsg?.classList.remove('hidden');
+        }
+      } catch (err: any) {
+        categorySelect.innerHTML = '<option value="" disabled selected>-- Lỗi kết nối danh mục --</option>';
+        categorySelect.required = false;
+        if (catEmptyMsg) {
+          catEmptyMsg.textContent = 'Không thể tải danh sách thể loại từ máy chủ. Vui lòng tải lại trang.';
+          catEmptyMsg.classList.remove('hidden');
+        }
+      }
+    }
+
+    loadCategories();
 
     // Auto-slugify on title input
     nameInput?.addEventListener('input', () => {
       slugInput.value = slugify(nameInput.value);
     });
 
+    // Show selected JAR file info & auto-fill title if empty
+    jarFileInput?.addEventListener('change', () => {
+      if (jarFileInput.files && jarFileInput.files[0]) {
+        const file = jarFileInput.files[0];
+        jarInfoBox.classList.remove('hidden');
+        jarFilename.textContent = file.name;
+        jarFilesize.textContent = `(${(file.size / 1024).toFixed(0)} KB)`;
+
+        // If title is empty, suggest name from filename
+        if (!nameInput.value) {
+          const rawName = file.name.replace(/\.jar$/i, '').replace(/[_-]+/g, ' ');
+          nameInput.value = rawName;
+          slugInput.value = slugify(rawName);
+        }
+      } else {
+        jarInfoBox.classList.add('hidden');
+      }
+    });
+
+    // Preview cover image (Safe DOM creation, no innerHTML)
+    coverFileInput?.addEventListener('change', () => {
+      coverPreviewBox.textContent = '';
+      if (coverFileInput.files && coverFileInput.files[0]) {
+        const file = coverFileInput.files[0];
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'w-full h-full object-cover';
+        coverPreviewBox.appendChild(img);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'text-2xl';
+        span.textContent = '🖼️';
+        coverPreviewBox.appendChild(span);
+      }
+    });
+
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       alertBox.classList.add('hidden');
       submitBtn.disabled = true;
-      submitBtn.textContent = 'ĐANG TẠO...';
 
       try {
-        const res = await createAdminGame({
+        const jarFile = jarFileInput.files?.[0];
+        if (!jarFile) {
+          throw new Error('Vui lòng chọn file game .jar để hệ thống có thể chạy giả lập');
+        }
+
+        if (!categorySelect.value) {
+          throw new Error('Vui lòng chọn thể loại cho trò chơi. Nếu chưa có thể loại, vui lòng tạo thể loại tại mục Quản lý thể loại trước.');
+        }
+
+        // Bước 1: Tạo record game DRAFT trước qua API POST /api/v1/admin/games (R05-C)
+        submitBtn.textContent = '1/5 ĐANG TẠO HỒ SƠ GAME (DRAFT)...';
+        const gameRes = await createAdminGame({
           name: nameInput.value.trim(),
           slug: slugInput.value.trim(),
           category_id: categorySelect.value,
@@ -163,26 +340,81 @@ const categories = catRes.success && catRes.data ? catRes.data : [];
           visibility: 'PUBLIC',
         });
 
-        if (res.success) {
-          alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-neon-green/20 border border-neon-green text-neon-green';
-          alertBox.textContent = 'Tạo game thành công! Đang chuyển hướng về danh sách...';
-          alertBox.classList.remove('hidden');
-          setTimeout(() => {
-            window.location.href = '/admin/games';
-          }, 1000);
-        } else {
-          alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
-          alertBox.textContent = res.error?.message || 'Tạo game thất bại';
-          alertBox.classList.remove('hidden');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Tạo Game (DRAFT)';
+        if (!gameRes.success || !gameRes.data?.id) {
+          throw new Error(gameRes.error?.message || 'Tạo hồ sơ game thất bại');
         }
+        const gameId = gameRes.data.id;
+
+        // Bước 2: Upload file cover (nếu có) với gameId trong FormData để lưu vào catalog asset games/{gameId}/covers/...
+        const coverFile = coverFileInput.files?.[0];
+        if (coverFile) {
+          submitBtn.textContent = '2/5 ĐANG TẢI ẢNH BÌA LÊN...';
+          const coverFormData = new FormData();
+          coverFormData.append('file', coverFile);
+          coverFormData.append('assetType', 'COVER');
+          coverFormData.append('gameId', gameId);
+
+          const coverRes = await apiRequest<{ id: string }>('/upload', {
+            method: 'POST',
+            body: coverFormData,
+          });
+
+          if (coverRes.success && coverRes.data?.id) {
+            await updateAdminGame(gameId, { cover_asset_id: coverRes.data.id });
+          }
+        }
+
+        // Bước 3: Upload file JAR qua POST /api/v1/upload với gameId trong FormData -> lưu vào catalog asset games/{gameId}/versions/...
+        submitBtn.textContent = '3/5 ĐANG TẢI FILE JAR VÀO CATALOG...';
+        const jarFormData = new FormData();
+        jarFormData.append('file', jarFile);
+        jarFormData.append('assetType', 'JAR');
+        jarFormData.append('gameId', gameId);
+
+        const jarRes = await apiRequest<{ id: string }>('/upload', {
+          method: 'POST',
+          body: jarFormData,
+        });
+
+        if (!jarRes.success || !jarRes.data?.id) {
+          throw new Error(jarRes.error?.message || 'Tải file JAR lên máy chủ thất bại');
+        }
+        const jarAssetId = jarRes.data.id;
+
+        // Bước 4: Tạo version qua POST /api/v1/admin/games/${gameId}/versions với jar_asset_id: assetId
+        submitBtn.textContent = '4/5 ĐANG KHỞI TẠO PHIÊN BẢN CHƠI...';
+        const versionRes = await addAdminGameVersion(gameId, {
+          version_name: versionNameInput.value.trim() || '1.0.0 (Bản Chuẩn)',
+          jar_asset_id: jarAssetId,
+          status: 'ACTIVE',
+        });
+
+        if (!versionRes.success) {
+          throw new Error(versionRes.error?.message || 'Đính kèm file JAR vào game thất bại');
+        }
+
+        // Bước 5: Nếu admin tích chọn 'Xuất bản ngay' (publish = true): gọi publishAdminGame
+        if (publishCheckbox.checked) {
+          submitBtn.textContent = '5/5 ĐANG XUẤT BẢN GAME...';
+          const publishRes = await publishAdminGame(gameId);
+          if (!publishRes.success) {
+            throw new Error(publishRes.error?.message || 'Xuất bản game thất bại');
+          }
+        }
+
+        alertBox.className = 'p-3 rounded-xl text-xs font-bold bg-neon-green/20 border border-neon-green text-neon-green';
+        alertBox.textContent = `Tạo thành công game "${nameInput.value.trim()}"! Đang chuyển hướng...`;
+        alertBox.classList.remove('hidden');
+
+        setTimeout(() => {
+          window.location.href = `/play/${slugInput.value.trim()}`;
+        }, 1200);
       } catch (err: any) {
-        alertBox.className = 'p-3 rounded-xl text-xs font-medium bg-red-500/20 border border-red-500 text-red-200';
-        alertBox.textContent = err.message || 'Lỗi kết nối';
+        alertBox.className = 'p-3 rounded-xl text-xs font-bold bg-red-500/20 border border-red-500 text-red-200';
+        alertBox.textContent = err.message || 'Lỗi khi tạo game';
         alertBox.classList.remove('hidden');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Tạo Game (DRAFT)';
+        submitBtn.textContent = 'Lưu & Tải Game Lên Hệ Thống';
       }
     });
   </script>

@@ -3,7 +3,7 @@ import { Game, GameVersion, Category, User, UserLibraryItem } from '@gametuoitho
 
 export const API_BASE_URL = typeof window !== 'undefined'
   ? (window as any).__PUBLIC_API_URL__ || '/api/v1'
-  : process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || 4321}/api/v1`;
+  : import.meta.env?.PUBLIC_API_URL || 'http://localhost:4321/api/v1';
 
 // Token storage helpers
 export function getAuthToken(): string | null {
@@ -46,7 +46,21 @@ export async function apiRequest<T = any>(
       headers,
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return {
+        success: false,
+        error: {
+          code: res.ok ? 'INVALID_RESPONSE' : res.status === 404 ? 'NOT_FOUND' : 'SERVER_ERROR',
+          message: res.ok
+            ? 'Phản hồi từ máy chủ không hợp lệ'
+            : `Lỗi máy chủ (HTTP ${res.status})`,
+        },
+      };
+    }
     return data;
   } catch (err: any) {
     return {
@@ -67,6 +81,7 @@ export async function getGames(params: {
   categoryId?: string;
   categorySlug?: string;
   sort?: string;
+  featured?: boolean;
 } = {}) {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
@@ -75,6 +90,7 @@ export async function getGames(params: {
   if (params.categoryId) query.set('categoryId', params.categoryId);
   if (params.categorySlug) query.set('categorySlug', params.categorySlug);
   if (params.sort) query.set('sort', params.sort);
+  if (params.featured !== undefined) query.set('featured', String(params.featured));
 
   return apiRequest<Game[]>(`/games?${query.toString()}`);
 }
@@ -207,8 +223,11 @@ export async function getAdminStats() {
   return apiRequest<any>('/admin/stats');
 }
 
-export async function getAdminGames(page = 1, limit = 50) {
-  return apiRequest<Game[]>(`/admin/games?page=${page}&limit=${limit}`);
+export async function getAdminGames(page = 1, limit = 100, status?: string, search?: string) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status && status !== 'ALL') params.set('status', status);
+  if (search) params.set('search', search);
+  return apiRequest<Game[]>(`/admin/games?${params.toString()}`);
 }
 
 export async function createAdminGame(gameData: any) {
@@ -276,11 +295,87 @@ export async function importCrawlerGame(gameId: string) {
 }
 
 export async function batchImportCrawlerGames(gameIds: string[]) {
-  return apiRequest<{ importedCount: number; errorCount: number; imported: any[]; errors: any[] }>(
-    `/admin/crawler/batch-import`,
+  return apiRequest<{
+    total: number;
+    importedCount: number;
+    errorCount: number;
+    results: { gameId: string; ok: boolean; slug?: string; error?: string }[];
+  }>(`/admin/crawler/batch-import`, {
+    method: 'POST',
+    body: JSON.stringify({ gameIds }),
+  });
+}
+
+// Crash & Error Reports API
+export async function reportGameCrash(reportData: {
+  game_id?: string;
+  game_version_id?: string;
+  game_slug?: string;
+  game_name: string;
+  error_type: string;
+  error_message: string;
+  stack_trace?: string;
+}) {
+  return apiRequest<{ id: string }>('/reports/crash', {
+    method: 'POST',
+    body: JSON.stringify(reportData),
+  });
+}
+
+export async function getAdminCrashReports(params: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  errorType?: string;
+  search?: string;
+} = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.status && params.status !== 'ALL') query.set('status', params.status);
+  if (params.errorType && params.errorType !== 'ALL') query.set('errorType', params.errorType);
+  if (params.search) query.set('search', params.search);
+
+  return apiRequest<any>(`/admin/reports?${query.toString()}`);
+}
+
+export async function updateAdminCrashReport(id: string, data: { status: string; admin_notes?: string }) {
+  return apiRequest(`/admin/reports/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteAdminCrashReport(id: string) {
+  return apiRequest(`/admin/reports/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// Storage Management & Cleanup API
+export async function getStorageAnalysis() {
+  return apiRequest<any>('/admin/storage/analysis');
+}
+
+export async function cleanupStorage(options: { cleanOrphans?: boolean; purgeDeleted?: boolean } = {}) {
+  return apiRequest<any>('/admin/storage/cleanup', {
+    method: 'POST',
+    body: JSON.stringify(options),
+  });
+}
+
+export async function deleteAdminAsset(id: string) {
+  return apiRequest(`/admin/assets/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function bulkDeleteAdminAssets(ids: string[]) {
+  return apiRequest<{ results: { id: string; ok: boolean; status: number; reason?: string }[] }>(
+    '/admin/assets/bulk-delete',
     {
       method: 'POST',
-      body: JSON.stringify({ gameIds }),
+      body: JSON.stringify({ ids }),
     }
   );
 }

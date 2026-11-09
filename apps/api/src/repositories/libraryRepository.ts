@@ -8,12 +8,13 @@ export class LibraryRepository {
     const sql = `
       SELECT 
         l.*,
-        g.name as catalog_game_name,
-        g.slug as catalog_game_slug,
-        a.storage_key as cover_storage_key,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.name ELSE NULL END as catalog_game_name,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.slug ELSE NULL END as catalog_game_slug,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN a.storage_key ELSE NULL END as cover_storage_key,
         custom.storage_key as custom_storage_key,
         custom.original_filename as custom_original_filename,
-        custom.file_size as custom_file_size
+        custom.file_size as custom_file_size,
+        CASE WHEN l.source_type = 'CATALOG' AND (g.status != 'PUBLISHED' OR g.visibility != 'PUBLIC') THEN 0 ELSE 1 END as is_available
       FROM user_library l
       LEFT JOIN games g ON l.game_id = g.id
       LEFT JOIN game_assets a ON g.cover_asset_id = a.id
@@ -48,6 +49,13 @@ export class LibraryRepository {
     return this.db.queryFirst<UserLibraryItem>(
       "SELECT * FROM user_library WHERE user_id = ? AND game_id = ? AND source_type = 'CATALOG'",
       [userId, gameId]
+    );
+  }
+
+  async findUserImportEntry(userId: string, customAssetId: string): Promise<UserLibraryItem | null> {
+    return this.db.queryFirst<UserLibraryItem>(
+      "SELECT * FROM user_library WHERE user_id = ? AND custom_asset_id = ? AND source_type = 'IMPORT'",
+      [userId, customAssetId]
     );
   }
 
@@ -111,14 +119,14 @@ export class LibraryRepository {
     const sql = `
       SELECT 
         act.*,
-        g.name as game_name,
-        g.slug as game_slug,
-        a.storage_key as cover_storage_key,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.name ELSE NULL END as game_name,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.slug ELSE NULL END as game_slug,
+        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN a.storage_key ELSE NULL END as cover_storage_key,
         l.custom_name
       FROM user_game_activity act
       LEFT JOIN games g ON act.game_id = g.id
       LEFT JOIN game_assets a ON g.cover_asset_id = a.id
-      LEFT JOIN user_library l ON act.user_library_id = l.id
+      LEFT JOIN user_library l ON act.user_library_id = l.id AND l.user_id = act.user_id
       WHERE act.user_id = ? AND act.activity_type = 'PLAY'
       ORDER BY act.last_played_at DESC
       LIMIT ?
@@ -154,7 +162,7 @@ export class LibraryRepository {
         g.developer,
         a.storage_key as cover_storage_key
       FROM user_game_activity act
-      JOIN games g ON act.game_id = g.id
+      JOIN games g ON act.game_id = g.id AND g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC'
       LEFT JOIN game_assets a ON g.cover_asset_id = a.id
       WHERE act.user_id = ? AND act.activity_type = 'FAVORITE'
       ORDER BY act.last_played_at DESC

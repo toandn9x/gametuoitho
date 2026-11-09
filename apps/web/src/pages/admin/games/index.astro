@@ -4,6 +4,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
 <AdminLayout title="Quản Lý Game Catalog" activeNav="games">
   <div class="space-y-6">
+    <!-- Header with Action Buttons -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-arcade-800 pb-6">
       <div>
         <h2 class="text-2xl font-black text-slate-100 flex items-center gap-2">
@@ -11,7 +12,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <span>Danh Sách Game Trong Catalog</span>
         </h2>
         <p class="text-xs text-slate-400 mt-1">
-          Quản lý xuất bản, duyệt hàng loạt, chỉnh sửa metadata và kiểm thử game trước khi công khai
+          Quản lý toàn bộ game: tìm kiếm, lọc theo trạng thái, thêm mới, sửa metadata, xuất bản và xóa
         </p>
       </div>
 
@@ -29,8 +30,61 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           class="px-4 py-2.5 bg-neon-pink hover:bg-neon-yellow text-arcade-950 font-bold rounded-xl text-xs transition-all shadow-neon-pink flex items-center gap-1.5"
         >
           <span>➕</span>
-          <span>Thêm Thủ Công</span>
+          <span>Thêm Game Mới</span>
         </a>
+      </div>
+    </div>
+
+    <!-- Status Filters & Search Bar -->
+    <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <!-- Status Tabs -->
+      <div class="flex flex-wrap items-center gap-1.5" id="status-tabs">
+        <button
+          data-status="ALL"
+          class="status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-neon-cyan text-arcade-950 shadow-neon-cyan"
+        >
+          Tất Cả (<span id="count-all">0</span>)
+        </button>
+        <button
+          data-status="PUBLISHED"
+          class="status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-neon-green/50"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-neon-green mr-1.5"></span>
+          Đã Xuất Bản
+        </button>
+        <button
+          data-status="DRAFT"
+          class="status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-neon-yellow/50"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-neon-yellow mr-1.5"></span>
+          Bản Nháp
+        </button>
+        <button
+          data-status="HIDDEN"
+          class="status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-slate-500"
+        >
+          <span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span>
+          Đang Ẩn
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative flex-1 max-w-md">
+        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 text-sm">
+          🔍
+        </span>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Tìm theo tên game, slug, nhà phát triển..."
+          class="w-full pl-10 pr-9 py-2 bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-colors"
+        />
+        <button
+          id="clear-search-btn"
+          class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 text-xs"
+        >
+          ✕
+        </button>
       </div>
     </div>
 
@@ -73,6 +127,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       </div>
     </div>
 
+    <!-- Hidden File Input for Quick JAR Upload -->
+    <input type="file" id="quick-jar-input" accept=".jar" class="hidden" />
+
     <!-- Games Table Container -->
     <div class="bg-arcade-900 border border-arcade-800 rounded-2xl overflow-hidden shadow-xl">
       <div class="overflow-x-auto">
@@ -88,6 +145,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
                 />
               </th>
               <th class="px-6 py-4">Tên Game</th>
+              <th class="px-4 py-4 text-center">Ưa thích</th>
               <th class="px-6 py-4">Thể Loại</th>
               <th class="px-6 py-4">Nhà Phát Triển</th>
               <th class="px-6 py-4">Trạng Thái</th>
@@ -97,7 +155,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           </thead>
           <tbody id="games-table-body" class="divide-y divide-arcade-800 text-slate-300">
             <tr>
-              <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-mono">
+              <td colspan="8" class="px-6 py-8 text-center text-slate-500 font-mono">
                 Đang tải dữ liệu...
               </td>
             </tr>
@@ -107,10 +165,207 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     </div>
   </div>
 
+  <!-- Modal Chỉnh Sửa Thông Tin Game (Edit Modal) -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div class="bg-arcade-900 border border-neon-cyan/50 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-arcade-800 pb-4">
+        <h3 class="text-xl font-black text-slate-100 flex items-center gap-2">
+          <span>✏️</span>
+          <span>Chỉnh Sửa Thông Tin Game</span>
+        </h3>
+        <button id="modal-close-btn" class="w-8 h-8 rounded-full bg-arcade-800 hover:bg-arcade-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm transition-colors">
+          ✕
+        </button>
+      </div>
+
+      <div id="modal-alert" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+
+      <form id="modal-edit-form" class="space-y-4">
+        <input type="hidden" id="edit-game-id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Tên Game <span class="text-neon-pink">*</span>
+            </label>
+            <input
+              type="text"
+              id="edit-game-name"
+              required
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              URL Slug <span class="text-neon-pink">*</span>
+            </label>
+            <input
+              type="text"
+              id="edit-game-slug"
+              required
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none font-mono"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Thể Loại <span class="text-neon-pink">*</span>
+            </label>
+            <select
+              id="edit-game-category"
+              required
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none"
+            >
+              <option value="" disabled selected>Đang tải danh mục...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Nhà Phát Triển
+            </label>
+            <input
+              type="text"
+              id="edit-game-developer"
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Năm Phát Hành
+            </label>
+            <input
+              type="number"
+              id="edit-game-year"
+              min="1995"
+              max="2030"
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none font-mono"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Trạng Thái Catalog <span class="text-neon-pink">*</span>
+            </label>
+            <select
+              id="edit-game-status"
+              required
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none font-mono"
+            >
+              <option value="PUBLISHED">PUBLISHED (Đã xuất bản - Công khai)</option>
+              <option value="DRAFT">DRAFT (Bản nháp - Chờ duyệt)</option>
+              <option value="HIDDEN">HIDDEN (Đang ẩn - Không hiển thị)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">
+              Quyền Hiển Thị <span class="text-neon-pink">*</span>
+            </label>
+            <select
+              id="edit-game-visibility"
+              required
+              class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none font-mono"
+            >
+              <option value="PUBLIC">PUBLIC (Ai cũng thấy)</option>
+              <option value="PRIVATE">PRIVATE (Chỉ Admin thấy)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">
+            Mô Tả Trò Chơi
+          </label>
+          <textarea
+            id="edit-game-desc"
+            rows="3"
+            class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl p-3 text-xs text-slate-100 focus:outline-none"
+          ></textarea>
+        </div>
+
+        <div class="border-t border-arcade-800 pt-5 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            id="modal-cancel-btn"
+            class="px-5 py-2.5 bg-arcade-800 hover:bg-arcade-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+          >
+            Hủy Bỏ
+          </button>
+          <button
+            type="submit"
+            id="modal-submit-btn"
+            class="px-6 py-2.5 bg-gradient-to-r from-neon-cyan to-neon-yellow text-arcade-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-neon-cyan hover:scale-105"
+          >
+            Lưu Thay Đổi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
-    import { getAdminGames, publishAdminGame, hideAdminGame, deleteAdminGame } from '../../../lib/api';
+    import {
+      getAdminGames,
+      updateAdminGame,
+      publishAdminGame,
+      hideAdminGame,
+      deleteAdminGame,
+      addAdminGameVersion,
+      getCategories,
+      apiRequest,
+    } from '../../../lib/api';
 
     const selectedGameIds = new Set<string>();
+    let pendingUploadGameId: string | null = null;
+    let pendingUploadGameName: string | null = null;
+    let gamesCache: any[] = [];
+
+    // Filter states
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentStatus = urlParams.get('status') || 'ALL';
+    let currentSearch = urlParams.get('search') || '';
+
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const clearSearchBtn = document.getElementById('clear-search-btn') as HTMLButtonElement;
+    if (searchInput) {
+      searchInput.value = currentSearch;
+      if (currentSearch) clearSearchBtn?.classList.remove('hidden');
+    }
+
+    // Modal elements
+    const editModal = document.getElementById('edit-modal') as HTMLDivElement;
+    const modalForm = document.getElementById('modal-edit-form') as HTMLFormElement;
+    const modalAlert = document.getElementById('modal-alert') as HTMLDivElement;
+    const editIdInput = document.getElementById('edit-game-id') as HTMLInputElement;
+    const editNameInput = document.getElementById('edit-game-name') as HTMLInputElement;
+    const editSlugInput = document.getElementById('edit-game-slug') as HTMLInputElement;
+    const editCatSelect = document.getElementById('edit-game-category') as HTMLSelectElement;
+    const editDevInput = document.getElementById('edit-game-developer') as HTMLInputElement;
+    const editYearInput = document.getElementById('edit-game-year') as HTMLInputElement;
+    const editStatusSelect = document.getElementById('edit-game-status') as HTMLSelectElement;
+    const editVisSelect = document.getElementById('edit-game-visibility') as HTMLSelectElement;
+    const editDescInput = document.getElementById('edit-game-desc') as HTMLTextAreaElement;
+    const modalSubmitBtn = document.getElementById('modal-submit-btn') as HTMLButtonElement;
+
+    function updateStatusTabsUI() {
+      document.querySelectorAll('.status-tab').forEach((tab) => {
+        const tabStatus = tab.getAttribute('data-status');
+        if (tabStatus === currentStatus) {
+          tab.className =
+            'status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-neon-cyan text-arcade-950 shadow-neon-cyan';
+        } else {
+          tab.className =
+            'status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-arcade-600';
+        }
+      });
+    }
 
     function updateBulkToolbar() {
       const toolbar = document.getElementById('bulk-toolbar')!;
@@ -132,89 +387,324 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       }
     }
 
+    // Load categories at runtime (R05F-A)
+    async function loadCategories() {
+      try {
+        const res = await getCategories();
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          editCatSelect.innerHTML = '<option value="" disabled selected>-- Chọn thể loại game --</option>';
+          for (const cat of res.data) {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.name;
+            editCatSelect.appendChild(opt);
+          }
+        } else {
+          editCatSelect.innerHTML = '<option value="" disabled selected>-- Chưa có thể loại nào --</option>';
+        }
+      } catch {
+        editCatSelect.innerHTML = '<option value="" disabled selected>-- Lỗi kết nối danh mục --</option>';
+      }
+    }
+
+    loadCategories();
+
+    function openEditModal(game: any) {
+      editIdInput.value = game.id;
+      editNameInput.value = game.name || '';
+      editSlugInput.value = game.slug || '';
+      if (editCatSelect.options.length <= 1) {
+        loadCategories().then(() => {
+          editCatSelect.value = game.category_id || '';
+        });
+      } else {
+        editCatSelect.value = game.category_id || '';
+      }
+      editDevInput.value = game.developer || '';
+      editYearInput.value = game.release_year ? String(game.release_year) : '';
+      editStatusSelect.value = game.status || 'DRAFT';
+      editVisSelect.value = game.visibility || 'PUBLIC';
+      editDescInput.value = game.description || '';
+
+      modalAlert.className = 'hidden';
+      modalAlert.textContent = '';
+      editModal.classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      editModal.classList.add('hidden');
+    }
+
+    document.getElementById('modal-close-btn')?.addEventListener('click', closeEditModal);
+    document.getElementById('modal-cancel-btn')?.addEventListener('click', closeEditModal);
+
+    modalForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      modalSubmitBtn.disabled = true;
+      modalSubmitBtn.textContent = 'ĐANG LƯU...';
+      modalAlert.classList.add('hidden');
+
+      const id = editIdInput.value;
+      const updateData = {
+        name: editNameInput.value.trim(),
+        slug: editSlugInput.value.trim(),
+        category_id: editCatSelect.value,
+        developer: editDevInput.value.trim() || undefined,
+        release_year: editYearInput.value ? Number(editYearInput.value) : undefined,
+        status: editStatusSelect.value,
+        visibility: editVisSelect.value,
+        description: editDescInput.value.trim() || undefined,
+      };
+
+      try {
+        const res = await updateAdminGame(id, updateData);
+        if (!res.success) {
+          throw new Error(res.error?.message || 'Cập nhật game thất bại');
+        }
+
+        modalAlert.className = 'p-3 rounded-xl text-xs font-bold bg-neon-green/20 border border-neon-green text-neon-green';
+        modalAlert.textContent = 'Cập nhật thành công!';
+        modalAlert.classList.remove('hidden');
+
+        setTimeout(() => {
+          closeEditModal();
+          modalSubmitBtn.disabled = false;
+          modalSubmitBtn.textContent = 'Lưu Thay Đổi';
+          loadGames();
+        }, 800);
+      } catch (err: any) {
+        modalAlert.className = 'p-3 rounded-xl text-xs font-bold bg-red-500/20 border border-red-500 text-red-200';
+        modalAlert.textContent = err.message || 'Lỗi cập nhật';
+        modalAlert.classList.remove('hidden');
+        modalSubmitBtn.disabled = false;
+        modalSubmitBtn.textContent = 'Lưu Thay Đổi';
+      }
+    });
+
     async function loadGames() {
       selectedGameIds.clear();
       updateBulkToolbar();
+      updateStatusTabsUI();
 
       const tbody = document.getElementById('games-table-body')!;
-      const res = await getAdminGames(1, 100);
+      tbody.textContent = '';
+      const loadingTr = document.createElement('tr');
+      const loadingTd = document.createElement('td');
+      loadingTd.colSpan = 8;
+      loadingTd.className = 'px-6 py-8 text-center text-slate-500 font-mono';
+      loadingTd.textContent = 'Đang tải dữ liệu...';
+      loadingTr.appendChild(loadingTd);
+      tbody.appendChild(loadingTr);
+
+      const res = await getAdminGames(1, 100, currentStatus, currentSearch);
 
       if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-mono">
-              Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".
-            </td>
-          </tr>
-        `;
+        const emptyMsg = currentSearch || currentStatus !== 'ALL'
+          ? `Không tìm thấy game nào phù hợp với bộ lọc (Trạng thái: ${currentStatus}${currentSearch ? `, Từ khóa: "${currentSearch}"` : ''}).`
+          : 'Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".';
+
+        tbody.textContent = '';
+        const emptyTr = document.createElement('tr');
+        const emptyTd = document.createElement('td');
+        emptyTd.colSpan = 8;
+        emptyTd.className = 'px-6 py-8 text-center text-slate-500 font-mono';
+        emptyTd.textContent = emptyMsg;
+        emptyTr.appendChild(emptyTd);
+        tbody.appendChild(emptyTr);
         return;
       }
 
-      tbody.innerHTML = res.data
-        .map((game: any) => {
-          const isPublished = game.status === 'PUBLISHED';
-          const isDraft = game.status === 'DRAFT';
+      gamesCache = res.data;
+      const countAllEl = document.getElementById('count-all');
+      if (countAllEl && currentStatus === 'ALL' && !currentSearch) {
+        countAllEl.textContent = String(res.data.length);
+      }
 
-          const statusBadge = isPublished
-            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40">PUBLISHED</span>'
-            : isDraft
-            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40">DRAFT</span>'
-            : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-400">HIDDEN</span>';
+      tbody.textContent = '';
+      for (const game of res.data) {
+        const isPublished = game.status === 'PUBLISHED';
+        const isDraft = game.status === 'DRAFT';
 
-          return `
-            <tr class="hover:bg-arcade-850/60 transition-colors ${selectedGameIds.has(game.id) ? 'bg-arcade-850/80' : ''}">
-              <td class="w-12 px-4 py-4 text-center">
-                <input
-                  type="checkbox"
-                  data-id="${game.id}"
-                  class="game-checkbox w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer"
-                />
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700">
-                    ${game.cover_url ? `<img src="${game.cover_url}" class="w-full h-full object-cover" />` : '<span class="w-full h-full flex items-center justify-center text-sm">🎮</span>'}
-                  </div>
-                  <div>
-                    <span class="font-bold text-slate-100 block">${game.name}</span>
-                    <span class="text-[10px] text-slate-500 font-mono">/game/${game.slug}</span>
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 font-medium text-slate-300">
-                ${game.category_name || 'N/A'}
-              </td>
-              <td class="px-6 py-4 text-slate-400">
-                ${game.developer || 'N/A'} (${game.release_year || 'N/A'})
-              </td>
-              <td class="px-6 py-4">
-                ${statusBadge}
-              </td>
-              <td class="px-6 py-4 font-mono text-[10px] text-slate-400">
-                ${game.visibility}
-              </td>
-              <td class="px-6 py-4 text-right space-x-2">
-                <a
-                  href="/play/${game.slug}"
-                  target="_blank"
-                  class="px-2.5 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-xs font-bold transition-all"
-                  title="Kiểm thử chạy game trong Web Emulator"
-                >
-                  Test ▶
-                </a>
-                ${
-                  !isPublished
-                    ? `<button data-id="${game.id}" class="publish-btn px-2.5 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-xs font-bold transition-all">Xuất bản</button>`
-                    : `<button data-id="${game.id}" class="hide-btn px-2.5 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40 hover:bg-neon-yellow hover:text-arcade-950 rounded text-xs font-bold transition-all">Ẩn</button>`
-                }
-                <button data-id="${game.id}" data-name="${game.name}" class="delete-btn px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all">
-                  Xóa
-                </button>
-              </td>
-            </tr>
-          `;
-        })
-        .join('');
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-arcade-850/60 transition-colors ${selectedGameIds.has(game.id) ? 'bg-arcade-850/80' : ''}`;
+
+        // 1. Checkbox td
+        const tdCb = document.createElement('td');
+        tdCb.className = 'w-12 px-4 py-4 text-center';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.id = game.id;
+        cb.className = 'game-checkbox w-4 h-4 rounded text-neon-pink bg-arcade-950 border-2 border-arcade-600 focus:ring-neon-pink cursor-pointer';
+        if (selectedGameIds.has(game.id)) cb.checked = true;
+        tdCb.appendChild(cb);
+        tr.appendChild(tdCb);
+
+        // 2. Game Info (Icon, Name, Slug)
+        const tdName = document.createElement('td');
+        tdName.className = 'px-6 py-4';
+        const flexBox = document.createElement('div');
+        flexBox.className = 'flex items-center gap-3';
+
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'w-10 h-10 rounded bg-arcade-950 overflow-hidden flex-shrink-0 border border-arcade-700';
+        if (game.cover_url) {
+          const img = document.createElement('img');
+          img.src = game.cover_url;
+          img.className = 'w-full h-full object-cover';
+          img.alt = '';
+          iconContainer.appendChild(img);
+        } else {
+          const emojiSpan = document.createElement('span');
+          emojiSpan.className = 'w-full h-full flex items-center justify-center text-sm';
+          emojiSpan.textContent = '🎮';
+          iconContainer.appendChild(emojiSpan);
+        }
+        flexBox.appendChild(iconContainer);
+
+        const titleBox = document.createElement('div');
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'font-bold text-slate-100 block';
+        nameSpan.textContent = game.name;
+        const slugSpan = document.createElement('span');
+        slugSpan.className = 'text-[10px] text-slate-500 font-mono';
+        slugSpan.textContent = `/game/${game.slug}`;
+        titleBox.appendChild(nameSpan);
+        titleBox.appendChild(slugSpan);
+        flexBox.appendChild(titleBox);
+        tdName.appendChild(flexBox);
+        tr.appendChild(tdName);
+
+        // 3. Homepage Game ưa thích
+        const tdFeatured = document.createElement('td');
+        tdFeatured.className = 'px-4 py-4 text-center';
+        const featuredBtn = document.createElement('button');
+        featuredBtn.type = 'button';
+        featuredBtn.dataset.id = game.id;
+        const updateFeaturedButton = () => {
+          const isFeatured = game.is_featured === true;
+          featuredBtn.textContent = isFeatured ? '★' : '☆';
+          featuredBtn.setAttribute('aria-pressed', String(isFeatured));
+          featuredBtn.title = `${isFeatured ? 'Bỏ' : 'Thêm'} "${game.name}" ${isFeatured ? 'khỏi' : 'vào'} Game ưa thích trên trang chủ`;
+          featuredBtn.setAttribute('aria-label', featuredBtn.title);
+          featuredBtn.className = `featured-game-btn w-10 h-10 rounded-lg border text-2xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow disabled:opacity-50 disabled:cursor-wait ${
+            isFeatured
+              ? 'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow hover:bg-neon-yellow/20'
+              : 'border-arcade-700 bg-arcade-800 text-slate-400 hover:border-neon-yellow/40 hover:text-neon-yellow'
+          }`;
+        };
+        updateFeaturedButton();
+        featuredBtn.addEventListener('click', async () => {
+          if (featuredBtn.disabled) return;
+          const nextFeatured = game.is_featured !== true;
+          featuredBtn.disabled = true;
+          featuredBtn.setAttribute('aria-busy', 'true');
+          try {
+            const res = await apiRequest<{ is_featured?: boolean }>(`/admin/games/${encodeURIComponent(game.id)}`, {
+              method: 'PUT',
+              body: JSON.stringify({ is_featured: nextFeatured }),
+            });
+            if (!res.success) {
+              throw new Error(res.error?.message || 'Không thể cập nhật Game ưa thích.');
+            }
+            if (typeof res.data?.is_featured !== 'boolean') {
+              throw new Error('Máy chủ chưa xác nhận trạng thái Game ưa thích.');
+            }
+            game.is_featured = res.data.is_featured;
+            updateFeaturedButton();
+          } catch (err) {
+            alert(err instanceof Error ? err.message : 'Không thể cập nhật Game ưa thích.');
+          } finally {
+            featuredBtn.disabled = false;
+            featuredBtn.removeAttribute('aria-busy');
+          }
+        });
+        tdFeatured.appendChild(featuredBtn);
+        tr.appendChild(tdFeatured);
+
+        // 4. Category
+        const tdCat = document.createElement('td');
+        tdCat.className = 'px-6 py-4 font-medium text-slate-300';
+        tdCat.textContent = game.category_name || 'N/A';
+        tr.appendChild(tdCat);
+
+        // 5. Developer / Year
+        const tdDev = document.createElement('td');
+        tdDev.className = 'px-6 py-4 text-slate-400';
+        tdDev.textContent = `${game.developer || 'N/A'} (${game.release_year || 'N/A'})`;
+        tr.appendChild(tdDev);
+
+        // 6. Status Badge
+        const tdStatus = document.createElement('td');
+        tdStatus.className = 'px-6 py-4';
+        const statusBadge = document.createElement('span');
+        statusBadge.textContent = game.status;
+        if (isPublished) {
+          statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-green/20 text-neon-green border border-neon-green/40';
+        } else if (isDraft) {
+          statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40';
+        } else {
+          statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-700 text-slate-400';
+        }
+        tdStatus.appendChild(statusBadge);
+        tr.appendChild(tdStatus);
+
+        // 7. Visibility
+        const tdVis = document.createElement('td');
+        tdVis.className = 'px-6 py-4 font-mono text-[10px] text-slate-400';
+        tdVis.textContent = game.visibility;
+        tr.appendChild(tdVis);
+
+        // 8. Actions
+        const tdActions = document.createElement('td');
+        tdActions.className = 'px-6 py-4 text-right space-x-1.5';
+
+        const editBtn = document.createElement('button');
+        editBtn.dataset.id = game.id;
+        editBtn.className = 'edit-game-btn px-2.5 py-1 bg-arcade-750 hover:bg-neon-cyan/20 text-slate-200 hover:text-neon-cyan border border-arcade-600 hover:border-neon-cyan/50 rounded text-xs font-bold transition-all';
+        editBtn.title = 'Chỉnh sửa thông tin game';
+        editBtn.textContent = '✏️ Sửa';
+        tdActions.appendChild(editBtn);
+
+        const uploadJarBtn = document.createElement('button');
+        uploadJarBtn.dataset.id = game.id;
+        uploadJarBtn.dataset.name = game.name;
+        uploadJarBtn.className = 'upload-jar-btn px-2.5 py-1 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 hover:bg-neon-cyan hover:text-arcade-950 rounded text-xs font-bold transition-all';
+        uploadJarBtn.title = 'Tải file .JAR lên cho game này để chạy giả lập';
+        uploadJarBtn.textContent = '+ Nạp JAR';
+        tdActions.appendChild(uploadJarBtn);
+
+        const testLink = document.createElement('a');
+        testLink.href = `/play/${encodeURIComponent(game.slug)}`;
+        testLink.target = '_blank';
+        testLink.className = 'px-2.5 py-1 bg-arcade-800 text-slate-200 border border-arcade-700 hover:border-neon-cyan hover:text-neon-cyan rounded text-xs font-bold transition-all';
+        testLink.title = 'Kiểm thử chạy game trong Web Emulator';
+        testLink.textContent = 'Test ▶';
+        tdActions.appendChild(testLink);
+
+        if (!isPublished) {
+          const publishBtn = document.createElement('button');
+          publishBtn.dataset.id = game.id;
+          publishBtn.className = 'publish-btn px-2.5 py-1 bg-neon-green/20 text-neon-green border border-neon-green/40 hover:bg-neon-green hover:text-arcade-950 rounded text-xs font-bold transition-all';
+          publishBtn.textContent = 'Xuất bản';
+          tdActions.appendChild(publishBtn);
+        } else {
+          const hideBtn = document.createElement('button');
+          hideBtn.dataset.id = game.id;
+          hideBtn.className = 'hide-btn px-2.5 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/40 hover:bg-neon-yellow hover:text-arcade-950 rounded text-xs font-bold transition-all';
+          hideBtn.textContent = 'Ẩn';
+          tdActions.appendChild(hideBtn);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.dataset.id = game.id;
+        deleteBtn.dataset.name = game.name;
+        deleteBtn.className = 'delete-btn px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded text-xs font-bold transition-all';
+        deleteBtn.textContent = 'Xóa';
+        tdActions.appendChild(deleteBtn);
+
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
+      }
 
       // Checkbox listeners
       document.querySelectorAll<HTMLInputElement>('.game-checkbox').forEach((cb) => {
@@ -230,14 +720,36 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         });
       });
 
-      // Single action listeners
+      // Edit Game Button listeners
+      document.querySelectorAll('.edit-game-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+          const game = gamesCache.find((g) => g.id === id);
+          if (game) openEditModal(game);
+        });
+      });
+
+      // Quick Upload JAR listener
+      document.querySelectorAll('.upload-jar-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+          const name = (e.currentTarget as HTMLElement).getAttribute('data-name')!;
+          pendingUploadGameId = id;
+          pendingUploadGameName = name;
+          const jarInput = document.getElementById('quick-jar-input') as HTMLInputElement;
+          jarInput.value = '';
+          jarInput.click();
+        });
+      });
+
+      // Publish single game listener
       document.querySelectorAll('.publish-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
           try {
             const res = await publishAdminGame(id);
             if (res.success) {
-              loadGames();
+              await loadGames();
             } else {
               alert(res.error?.message || 'Lỗi xuất bản: Game cần có ít nhất 1 phiên bản file JAR!');
             }
@@ -247,24 +759,82 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         });
       });
 
+      // Hide single game listener
       document.querySelectorAll('.hide-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
           await hideAdminGame(id);
-          loadGames();
+          await loadGames();
         });
       });
 
+      // Delete single game listener
       document.querySelectorAll('.delete-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
           const name = (e.currentTarget as HTMLElement).getAttribute('data-name')!;
           if (!confirm(`Bạn có chắc chắn muốn xóa game "${name}" khỏi Catalog?`)) return;
           await deleteAdminGame(id);
-          loadGames();
+          await loadGames();
         });
       });
     }
+
+    // Status tabs click handlers
+    document.querySelectorAll('.status-tab').forEach((tab) => {
+      tab.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const newStatus = target.getAttribute('data-status') || 'ALL';
+        currentStatus = newStatus;
+
+        // Update URL query
+        const url = new URL(window.location.href);
+        if (newStatus === 'ALL') {
+          url.searchParams.delete('status');
+        } else {
+          url.searchParams.set('status', newStatus);
+        }
+        window.history.replaceState({}, '', url.toString());
+
+        loadGames();
+      });
+    });
+
+    // Search input handler with debounce
+    let searchTimeout: any;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const val = searchInput.value.trim();
+      currentSearch = val;
+
+      if (val) {
+        clearSearchBtn?.classList.remove('hidden');
+      } else {
+        clearSearchBtn?.classList.add('hidden');
+      }
+
+      searchTimeout = setTimeout(() => {
+        const url = new URL(window.location.href);
+        if (val) {
+          url.searchParams.set('search', val);
+        } else {
+          url.searchParams.delete('search');
+        }
+        window.history.replaceState({}, '', url.toString());
+
+        loadGames();
+      }, 300);
+    });
+
+    clearSearchBtn?.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearch = '';
+      clearSearchBtn.classList.add('hidden');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('search');
+      window.history.replaceState({}, '', url.toString());
+      loadGames();
+    });
 
     // Header select all
     const selectAllHeader = document.getElementById('select-all-header') as HTMLInputElement;
@@ -296,11 +866,33 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       if (selectedGameIds.size === 0) return;
       if (!confirm(`Bạn có chắc chắn muốn duyệt và xuất bản ${selectedGameIds.size} game đã chọn?`)) return;
 
+      let successCount = 0;
+      const failures: { id: string; error: string }[] = [];
+
       for (const id of Array.from(selectedGameIds)) {
-        await publishAdminGame(id).catch(() => {});
+        try {
+          const res = await publishAdminGame(id);
+          if (res.success) {
+            successCount++;
+          } else {
+            failures.push({ id, error: res.error?.message || 'Không đủ điều kiện xuất bản' });
+          }
+        } catch (err: any) {
+          failures.push({ id, error: err.message || 'Lỗi mạng' });
+        }
       }
-      alert(`Đã hoàn tất duyệt & xuất bản các game đã chọn!`);
-      loadGames();
+
+      if (failures.length === 0) {
+        alert(`Thành công: Đã xuất bản toàn bộ ${successCount} game!`);
+      } else {
+        const details = failures.slice(0, 3).map((f) => {
+          const game = gamesCache.find((g: any) => g.id === f.id);
+          const label = game ? `Game "${game.name}"` : `ID ${f.id}`;
+          return `- ${label}: ${f.error}`;
+        }).join('\n');
+        alert(`Tổng kết xuất bản hàng loạt:\n- Thành công: ${successCount}\n- Thất bại/Lỗi: ${failures.length}\n${details}${failures.length > 3 ? `\n... và ${failures.length - 3} lỗi khác` : ''}`);
+      }
+      await loadGames();
     });
 
     // Bulk Hide
@@ -308,11 +900,33 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       if (selectedGameIds.size === 0) return;
       if (!confirm(`Bạn có chắc chắn muốn ẩn ${selectedGameIds.size} game đã chọn?`)) return;
 
+      let successCount = 0;
+      const failures: { id: string; error: string }[] = [];
+
       for (const id of Array.from(selectedGameIds)) {
-        await hideAdminGame(id).catch(() => {});
+        try {
+          const res = await hideAdminGame(id);
+          if (res.success) {
+            successCount++;
+          } else {
+            failures.push({ id, error: res.error?.message || 'Không thể ẩn' });
+          }
+        } catch (err: any) {
+          failures.push({ id, error: err.message || 'Lỗi mạng' });
+        }
       }
-      alert(`Đã hoàn tất ẩn các game đã chọn!`);
-      loadGames();
+
+      if (failures.length === 0) {
+        alert(`Thành công: Đã ẩn toàn bộ ${successCount} game!`);
+      } else {
+        const details = failures.slice(0, 3).map((f) => {
+          const game = gamesCache.find((g: any) => g.id === f.id);
+          const label = game ? `Game "${game.name}"` : `ID ${f.id}`;
+          return `- ${label}: ${f.error}`;
+        }).join('\n');
+        alert(`Tổng kết ẩn hàng loạt:\n- Thành công: ${successCount}\n- Thất bại: ${failures.length}\n${details}${failures.length > 3 ? `\n... và ${failures.length - 3} lỗi khác` : ''}`);
+      }
+      await loadGames();
     });
 
     // Bulk Delete
@@ -320,11 +934,79 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       if (selectedGameIds.size === 0) return;
       if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedGameIds.size} game đã chọn?`)) return;
 
+      let successCount = 0;
+      const failures: { id: string; error: string }[] = [];
+
       for (const id of Array.from(selectedGameIds)) {
-        await deleteAdminGame(id).catch(() => {});
+        try {
+          const res = await deleteAdminGame(id);
+          if (res.success) {
+            successCount++;
+          } else {
+            failures.push({ id, error: res.error?.message || 'Không thể xóa' });
+          }
+        } catch (err: any) {
+          failures.push({ id, error: err.message || 'Lỗi mạng' });
+        }
       }
-      alert(`Đã hoàn tất xóa các game đã chọn!`);
-      loadGames();
+
+      if (failures.length === 0) {
+        alert(`Thành công: Đã xóa toàn bộ ${successCount} game!`);
+      } else {
+        const details = failures.slice(0, 3).map((f) => {
+          const game = gamesCache.find((g: any) => g.id === f.id);
+          const label = game ? `Game "${game.name}"` : `ID ${f.id}`;
+          return `- ${label}: ${f.error}`;
+        }).join('\n');
+        alert(`Tổng kết xóa hàng loạt:\n- Thành công: ${successCount}\n- Thất bại: ${failures.length}\n${details}${failures.length > 3 ? `\n... và ${failures.length - 3} lỗi khác` : ''}`);
+      }
+      await loadGames();
+    });
+
+    // Quick JAR upload file handler
+    const quickJarInput = document.getElementById('quick-jar-input') as HTMLInputElement;
+    quickJarInput?.addEventListener('change', async () => {
+      if (!quickJarInput.files || !quickJarInput.files[0] || !pendingUploadGameId) return;
+      const file = quickJarInput.files[0];
+      const gameId = pendingUploadGameId;
+      const gameName = pendingUploadGameName || 'game';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('assetType', 'JAR');
+        formData.append('gameId', gameId);
+
+        const uploadRes = await apiRequest<{ id: string }>('/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.success || !uploadRes.data?.id) {
+          throw new Error(uploadRes.error?.message || 'Tải file JAR lên thất bại');
+        }
+
+        const versionRes = await addAdminGameVersion(gameId, {
+          version_name: '1.0.0 (Bản Chuẩn)',
+          jar_asset_id: uploadRes.data.id,
+          status: 'ACTIVE',
+        });
+
+        if (!versionRes.success) {
+          throw new Error(versionRes.error?.message || 'Đính kèm phiên bản thất bại');
+        }
+
+        // Auto-publish if draft
+        await publishAdminGame(gameId).catch(() => {});
+
+        alert(`Đã nạp file JAR "${file.name}" cho game "${gameName}" và kích hoạt thành công!`);
+        await loadGames();
+      } catch (err: any) {
+        alert(err.message || 'Lỗi nạp file JAR');
+      } finally {
+        pendingUploadGameId = null;
+        pendingUploadGameName = null;
+      }
     });
 
     loadGames();

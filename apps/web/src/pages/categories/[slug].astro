@@ -5,23 +5,23 @@ import { getCategories } from '../../lib/api';
 
 export async function getStaticPaths() {
   const catRes = await getCategories();
-  const categories = catRes.success && catRes.data && catRes.data.length > 0 ? catRes.data : [
-    { slug: 'nhap-vai', name: 'Nhập vai (RPG)' },
-    { slug: 'hanh-dong', name: 'Hành động' },
-    { slug: 'tri-tue', name: 'Trí tuệ & Giải đố' },
-    { slug: 'the-thao-dua-xe', name: 'Đua xe & Thể thao' },
-    { slug: 'doi-song', name: 'Đời sống & Nông trại' },
-    { slug: 'ban-sung', name: 'Bắn súng & Arcade' },
-  ];
-  return categories.map((cat) => ({
-    params: { slug: cat.slug },
-    props: { name: cat.name },
-  }));
+  const categories = catRes.success && Array.isArray(catRes.data) ? catRes.data : [];
+  const paths = [{ params: { slug: '_shell' }, props: { name: 'Danh mục' } }];
+  for (const cat of categories) {
+    if (cat.slug && cat.slug !== '_shell') {
+      paths.push({
+        params: { slug: cat.slug },
+        props: { name: cat.name },
+      });
+    }
+  }
+  return paths;
 }
 
 const { slug } = Astro.params;
 const { name } = Astro.props;
-const categoryName = name || slug;
+const isShell = !slug || slug === '_shell';
+const categoryName = name || (isShell ? 'Danh mục' : slug);
 ---
 
 <Layout title={`Thể loại: ${categoryName} --- Game Tuổi Thơ`}>
