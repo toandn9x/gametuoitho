@@ -89,5 +89,5 @@ pnpm dev:api
 
 # 3. Chạy Web Frontend (Astro dev server)
 pnpm dev:web
-# Website chạy tại: http://localhost:3000
+# Website chạy tại: http://localhost:4321
 ```
