@@ -17,9 +17,14 @@ interface SourceGame {
   height?: number;
   is_imported?: boolean;
   imported_slug?: string;
+  /** Slug of a catalog game with the same name (a different file of this entry is already imported). */
+  same_name_slug?: string;
 }
 
 const getGameKey = (g: SourceGame): string => g.source_key || g.id;
+
+/** 409 reasons from the server that mean "this entry is already in the catalog". */
+const ALREADY_IN_CATALOG = new Set(['ALREADY_IMPORTED', 'SAME_FILE']);
 
 export default function AdminCrawlerView() {
   const [games, setGames] = useState<SourceGame[]>([]);
@@ -36,6 +41,8 @@ export default function AdminCrawlerView() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchProgressText, setBatchProgressText] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  // Per-game outcome of the last batch import, shown until dismissed.
+  const [batchReport, setBatchReport] = useState<{ name: string; status: 'imported' | 'skipped' | 'failed'; detail?: string }[] | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -129,27 +136,48 @@ export default function AdminCrawlerView() {
     });
   };
 
+  // Card state after an import attempt: in the catalog now, or a same-name game exists.
+  const markImported = (key: string, slug?: string) => {
+    setGames((prev) =>
+      prev.map((g) => (getGameKey(g) === key ? { ...g, is_imported: true, imported_slug: slug, same_name_slug: undefined } : g))
+    );
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+  const markSameName = (key: string, slug?: string) => {
+    setGames((prev) => prev.map((g) => (getGameKey(g) === key ? { ...g, same_name_slug: slug } : g)));
+  };
+
   // Single game import
   const handleImportSingle = async (sourceGame: SourceGame) => {
     const key = getGameKey(sourceGame);
+    let allowSameName = false;
+    if (sourceGame.same_name_slug) {
+      allowSameName = confirm(
+        `Kho đã có game cùng tên "${sourceGame.name}" (${sourceGame.same_name_slug}).\n` +
+          `Bản này là một file khác (${sourceGame.filename}). Vẫn nhập thêm thành một game riêng?`
+      );
+      if (!allowSameName) return;
+    }
     setImportingId(key);
     try {
-      const res = await importCrawlerGame(key);
+      const res = await importCrawlerGame(key, { allowSameName });
       const importedData = res.data;
+      const reason = (res.error as any)?.reason as string | undefined;
+      const existingSlug = (res.error as any)?.slug as string | undefined;
       if (res.success && importedData) {
-        showToast(`Đã nhập thành công game "${sourceGame.name}" vào Catalog!`, 'success');
-        setGames((prev) =>
-          prev.map((g) =>
-            getGameKey(g) === key
-              ? { ...g, is_imported: true, imported_slug: importedData.game.slug }
-              : g
-          )
-        );
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
+        const note = importedData.warnings?.length ? ' (không lấy được ảnh bìa, dùng ảnh mặc định)' : '';
+        showToast(`Đã nhập thành công game "${sourceGame.name}" vào Catalog!${note}`, 'success');
+        markImported(key, importedData.game.slug);
+      } else if (reason && ALREADY_IN_CATALOG.has(reason)) {
+        markImported(key, existingSlug);
+        showToast(`"${sourceGame.name}" đã có trong kho, không nhập lại.`, 'success');
+      } else if (reason === 'SAME_NAME') {
+        markSameName(key, existingSlug);
+        showToast(res.error?.message || 'Kho đã có game cùng tên.', 'error');
       } else {
         showToast(res.error?.message || 'Nhập game thất bại', 'error');
       }
@@ -168,47 +196,64 @@ export default function AdminCrawlerView() {
       return;
     }
 
-    if (!confirm(`Bạn có chắc chắn muốn nhập tự động ${idsToImport.length} game đã chọn vào hệ thống?`)) {
+    if (!confirm(`Bạn có chắc chắn muốn nhập tự động ${idsToImport.length} game đã chọn vào hệ thống?\nGame đã có trong kho hoặc trùng tên sẽ được bỏ qua.`)) {
       return;
     }
 
     setBatchLoading(true);
+    setBatchReport(null);
     let successCount = 0;
+    let existingCount = 0;
+    let sameNameCount = 0;
     let failCount = 0;
+    const report: NonNullable<typeof batchReport> = [];
 
     for (let i = 0; i < idsToImport.length; i++) {
-      const id = idsToImport[i];
-      const gameObj = games.find((g) => g.id === id);
-      const gameName = gameObj ? gameObj.name : id;
+      const key = idsToImport[i];
+      const gameObj = games.find((g) => getGameKey(g) === key);
+      const gameName = gameObj ? gameObj.name : key;
       setBatchProgressText(`Đang nhập (${i + 1}/${idsToImport.length}): ${gameName}...`);
 
       try {
-        const res = await importCrawlerGame(id);
+        const res = await importCrawlerGame(key);
         const importedData = res.data;
+        const reason = (res.error as any)?.reason as string | undefined;
+        const existingSlug = (res.error as any)?.slug as string | undefined;
         if (res.success && importedData) {
           successCount++;
-          // Mark game as imported in local state immediately
-          setGames((prev) =>
-            prev.map((g) =>
-              g.id === id ? { ...g, is_imported: true, imported_slug: importedData.game.slug } : g
-            )
-          );
+          markImported(key, importedData.game.slug);
+          report.push({ name: gameName, status: 'imported', detail: importedData.warnings?.join(' ') });
+        } else if (reason && ALREADY_IN_CATALOG.has(reason)) {
+          existingCount++;
+          markImported(key, existingSlug);
+          report.push({ name: gameName, status: 'skipped', detail: res.error?.message || 'Đã có trong kho' });
+        } else if (reason === 'SAME_NAME') {
+          sameNameCount++;
+          markSameName(key, existingSlug);
+          report.push({ name: gameName, status: 'skipped', detail: res.error?.message || 'Trùng tên với game trong kho' });
         } else {
           failCount++;
+          report.push({ name: gameName, status: 'failed', detail: res.error?.message || 'Lỗi không xác định' });
         }
-      } catch {
+      } catch (err: any) {
         failCount++;
+        report.push({ name: gameName, status: 'failed', detail: err?.message || 'Lỗi kết nối' });
       }
     }
+    setBatchReport(report);
 
     setBatchLoading(false);
     setBatchProgressText('');
     setSelectedIds(new Set());
 
-    showToast(
-      `Hoàn tất duyệt hàng loạt! Đã nhập thành công ${successCount} game${failCount > 0 ? `, thất bại ${failCount} game` : ''}.`,
-      successCount > 0 ? 'success' : 'error'
-    );
+    const parts = [`Đã nhập thành công ${successCount} game`];
+    if (existingCount > 0) parts.push(`bỏ qua ${existingCount} game đã có trong kho`);
+    if (sameNameCount > 0) parts.push(`bỏ qua ${sameNameCount} game trùng tên`);
+    if (failCount > 0) parts.push(`lỗi ${failCount} game`);
+    showToast(`Hoàn tất! ${parts.join(', ')}.`, failCount > 0 && successCount === 0 ? 'error' : 'success');
+
+    // Re-read the page from the server so every card reflects the catalog.
+    fetchGames(page, search, selectedCategory);
   };
 
   // Top 5 preset
@@ -220,7 +265,7 @@ export default function AdminCrawlerView() {
       const res = await batchImportCrawlerGames(topIds);
       if (res.success && res.data) {
         showToast(
-          `Hoàn tất! Đã nhập thành công ${res.data.importedCount} game, bỏ qua/lỗi: ${res.data.errorCount}.`,
+          `Hoàn tất! Đã nhập thành công ${res.data.importedCount} game, bỏ qua (đã có/trùng tên): ${res.data.skippedCount ?? 0}, lỗi: ${res.data.errorCount}.`,
           'success'
         );
         fetchGames(page, search, selectedCategory);
@@ -424,6 +469,50 @@ export default function AdminCrawlerView() {
         </div>
       </div>
 
+      {/* Result of the last batch import: one line per game, with the reason when it was not imported */}
+      {batchReport && batchReport.length > 0 && (
+        <div id="batch-report" className="bg-arcade-900 border border-arcade-700 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-bold text-slate-100">
+              Kết quả nhập hàng loạt:{' '}
+              <span className="text-neon-green">{batchReport.filter((r) => r.status === 'imported').length} đã nhập</span>
+              {' · '}
+              <span className="text-neon-yellow">{batchReport.filter((r) => r.status === 'skipped').length} bỏ qua</span>
+              {' · '}
+              <span className="text-red-400">{batchReport.filter((r) => r.status === 'failed').length} lỗi</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => setBatchReport(null)}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-arcade-800"
+            >
+              Đóng ✕
+            </button>
+          </div>
+          <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            {batchReport.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs">
+                <span
+                  className={`flex-shrink-0 w-16 text-center px-1.5 py-0.5 rounded font-bold ${
+                    r.status === 'imported'
+                      ? 'bg-neon-green/15 text-neon-green'
+                      : r.status === 'skipped'
+                      ? 'bg-neon-yellow/15 text-neon-yellow'
+                      : 'bg-red-500/15 text-red-400'
+                  }`}
+                >
+                  {r.status === 'imported' ? 'Đã nhập' : r.status === 'skipped' ? 'Bỏ qua' : 'Lỗi'}
+                </span>
+                <span className="min-w-0">
+                  <span className="font-semibold text-slate-200">{r.name}</span>
+                  {r.detail && <span className="text-slate-400"> — {r.detail}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Stats bar */}
       <div className="flex items-center justify-between text-xs text-slate-400 px-1 font-mono">
         <span>Tìm thấy: <strong className="text-neon-cyan">{pagination.total}</strong> game phù hợp</span>
@@ -531,6 +620,16 @@ export default function AdminCrawlerView() {
                   <div className="mt-3 py-1 px-2 bg-arcade-950/70 rounded border border-arcade-800 text-[10px] font-mono text-slate-400 truncate">
                     📁 {g.filename}
                   </div>
+
+                  {!g.is_imported && g.same_name_slug && (
+                    <div className="mt-2 py-1 px-2 rounded border border-neon-yellow/40 bg-neon-yellow/10 text-[10px] text-neon-yellow leading-snug">
+                      ⚠ Kho đã có game cùng tên (
+                      <a href={`/game/${encodeURIComponent(g.same_name_slug)}`} target="_blank" rel="noreferrer" className="underline font-mono">
+                        {g.same_name_slug}
+                      </a>
+                      ). Nhập hàng loạt sẽ bỏ qua bản này.
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

@@ -377,10 +377,10 @@ export async function getCrawlerGames(params: {
   return apiRequest<any[]>(`/admin/crawler/games?${query.toString()}`);
 }
 
-export async function importCrawlerGame(gameId: string) {
-  return apiRequest<{ game: Game; version: GameVersion }>(`/admin/crawler/import`, {
+export async function importCrawlerGame(gameId: string, options: { allowSameName?: boolean } = {}) {
+  return apiRequest<{ game: Game; version: GameVersion; warnings?: string[] }>(`/admin/crawler/import`, {
     method: 'POST',
-    body: JSON.stringify({ gameId }),
+    body: JSON.stringify({ gameId, allowSameName: options.allowSameName === true }),
   });
 }
 
@@ -388,8 +388,9 @@ export async function batchImportCrawlerGames(gameIds: string[]) {
   return apiRequest<{
     total: number;
     importedCount: number;
+    skippedCount?: number;
     errorCount: number;
-    results: { gameId: string; ok: boolean; slug?: string; error?: string }[];
+    results: { gameId: string; ok: boolean; slug?: string; error?: string; reason?: string; warnings?: string[] }[];
   }>(`/admin/crawler/batch-import`, {
     method: 'POST',
     body: JSON.stringify({ gameIds }),

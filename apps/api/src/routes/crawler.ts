@@ -53,7 +53,9 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
         );
       }
 
-      const imported = await crawlerService.importGameFromSource(gameId, user.id);
+      const imported = await crawlerService.importGameFromSource(gameId, user.id, {
+        allowSameName: body.allowSameName === true,
+      });
 
       return c.json({
         success: true,
@@ -67,6 +69,7 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
             success: false,
             error: {
               code: 'CONFLICT',
+              reason: err.reason,
               message: err.message,
               slug: err.slug,
             },
@@ -74,6 +77,8 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
           409
         );
       }
+      // Visible in Cloudflare Logs / `wrangler tail` and the Node console.
+      console.error(`[crawler] import failed: ${err?.message || err}`);
       return c.json(
         { success: false, error: { message: err.message || 'Lỗi khi nhập game' } },
         400
@@ -103,25 +108,30 @@ export const crawlerRoutes = (getService: (c: Context<AppEnv>) => CrawlerService
         );
       }
 
-      const results: { gameId: string; ok: boolean; slug?: string; error?: string }[] = [];
+      const results: { gameId: string; ok: boolean; slug?: string; error?: string; reason?: string; warnings?: string[] }[] = [];
 
       for (const id of gameIds) {
         try {
           const res = await crawlerService.importGameFromSource(id, user.id);
-          results.push({ gameId: id, ok: true, slug: res.game.slug });
+          results.push({ gameId: id, ok: true, slug: res.game.slug, ...(res.warnings.length ? { warnings: res.warnings } : {}) });
         } catch (e: any) {
-          results.push({ gameId: id, ok: false, error: e.message });
+          const isDuplicate = e instanceof ConflictError || e.name === 'ConflictError';
+          if (!isDuplicate) console.error(`[crawler] import failed (${id}): ${e?.message || e}`);
+          results.push({ gameId: id, ok: false, error: e.message, ...(isDuplicate ? { reason: e.reason, slug: e.slug } : {}) });
         }
       }
 
       const importedCount = results.filter((r) => r.ok).length;
-      const errorCount = results.filter((r) => !r.ok).length;
+      // Duplicates are skipped on purpose; only real failures count as errors.
+      const skippedCount = results.filter((r) => !r.ok && r.reason).length;
+      const errorCount = results.filter((r) => !r.ok && !r.reason).length;
 
       return c.json({
         success: true,
         data: {
           total: gameIds.length,
           importedCount,
+          skippedCount,
           errorCount,
           results,
         },

@@ -2,7 +2,7 @@
 
 Website lưu trữ và chơi game Java ME, gồm Web Astro/React, REST API Hono, Game Catalog và thư viện riêng của người dùng.
 
-**Website đã triển khai:** [gametuoitho.ngoc98toan.workers.dev](https://gametuoitho.ngoc98toan.workers.dev).
+**Website đã triển khai:** [gametuoitho.toandn9x.workers.dev](https://gametuoitho.toandn9x.workers.dev).
 
 Đây là hướng dẫn chung cho setup, deploy và vận hành. Với Cloudflare, bạn tạo tài nguyên/token/key trên giao diện web, điền file local rồi [chạy deploy.bat](#manual-deploy). Không cần kết nối GitHub.
 
@@ -190,7 +190,7 @@ File private đã được git-ignore. Không gửi token/key vào chat, ảnh c
 
 Nhấp đúp **[deploy.bat](deploy.bat)** tại gốc dự án. Script tự đọc `.env.deploy.local`, cài dependency, build và deploy.
 
-Chờ thông báo **SUCCESS**, rồi mở [website](https://gametuoitho.ngoc98toan.workers.dev) và nhấn **Ctrl+F5** để tải bản mới.
+Chờ thông báo **SUCCESS**, rồi mở [website](https://gametuoitho.toandn9x.workers.dev) và nhấn **Ctrl+F5** để tải bản mới.
 
 Nếu có lỗi, xem trên cửa sổ đang mở hoặc file log mới nhất trong `logs/deploy/`. Log ghi rõ bước lỗi và mã lỗi; token/key được che. Sửa lỗi xong, chạy lại `deploy.bat`.
 
@@ -245,7 +245,7 @@ Trong Game Catalog, đánh dấu ☆/★ để chọn game cho mục **Game ưa 
 4. Thêm **Authorized JavaScript origins** đúng địa chỉ sử dụng, ví dụ:
    - `http://localhost:4321`
    - `http://localhost:8787` nếu thử Wrangler local
-   - `https://gametuoitho.ngoc98toan.workers.dev`
+   - `https://gametuoitho.toandn9x.workers.dev`
    - Domain riêng nếu đã cấu hình.
 5. Tích hợp hiện tại dùng credential callback, không cần Authorized redirect URI. Copy **Client ID** dạng `....apps.googleusercontent.com`; không dùng Client secret.
 6. Kiểm tra Audience/Testing/Production và danh sách tài khoản được phép thử trong Google Console.

@@ -32,12 +32,12 @@ const categoryName = name || (isShell ? 'Danh mục' : slug);
         <span>/</span>
         <a href="/games" class="hover:text-neon-cyan">Thể loại</a>
         <span>/</span>
-        <span class="text-neon-cyan font-bold">{categoryName}</span>
+        <span id="category-crumb" class="text-neon-cyan font-bold">{categoryName}</span>
       </div>
 
       <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
         <span class="text-neon-yellow">📁</span>
-        <span>Thể Loại: {categoryName}</span>
+        <span id="category-title">Thể Loại: {categoryName}</span>
       </h1>
     </div>
 
@@ -45,3 +45,22 @@ const categoryName = name || (isShell ? 'Danh mục' : slug);
     <CategoryGamesView client:load categorySlug={slug || ''} />
   </div>
 </Layout>
+
+<script>
+  import { getCategories } from '../../lib/api';
+
+  // Pages built without category data (shell build, e.g. Cloudflare, or categories added after
+  // the build) get the real category name from the API.
+  const slug = decodeURIComponent(window.location.pathname.replace(/^\/categories\/?/, '').replace(/\/$/, ''));
+  if (slug && slug !== '_shell') {
+    getCategories().then((res) => {
+      const category = res.success && Array.isArray(res.data) ? res.data.find((c) => c.slug === slug) : undefined;
+      if (!category) return;
+      const crumb = document.getElementById('category-crumb');
+      const title = document.getElementById('category-title');
+      if (crumb) crumb.textContent = category.name;
+      if (title) title.textContent = `Thể Loại: ${category.name}`;
+      document.title = `Thể loại: ${category.name} --- Game Tuổi Thơ`;
+    });
+  }
+</script>

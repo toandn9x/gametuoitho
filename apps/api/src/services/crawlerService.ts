@@ -8,14 +8,30 @@ import { StorageDriver } from '../storage/storage';
 import { slugify, computeSha256, generateId, validateJarFile } from '@gametuoitho/shared-utils';
 import { Game, GameVersion, GameAsset, Category } from '@gametuoitho/shared-types';
 
+/** Why an import was refused as a duplicate. */
+export type DuplicateReason = 'ALREADY_IMPORTED' | 'SAME_FILE' | 'SAME_NAME';
+
 export class ConflictError extends Error {
   slug: string;
-  constructor(message: string, slug: string) {
+  reason: DuplicateReason;
+  constructor(message: string, slug: string, reason: DuplicateReason = 'SAME_FILE') {
     super(message);
     this.name = 'ConflictError';
     this.slug = slug;
+    this.reason = reason;
   }
 }
+
+/** Games already in the catalog, keyed the ways a crawler entry can match them. */
+interface ImportIndex {
+  bySourceKey: Map<string, string>;
+  byNameAndFile: Map<string, string>;
+  byName: Map<string, string>;
+}
+
+const normalizeName = (name: string) => name.trim().toLowerCase();
+const nameAndFileKey = (name: string, filename: string) =>
+  `${normalizeName(name)}|${filename.split('/').pop()!.trim().toLowerCase()}`;
 
 export interface SourceGameItem {
   id: string;
@@ -33,6 +49,7 @@ export interface SourceGameItem {
   height?: number;
   is_imported?: boolean;
   imported_slug?: string;
+  same_name_slug?: string;
 }
 
 export function computeStableSourceKey(id: string, filename: string): string {
@@ -84,9 +101,7 @@ export class CrawlerService {
     const page = Math.max(1, params.page || 1);
     const limit = Math.min(100, Math.max(1, params.limit || 20));
 
-    const { games: localGames } = await this.gameRepo.findGames({ limit: 10000 });
-    const localNames = new Set(localGames.map((g) => g.name.toLowerCase()));
-    const localSlugs = new Map(localGames.map((g) => [g.name.toLowerCase(), g.slug]));
+    const index = await this.buildImportIndex();
 
     let filtered = catalog;
 
@@ -115,11 +130,13 @@ export class CrawlerService {
     const paged = filtered.slice(offset, offset + limit);
 
     const result = paged.map((g) => {
-      const isImported = localNames.has(g.name.toLowerCase());
+      const importedSlug = this.findImported(index, g);
       return {
         ...g,
-        is_imported: isImported,
-        imported_slug: localSlugs.get(g.name.toLowerCase()),
+        is_imported: !!importedSlug,
+        imported_slug: importedSlug,
+        // Another catalog entry with the same name is already in the catalog (different file).
+        same_name_slug: importedSlug ? undefined : index.byName.get(normalizeName(g.name)),
       };
     });
 
@@ -286,14 +303,50 @@ export class CrawlerService {
     throw new Error('Định dạng ảnh bìa không hợp lệ (chỉ chấp nhận PNG, JPEG, WebP, GIF)');
   }
 
+  private async buildImportIndex(): Promise<ImportIndex> {
+    const index: ImportIndex = { bySourceKey: new Map(), byNameAndFile: new Map(), byName: new Map() };
+    for (const row of await this.gameRepo.findImportIndex()) {
+      if (row.source_key) index.bySourceKey.set(row.source_key, row.slug);
+      if (row.jar_filename) index.byNameAndFile.set(nameAndFileKey(row.name, row.jar_filename), row.slug);
+      if (!index.byName.has(normalizeName(row.name))) index.byName.set(normalizeName(row.name), row.slug);
+    }
+    return index;
+  }
+
+  /** Slug of the catalog game imported from this entry (games imported before 0007 match by name + file). */
+  private findImported(index: ImportIndex, item: SourceGameItem): string | undefined {
+    return (
+      (item.source_key && index.bySourceKey.get(item.source_key)) ||
+      index.byNameAndFile.get(nameAndFileKey(item.name, item.filename)) ||
+      undefined
+    );
+  }
+
   async importGameFromSource(
     sourceGameId: string,
-    adminUserId: string
-  ): Promise<{ game: Game; version: GameVersion }> {
+    adminUserId: string,
+    options: { allowSameName?: boolean } = {}
+  ): Promise<{ game: Game; version: GameVersion; warnings: string[] }> {
     const catalog = this.loadCatalog();
     const sourceGame = catalog.find((g) => g.source_key === sourceGameId || g.id === sourceGameId);
     if (!sourceGame) {
       throw new Error(`Không tìm thấy game với ID "${sourceGameId}" trên nguồn gametuoitho.cc`);
+    }
+    const sourceKey = sourceGame.source_key || computeStableSourceKey(sourceGame.id, sourceGame.filename);
+
+    // 0. Duplicate guard before downloading anything.
+    const index = await this.buildImportIndex();
+    const importedSlug = this.findImported(index, sourceGame);
+    if (importedSlug) {
+      throw new ConflictError(`Game "${sourceGame.name}" đã có trong kho (slug: ${importedSlug}).`, importedSlug, 'ALREADY_IMPORTED');
+    }
+    const sameNameSlug = index.byName.get(normalizeName(sourceGame.name));
+    if (sameNameSlug && !options.allowSameName) {
+      throw new ConflictError(
+        `Kho đã có game cùng tên "${sourceGame.name}" (slug: ${sameNameSlug}). Đã bỏ qua để tránh trùng.`,
+        sameNameSlug,
+        'SAME_NAME'
+      );
     }
 
     // 1. Download & Validate JAR binary
@@ -315,34 +368,48 @@ export class CrawlerService {
     if (duplicateGame) {
       throw new ConflictError(
         `Game đã tồn tại trong Catalog với mã SHA-256 trùng khớp (slug: ${duplicateGame.slug})`,
-        duplicateGame.slug
+        duplicateGame.slug,
+        'SAME_FILE'
       );
     }
 
-    // 2. Download & Validate Cover image (if available)
+    // 2. Download & Validate Cover image (if available).
+    // The cover is optional: when it is missing or not a real image (gametuoitho.cc answers missing icons
+    // with its HTML page), the game is imported without a cover instead of failing. Nothing that is not a
+    // verified PNG/JPEG/WebP/GIF is ever stored.
     let coverBytes: Uint8Array | null = null;
     let coverInfo: { mimeType: string; ext: string } | null = null;
     let coverSha256: string | null = null;
+    const warnings: string[] = [];
 
     if (sourceGame.icon) {
-      if (sourceGame.icon.startsWith('http://') || sourceGame.icon.startsWith('https://')) {
-        const iconUrlObj = new URL(sourceGame.icon);
-        if (iconUrlObj.protocol !== 'https:' || iconUrlObj.hostname !== 'gametuoitho.cc') {
-          throw new Error(
-            `URL ảnh bìa trỏ tới host không an toàn: ${iconUrlObj.hostname}`
-          );
+      try {
+        if (sourceGame.icon.startsWith('http://') || sourceGame.icon.startsWith('https://')) {
+          const iconUrlObj = new URL(sourceGame.icon);
+          if (iconUrlObj.protocol !== 'https:' || iconUrlObj.hostname !== 'gametuoitho.cc') {
+            throw new Error(`URL ảnh bìa trỏ tới host không an toàn: ${iconUrlObj.hostname}`);
+          }
         }
-      }
-      const iconPath = sourceGame.icon.startsWith('/') ? sourceGame.icon : `/${sourceGame.icon}`;
-      const iconUrl = sourceGame.icon.startsWith('http')
-        ? sourceGame.icon
-        : `https://gametuoitho.cc${iconPath}`;
+        const iconPath = sourceGame.icon.startsWith('/') ? sourceGame.icon : `/${sourceGame.icon}`;
+        const iconUrl = sourceGame.icon.startsWith('http')
+          ? sourceGame.icon
+          : `https://gametuoitho.cc${iconPath}`;
 
-      coverBytes = await this.safeFetchFromSource(iconUrl, { maxBytes: 2 * 1024 * 1024 });
-      coverInfo = this.detectImageFormat(coverBytes);
-      coverSha256 = await computeSha256(
-        coverBytes.buffer.slice(coverBytes.byteOffset, coverBytes.byteOffset + coverBytes.byteLength) as ArrayBuffer
-      );
+        const bytes = await this.safeFetchFromSource(iconUrl, { maxBytes: 2 * 1024 * 1024 });
+        const info = this.detectImageFormat(bytes);
+        coverSha256 = await computeSha256(
+          bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+        );
+        coverBytes = bytes;
+        coverInfo = info;
+      } catch (err: any) {
+        coverBytes = null;
+        coverInfo = null;
+        coverSha256 = null;
+        const reason = err?.message || 'không tải được ảnh';
+        warnings.push(`Không lấy được ảnh bìa (${reason}); game được nhập với ảnh mặc định.`);
+        console.warn(`[CrawlerService] ${sourceGame.name}: cover skipped - ${reason}`);
+      }
     }
 
     // 3. Generate slugs & IDs
@@ -446,6 +513,12 @@ export class CrawlerService {
       };
       await this.gameRepo.createGame(game);
       createdGameId = gameId;
+      try {
+        // UNIQUE: a concurrent import of the same entry fails here and is rolled back below.
+        await this.gameRepo.setSourceKey(gameId, sourceKey);
+      } catch {
+        throw new ConflictError(`Game "${sourceGame.name}" vừa được nhập bởi một thao tác khác.`, finalSlug, 'ALREADY_IMPORTED');
+      }
 
       // Create Version in ACTIVE
       const version: GameVersion = {
@@ -463,7 +536,7 @@ export class CrawlerService {
       await this.gameRepo.createVersion(version);
       createdVersionId = versionId;
 
-      return { game, version };
+      return { game, version, warnings };
     } catch (err) {
       if (createdVersionId) {
         await this.gameRepo.deleteVersion(createdVersionId).catch(() => {});

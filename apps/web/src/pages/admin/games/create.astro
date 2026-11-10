@@ -70,7 +70,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             <span>🖼️</span>
             <span>Ảnh Bìa / Icon Game (Cover)</span>
           </label>
-          <span class="text-[10px] text-slate-400 font-mono">PNG, JPG, WEBP</span>
+          <span class="text-[10px] text-slate-400 font-mono">JPG/JPEG, PNG, WEBP, GIF</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -81,10 +81,10 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             <input
               type="file"
               id="game-cover-file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
               class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-arcade-700 file:text-slate-200 hover:file:bg-arcade-600 file:cursor-pointer cursor-pointer"
             />
-            <p class="text-[10px] text-slate-500 mt-1">Khuyến nghị tỉ lệ 1:1 hoặc 4:3 (ảnh chụp từ màn hình hoặc icon game)</p>
+            <p class="text-[10px] text-slate-500 mt-1">Tối đa 5 MB. Khuyến nghị tỉ lệ 1:1 hoặc 4:3 (ảnh chụp từ màn hình hoặc icon game)</p>
           </div>
         </div>
       </div>
@@ -359,8 +359,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             body: coverFormData,
           });
 
-          if (coverRes.success && coverRes.data?.id) {
-            await updateAdminGame(gameId, { cover_asset_id: coverRes.data.id });
+          if (!coverRes.success || !coverRes.data?.id) {
+            throw new Error(coverRes.error?.message || 'Tải ảnh bìa thất bại. Vui lòng kiểm tra định dạng và dung lượng ảnh.');
+          }
+          const updateCoverRes = await updateAdminGame(gameId, { cover_asset_id: coverRes.data.id });
+          if (!updateCoverRes.success) {
+            throw new Error(updateCoverRes.error?.message || 'Không thể lưu ảnh bìa cho game.');
           }
         }
 

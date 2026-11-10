@@ -349,4 +349,23 @@ export class GameRepository {
       draft: draftRes?.count || 0,
     };
   }
+
+  // --- Crawler duplicate guard (migration 0007) ---
+
+  /**
+   * Every game (all statuses, no paging) with what is needed to recognise a crawler entry that is
+   * already in the catalog: its source_key, or — for games imported before 0007 — name + JAR file name.
+   */
+  async findImportIndex(): Promise<{ id: string; slug: string; name: string; source_key: string | null; jar_filename: string | null }[]> {
+    return this.db.query(
+      `SELECT g.id, g.slug, g.name, g.source_key, a.original_filename AS jar_filename
+       FROM games g
+       LEFT JOIN game_versions v ON v.game_id = g.id
+       LEFT JOIN game_assets a ON a.id = v.jar_asset_id`
+    );
+  }
+
+  async setSourceKey(gameId: string, sourceKey: string): Promise<void> {
+    await this.db.execute('UPDATE games SET source_key = ? WHERE id = ?', [sourceKey, gameId]);
+  }
 }
