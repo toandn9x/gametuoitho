@@ -71,7 +71,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 const storageDriver = new LocalStorageDriver(UPLOADS_DIR, '/api/v1/assets/raw/');
 
-const app = createApp(dbClient, storageDriver, UPLOADS_DIR);
+const app = createApp(dbClient, storageDriver);
 
 const PORT = 8787;
 console.log(`[DevServer] Starting Hono Backend API on http://localhost:${PORT}`);

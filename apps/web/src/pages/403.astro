@@ -1,0 +1,32 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="403 - Không Có Quyền Truy Cập --- Game Tuổi Thơ">
+  <div class="max-w-3xl mx-auto px-4 py-16 sm:py-24 text-center">
+    <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-arcade-800 border-2 border-neon-pink/50 mb-6 text-4xl shadow-neon-pink">
+      🚫
+    </div>
+    <p class="font-mono text-xs tracking-[0.3em] text-neon-pink mb-3">403 · FORBIDDEN</p>
+    <h1 class="text-3xl sm:text-5xl font-black text-slate-100 mb-4 tracking-tight">
+      Không Có Quyền Truy Cập
+    </h1>
+    <p class="text-slate-400 text-sm sm:text-base mb-8 max-w-lg mx-auto">
+      Trang quản trị chỉ dành cho tài khoản <strong class="text-neon-pink">Admin</strong>. Nếu bạn là quản trị viên, hãy đăng nhập bằng tài khoản Admin.
+    </p>
+    <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+      <a
+        href="/"
+        class="px-6 py-3 bg-neon-cyan text-arcade-950 font-bold rounded-xl hover:bg-neon-yellow transition-all text-sm shadow-md"
+      >
+        Về Trang Chủ
+      </a>
+      <a
+        href="/login?next=%2Fadmin%2F"
+        class="px-6 py-3 bg-arcade-800 hover:bg-arcade-700 text-slate-200 border border-arcade-700 font-bold rounded-xl transition-all text-sm"
+      >
+        Đăng nhập tài khoản Admin
+      </a>
+    </div>
+  </div>
+</Layout>

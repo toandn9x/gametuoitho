@@ -10,9 +10,66 @@
           <span class="font-extrabold text-lg text-neon-cyan">GAME TUỔI THƠ</span>
         </div>
         <p class="text-slate-400 text-sm leading-relaxed max-w-md">
-          Dự án lưu giữ và tái hiện những kỷ niệm đẹp đẽ thời hoàng kim của game di động Java ME (J2ME). 
+          Dự án lưu giữ và tái hiện những kỷ niệm đẹp đẽ thời hoàng kim của game di động Java ME (J2ME).
           Chơi trực tiếp trên mọi trình duyệt web với công nghệ WebAssembly và giao diện hoài niệm Nokia.
         </p>
+
+        <!-- Author & donate card -->
+        <details class="group mt-5 max-w-md rounded-2xl border border-neon-pink/30 bg-gradient-to-br from-arcade-900 via-arcade-950 to-arcade-950 shadow-[0_0_24px_rgba(255,0,127,0.08)] open:border-neon-pink/60 transition-colors">
+          <summary class="flex items-center gap-3 p-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden select-none">
+            <span class="flex-shrink-0 w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-neon-cyan via-neon-yellow to-neon-pink">
+              <span class="w-full h-full rounded-full bg-arcade-950 flex items-center justify-center font-black text-neon-cyan text-lg">T</span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[10px] font-mono uppercase tracking-widest text-slate-500">Tác giả</span>
+              <span class="block font-bold text-slate-100 truncate">Toandn</span>
+            </span>
+            <span class="flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neon-pink/15 border border-neon-pink/50 text-neon-pink text-xs font-bold group-hover:bg-neon-pink group-hover:text-white group-open:bg-neon-pink group-open:text-white transition-colors">
+              <span aria-hidden="true">☕</span>
+              <span>Ủng hộ</span>
+              <svg class="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+            </span>
+          </summary>
+
+          <div class="px-4 pb-4 -mt-1">
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Nếu bạn thấy dự án hữu ích, hãy ủng hộ tác giả để vận hành và duy trì máy chủ. Cảm ơn bạn rất nhiều! 💖
+            </p>
+            <div class="mt-4 flex flex-col min-[400px]:flex-row items-center gap-4">
+              <a
+                href="https://img.vietqr.io/image/TCB-94183868386-qr_only.svg?accountName=DINH+NGOC+TOAN"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex-shrink-0 block rounded-xl bg-white p-2 shadow-neon-pink hover:scale-[1.03] transition-transform"
+                title="Mở ảnh QR cỡ lớn"
+              >
+                <img
+                  src="https://img.vietqr.io/image/TCB-94183868386-qr_only.svg?accountName=DINH+NGOC+TOAN"
+                  alt="Mã VietQR ủng hộ tác giả Toandn"
+                  width="136"
+                  height="136"
+                  loading="lazy"
+                  class="w-[136px] h-[136px]"
+                />
+              </a>
+              <dl class="w-full text-xs space-y-2 font-mono">
+                <div>
+                  <dt class="text-[10px] uppercase tracking-widest text-slate-500">Ngân hàng</dt>
+                  <dd class="text-slate-200">Techcombank (TCB)</dd>
+                </div>
+                <div>
+                  <dt class="text-[10px] uppercase tracking-widest text-slate-500">Số tài khoản</dt>
+                  <dd class="text-neon-yellow font-bold tracking-wider select-all">94183868386</dd>
+                </div>
+                <div>
+                  <dt class="text-[10px] uppercase tracking-widest text-slate-500">Chủ tài khoản</dt>
+                  <dd class="text-slate-200">DINH NGOC TOAN</dd>
+                </div>
+              </dl>
+            </div>
+            <p class="mt-3 text-[11px] text-slate-500">Mở app ngân hàng → Quét mã QR. Bấm vào mã để xem ảnh lớn.</p>
+          </div>
+        </details>
       </div>
 
       <div>
@@ -36,12 +93,10 @@
 
     <div class="border-t border-arcade-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left text-xs text-slate-500">
       <p>© 2026 Game Tuổi Thơ Platform. Phát triển với đam mê và hoài niệm.</p>
-      <div class="flex items-center gap-4 mt-2 sm:mt-0 font-mono">
-        <span class="text-neon-green/80 flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></span>
-          CheerpJ 4.x + FreeJ2ME Powered
-        </span>
-      </div>
+      <p class="font-mono text-neon-green/80 flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></span>
+        Made with <span class="text-neon-pink" aria-label="love">♥</span> by <a href="https://www.facebook.com/toandnt">Toandn</a>
+      </p>
     </div>
   </div>
 </footer>

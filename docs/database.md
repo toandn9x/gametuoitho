@@ -29,13 +29,13 @@ Hệ thống sử dụng cơ sở dữ liệu quan hệ **Cloudflare D1 (SQLite 
 | `sort_order` | INTEGER | NOT NULL DEFAULT 0 | Thứ tự hiển thị ưu tiên |
 | `status` | TEXT | NOT NULL, CHECK (`ACTIVE`, `INACTIVE`) | Trạng thái hiển thị |
 
-### 1.3. `game_assets` (Quản lý file trên R2 / Local Storage)
+### 1.3. `game_assets` (Quản lý metadata file trên Tigris / R2 / Local Storage)
 | Cột | Kiểu | Ràng buộc | Mô tả |
 | :--- | :--- | :--- | :--- |
 | `id` | TEXT | PRIMARY KEY | Khóa chính asset (UUID v4) |
 | `owner_user_id` | TEXT | FK `users(id)` ON DELETE SET NULL | Người tải lên (NULL nếu là file hệ thống/admin) |
 | `asset_type` | TEXT | NOT NULL, CHECK (`JAR`, `JAD`, `COVER`, `SCREENSHOT`) | Loại tệp tin |
-| `storage_key` | TEXT | UNIQUE, NOT NULL | Khóa lưu trữ vật lý trên R2 hoặc thư mục uploads |
+| `storage_key` | TEXT | UNIQUE, NOT NULL | Khóa object trên Tigris/R2 hoặc file trong uploads; không lưu binary/Base64 trong database |
 | `original_filename` | TEXT | NOT NULL | Tên file gốc ban đầu |
 | `mime_type` | TEXT | NOT NULL | Định dạng MIME do server kiểm soát |
 | `file_size` | INTEGER | NOT NULL DEFAULT 0 | Dung lượng tính theo byte |
@@ -191,17 +191,10 @@ Hệ thống quản lý schema qua các file SQL đánh số thứ tự trong th
 3. `0003_token_version.sql`: Thêm cột `token_version` vào bảng `users` phục vụ thu hồi phiên.
 4. `0004_library_constraints.sql`: Thêm chỉ mục duy nhất `uq_user_import_asset` chống trùng lặp import.
 5. `0005_game_featured.sql`: Thêm cờ `games.is_featured` và chỉ mục lọc danh sách Game ưa thích công khai. Game hiện có mặc định chưa được đánh dấu.
+6. `0006_google_auth.sql`: Thêm cột `users.google_sub` (mã tài khoản Google, duy nhất) cho tính năng "Đăng nhập bằng Google". Tài khoản tạo qua Google có `password_hash` không dùng được để đăng nhập bằng mật khẩu.
 
 ### Thực thi trên môi trường Node.js / SQLite cục bộ:
 Module [`apps/api/src/repositories/migrationRunner.ts`](file:///D:/Link%20tink/gametuoitho/apps/api/src/repositories/migrationRunner.ts) tự động kiểm tra `schema_migrations`, phát hiện các bảng hiện hữu và thực thi các file migration mới chưa áp dụng theo thứ tự bảng chữ cái. Hàm `runMigrations(dbClient, migrationsDir)` được gọi tự động khi khởi động `server.ts`, `dev-server.ts` hoặc bộ kiểm thử tự động.
 
 ### Thực thi trên môi trường Cloudflare D1 (Production):
-Thực thi tuần tự các file migration qua công cụ Wrangler:
-```bash
-wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0001_initial_schema.sql --remote
-wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0002_crash_reports.sql --remote
-wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0003_token_version.sql --remote
-wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0004_library_constraints.sql --remote
-wrangler d1 execute gametuoitho-d1 --file=./database/migrations/0005_game_featured.sql --remote
-```
-*(Tuyệt đối không chạy file seed data mẫu lên môi trường Cloudflare D1 Production).*
+Helper token dùng Wrangler migrations để áp dụng các file chưa chạy và theo dõi trong bảng `d1_migrations`. Seed production hiện tại chỉ có 8 thể loại, không chứa game hay tài khoản mẫu. Toàn bộ thao tác và cấu hình nằm trong [hướng dẫn setup/deploy](../README.md#cloudflare).

@@ -15,9 +15,21 @@ import { AuditRepository } from './repositories/auditRepository';
 
 export interface Bindings {
   DB: any;
-  BUCKET: any;
+  BUCKET?: any;
+  STORAGE_PROVIDER?: 'tigris' | 'r2';
+  TIGRIS_ENDPOINT?: string;
+  TIGRIS_REGION?: string;
+  TIGRIS_BUCKET?: string;
+  TIGRIS_ACCESS_KEY_ID?: string;
+  TIGRIS_SECRET_ACCESS_KEY?: string;
   JWT_SECRET: string;
   ENVIRONMENT?: string;
+  /** OAuth client id for "Sign in with Google" (public). Empty = feature off. */
+  GOOGLE_CLIENT_ID?: string;
+  /** Override for Google's signing-key URL (tests only). */
+  GOOGLE_JWKS_URL?: string;
+  /** Cloudflare Workers Static Assets (the built web app), see wrangler.toml [assets]. */
+  ASSETS?: { fetch(request: Request): Promise<Response> };
   _dbClient?: DatabaseClient;
   _storageDriver?: StorageDriver;
 }

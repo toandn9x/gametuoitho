@@ -6,16 +6,24 @@
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc --noEmit",
-    "test": "tsx ../../tests/api.test.ts",
+    "test": "tsx ../../tests/api.test.ts && tsx ../../tests/google-auth.test.ts && tsx ../../tests/tigris-storage.test.ts",
     "lint": "tsc --noEmit",
-    "create-admin": "tsx src/cli/createAdmin.ts"
+    "create-admin": "tsx src/cli/createAdmin.ts",
+    "cf:dev": "npx --yes wrangler@4 dev --env local",
+    "cf:migrate:local": "npx --yes wrangler@4 d1 migrations apply gametuoitho-d1 --env local --local",
+    "cf:seed:local": "npx --yes wrangler@4 d1 execute gametuoitho-d1 --env local --local --file=../../database/seeds/0001_seed_data.sql",
+    "cf:migrate": "npx --yes wrangler@4 d1 migrations apply gametuoitho-d1 --env= --remote",
+    "cf:seed": "npx --yes wrangler@4 d1 execute gametuoitho-d1 --env= --remote --file=../../database/seeds/0001_seed_data.sql",
+    "cf:deploy": "npx --yes wrangler@4 deploy --env="
   },
   "dependencies": {
     "@gametuoitho/api-contracts": "workspace:*",
     "@gametuoitho/shared-types": "workspace:*",
     "@gametuoitho/shared-utils": "workspace:*",
     "@hono/node-server": "^1.13.8",
+    "aws4fetch": "^1.0.20",
     "better-sqlite3": "^11.8.1",
+    "fast-xml-parser": "^5.12.0",
     "hono": "^4.7.4",
     "zod": "^3.24.2"
   },

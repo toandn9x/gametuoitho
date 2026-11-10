@@ -1,8 +1,8 @@
-import * as path from 'path';
 import { Hono, Context } from 'hono';
 import { cors } from 'hono/cors';
 import { D1DatabaseClient, DatabaseClient } from './repositories/db';
-import { R2StorageDriver, StorageDriver } from './storage/storage';
+import { StorageDriver } from './storage/storage';
+import { createCloudStorage } from './storage/factory';
 import { UserRepository } from './repositories/userRepository';
 import { GameRepository } from './repositories/gameRepository';
 import { CategoryRepository } from './repositories/categoryRepository';
@@ -11,6 +11,7 @@ import { LibraryRepository } from './repositories/libraryRepository';
 import { ReportRepository } from './repositories/reportRepository';
 import { AuditRepository } from './repositories/auditRepository';
 import { UploadJobRepository } from './repositories/uploadJobRepository';
+import { StatsRepository } from './repositories/statsRepository';
 
 import { AuthService } from './services/authService';
 import { GameService } from './services/gameService';
@@ -34,8 +35,7 @@ import { AppEnv } from './types';
 
 export function createApp(
   customDb?: DatabaseClient,
-  customStorage?: StorageDriver,
-  customUploadsDir?: string
+  customStorage?: StorageDriver
 ) {
   const app = new Hono<AppEnv>();
 
@@ -81,7 +81,7 @@ export function createApp(
       const storageDriver =
         customStorage ||
         c.env._storageDriver ||
-        new R2StorageDriver(c.env.BUCKET);
+        createCloudStorage(c.env);
 
       const jwtSecret = getJwtSecret(
         c.env?.JWT_SECRET || process.env.JWT_SECRET,
@@ -97,14 +97,7 @@ export function createApp(
       const auditRepo = new AuditRepository(dbClient);
       const uploadJobRepo = new UploadJobRepository(dbClient);
 
-      let uploadsDir = customUploadsDir || process.env.UPLOADS_DIR;
-      if (!uploadsDir && storageDriver && typeof (storageDriver as any).getBaseDir === 'function') {
-        uploadsDir = (storageDriver as any).getBaseDir();
-      }
-      if (!uploadsDir) {
-        uploadsDir = path.resolve(process.cwd(), 'uploads');
-      }
-      const storageService = new StorageService(assetRepo, storageDriver, uploadsDir);
+      const storageService = new StorageService(assetRepo, storageDriver);
 
       services = {
         authService: new AuthService(userRepo, jwtSecret),
@@ -119,7 +112,8 @@ export function createApp(
           libraryRepo,
           storageDriver,
           storageService,
-          auditRepo
+          auditRepo,
+          new StatsRepository(dbClient)
         ),
         crawlerService: new CrawlerService(
           gameRepo,

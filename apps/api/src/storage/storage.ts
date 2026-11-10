@@ -1,11 +1,22 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface StoredObjectInfo {
+  key: string;
+  size: number;
+  /** Last write / upload time in ms (used by the cleanup safety window). */
+  mtimeMs: number;
+}
+
 export interface StorageDriver {
   put(key: string, data: Uint8Array | ArrayBuffer, contentType: string): Promise<void>;
   get(key: string): Promise<{ data: ArrayBuffer; contentType: string } | null>;
   delete(key: string): Promise<void>;
   getUrl(key: string): string;
+  /** Every stored object (storage analysis / orphan cleanup). Optional for test doubles. */
+  list?(): Promise<StoredObjectInfo[]>;
+  /** Housekeeping after cleanup (local disk only). */
+  pruneEmptyDirs?(): Promise<void>;
 }
 
 // Cloudflare R2 driver
@@ -32,6 +43,19 @@ export class R2StorageDriver implements StorageDriver {
 
   getUrl(key: string): string {
     return `${this.publicUrlPrefix}${encodeURIComponent(key)}`;
+  }
+
+  async list(): Promise<StoredObjectInfo[]> {
+    const results: StoredObjectInfo[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await this.r2.list({ cursor, limit: 1000 });
+      for (const obj of page.objects) {
+        results.push({ key: obj.key, size: obj.size, mtimeMs: new Date(obj.uploaded).getTime() });
+      }
+      cursor = page.truncated ? page.cursor : undefined;
+    } while (cursor);
+    return results;
   }
 }
 
@@ -109,5 +133,44 @@ export class LocalStorageDriver implements StorageDriver {
 
   getUrl(key: string): string {
     return `${this.publicUrlPrefix}${encodeURIComponent(key)}`;
+  }
+
+  async list(): Promise<StoredObjectInfo[]> {
+    const results: StoredObjectInfo[] = [];
+    const scan = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(fullPath);
+        } else if (entry.isFile()) {
+          const stats = fs.statSync(fullPath);
+          results.push({
+            // Normalize key with forward slashes
+            key: path.relative(this.baseDir, fullPath).replace(/\\/g, '/'),
+            size: stats.size,
+            mtimeMs: stats.mtimeMs,
+          });
+        }
+      }
+    };
+    scan(this.baseDir);
+    return results;
+  }
+
+  async pruneEmptyDirs(): Promise<void> {
+    const prune = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          const subDir = path.join(dir, entry.name);
+          prune(subDir);
+          try {
+            if (fs.readdirSync(subDir).length === 0) fs.rmdirSync(subDir);
+          } catch {}
+        }
+      }
+    };
+    prune(this.baseDir);
   }
 }

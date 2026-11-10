@@ -9,6 +9,8 @@ import {
   UpdateCategorySchema,
   CreateVersionSchema,
   BulkDeleteAssetsSchema,
+  AdminUserQuerySchema,
+  UpdateUserStatusSchema,
 } from '@gametuoitho/api-contracts';
 import { AppEnv } from '../types';
 
@@ -26,6 +28,31 @@ export const adminRoutes = (
     const adminService = getService(c);
     const stats = await adminService.getDashboardStats();
     return c.json({ success: true, data: stats });
+  });
+
+  // User accounts are managed independently of uploaded games.
+  router.get('/users', async (c) => {
+    const parsed = AdminUserQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message } }, 400);
+    }
+    const { users, total } = await getService(c).getUsers(parsed.data);
+    const { page, limit } = parsed.data;
+    return c.json({ success: true, data: users, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  });
+
+  router.put('/users/:id/status', async (c) => {
+    const parsed = UpdateUserStatusSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message } }, 400);
+    }
+    try {
+      const user = await getService(c).updateUserStatus(c.get('user')!.id, c.req.param('id'), parsed.data);
+      return c.json({ success: true, data: user });
+    } catch (err: any) {
+      const status = err.status || 500;
+      return c.json({ success: false, error: { code: err.code || 'INTERNAL_SERVER_ERROR', message: err.message } }, status);
+    }
   });
 
   // Games CRUD

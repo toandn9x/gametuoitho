@@ -21,4 +21,4 @@ Tài liệu này quy định các nguyên tắc bất biến mà mọi Agent ph�
 
 ## 2. Tiếp Tục Điều Phối Agent
 
-Khi cần trao đổi hoặc giao việc cho agent Antigravity hiện có, đọc [docs/antigravity-agent-access.md](docs/antigravity-agent-access.md) trước để dùng lại CLI, conversation ID và script đã kiểm chứng. Kiểm tra [docs/delivery-board.md](docs/delivery-board.md) cùng [docs/anty-status.md](docs/anty-status.md) để nắm task đang chạy và tránh sửa chồng file.
+Khi cần trao đổi hoặc giao việc cho agent Antigravity hiện có, đọc [docs/antigravity-agent-access.md](docs/antigravity-agent-access.md) trước để dùng lại CLI, conversation ID và script đã kiểm chứng. Đối chiếu yêu cầu hiện tại, working tree và phản hồi trực tiếp của agent để chốt phạm vi file, tránh sửa chồng. Hướng dẫn setup/deploy và kết quả kiểm chứng được tổng hợp trong [README.md](README.md).

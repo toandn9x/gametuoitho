@@ -13,7 +13,13 @@ dist/
 .env.local
 .env.*.local
 
+# Cloudflare local secrets for `wrangler dev` (never commit)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
 # Logs
+logs/deploy/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

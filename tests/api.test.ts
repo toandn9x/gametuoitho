@@ -9,6 +9,7 @@ import { runMigrations } from '../apps/api/src/repositories/migrationRunner';
 import { bootstrapAdmin } from '../apps/api/src/utils/bootstrapAdmin';
 import { createJwt, validateJarFile } from '../packages/shared-utils/src/index';
 import { apiRequest } from '../apps/web/src/lib/api';
+import { runAdminUsersTests } from './admin-users.test';
 
 // Defensive test runner tracking for unhandled rejections and exceptions
 let unhandledRejectionCount = 0;
@@ -356,6 +357,10 @@ async function runTests() {
     throw new Error(`Expected 403 Forbidden, got ${forbiddenRes.status}`);
   }
   console.log('   ✓ Chặn truy cập trái phép chính xác (HTTP 403 Forbidden)');
+
+  console.log('8b. Kiểm tra quản lý tài khoản độc lập với game tải lên...');
+  await runAdminUsersTests(request, dbClient, adminToken, userToken);
+  console.log('   ✓ Tìm kiếm, bộ lọc, phân trang, quyền admin, khóa/mở khóa, thu hồi phiên và audit PASS');
 
   // 9. User Library: Add Catalog Game to Library
   console.log('9. Kiểm tra POST /api/v1/me/library (Thêm game vào thư viện cá nhân)...');
@@ -2027,7 +2032,7 @@ async function runTests() {
     }
 
     console.log('\n=============================================');
-    console.log('🎉 TẤT CẢ 21 BỘ TEST ĐÃ HOÀN THÀNH XUẤT SẮC! 🎉');
+    console.log('🎉 TẤT CẢ 22 BỘ TEST ĐÃ HOÀN THÀNH XUẤT SẮC! 🎉');
     console.log('=============================================');
   } finally {
     // Clean up test uploads

@@ -4,9 +4,10 @@ import { AssetRepository } from '../repositories/assetRepository';
 import { UserRepository } from '../repositories/userRepository';
 import { LibraryRepository } from '../repositories/libraryRepository';
 import { AuditRepository } from '../repositories/auditRepository';
+import { StatsRepository } from '../repositories/statsRepository';
 import { StorageDriver } from '../storage/storage';
 import { StorageService } from './storageService';
-import { CreateGameInput, UpdateGameInput, CreateCategoryInput, CreateVersionInput } from '@gametuoitho/api-contracts';
+import { AdminUserQueryInput, CreateGameInput, UpdateGameInput, CreateCategoryInput, CreateVersionInput, UpdateUserStatusInput } from '@gametuoitho/api-contracts';
 import { generateId } from '@gametuoitho/shared-utils';
 import { Game } from '@gametuoitho/shared-types';
 
@@ -19,7 +20,8 @@ export class AdminService {
     private libraryRepo: LibraryRepository,
     private storage: StorageDriver,
     private storageService?: StorageService,
-    private auditRepo?: AuditRepository
+    private auditRepo?: AuditRepository,
+    private statsRepo?: StatsRepository
   ) {}
 
   private async logAudit(params: {
@@ -84,6 +86,7 @@ export class AdminService {
       totalImports: importCount,
       totalStorageBytes,
       storageFormatted: `${(totalStorageBytes / (1024 * 1024)).toFixed(2)} MB`,
+      activity: this.statsRepo ? await this.statsRepo.getActivitySummary() : null,
     };
   }
 
@@ -98,6 +101,28 @@ export class AdminService {
       page,
       limit,
     };
+  }
+
+  async getUsers(query: AdminUserQueryInput) {
+    return this.userRepo.findForAdmin(query);
+  }
+
+  async updateUserStatus(adminId: string, userId: string, input: UpdateUserStatusInput) {
+    const user = await this.userRepo.findAccountForAdmin(userId);
+    if (!user) {
+      throw Object.assign(new Error('Không tìm thấy người dùng'), { status: 404, code: 'NOT_FOUND' });
+    }
+    if (userId === adminId || user.role === 'ADMIN') {
+      throw Object.assign(new Error('Không thể đổi trạng thái tài khoản quản trị viên'), { status: 403, code: 'FORBIDDEN' });
+    }
+    const changed = await this.userRepo.updateMemberStatus(userId, input.status);
+    if (changed) {
+      await this.logAudit({
+        userId: adminId, action: 'UPDATE_USER_STATUS', targetType: 'USER', targetId: userId,
+        details: { previousStatus: user.status, status: input.status },
+      });
+    }
+    return this.userRepo.findAccountForAdmin(userId);
   }
 
   async createGame(adminId: string, input: CreateGameInput): Promise<Game> {

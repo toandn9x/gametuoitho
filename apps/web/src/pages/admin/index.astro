@@ -12,7 +12,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <span>Tổng Quan Nền Tảng Game Tuổi Thơ</span>
         </h2>
         <p class="text-xs text-slate-400 mt-1">
-          Theo dõi trạng thái Game Catalog, người dùng, lượt import và dung lượng R2
+          Theo dõi trạng thái Game Catalog, người dùng, lượt import và dung lượng lưu trữ
         </p>
       </div>
 
@@ -70,12 +70,24 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             <span>●</span>
             <span id="stat-draft-text">-- Bản nháp</span>
           </a>
+          <a
+            href="/admin/games?status=HIDDEN"
+            class="px-2 py-0.5 rounded-lg bg-slate-700/40 text-slate-300 hover:bg-slate-600 border border-slate-600/50 font-bold transition-all flex items-center gap-1"
+            title="Game đang ẩn khỏi trang công khai"
+          >
+            <span>●</span>
+            <span id="stat-hidden-text">-- Đang ẩn</span>
+          </a>
+          <span class="px-2 py-0.5 rounded-lg bg-neon-yellow/5 text-neon-yellow/90 border border-neon-yellow/20 font-bold flex items-center gap-1" title="Game ưa thích trên trang chủ">
+            <span>★</span>
+            <span id="stat-featured-text">-- Ưa thích</span>
+          </span>
         </div>
       </div>
 
       <!-- Card: User Accounts -->
       <a
-        href="/admin/user-imports"
+        href="/admin/users"
         class="bg-arcade-900 border border-arcade-800 hover:border-neon-yellow/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between block"
       >
         <div>
@@ -102,7 +114,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-pink transition-colors">
             <span class="flex items-center gap-1.5 font-bold">
               <span>📥</span>
-              <span>USER IMPORTS</span>
+              <span>GAME NGƯỜI DÙNG TẢI LÊN</span>
             </span>
             <span class="text-[10px] text-slate-500 group-hover:text-neon-pink">Quản lý →</span>
           </div>
@@ -113,7 +125,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </div>
       </a>
 
-      <!-- Card: R2 Storage -->
+      <!-- Card: Object storage -->
       <a
         href="/admin/storage"
         class="bg-arcade-900 border border-arcade-800 hover:border-neon-green/60 rounded-2xl p-6 transition-all shadow-md group flex flex-col justify-between block"
@@ -122,7 +134,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-2 group-hover:text-neon-green transition-colors">
             <span class="flex items-center gap-1.5 font-bold">
               <span>💾</span>
-              <span>DUNG LƯỢNG R2</span>
+              <span>DUNG LƯỢNG LƯU TRỮ</span>
             </span>
             <span class="text-[10px] text-slate-500 group-hover:text-neon-green">Quản lý kho →</span>
           </div>
@@ -133,6 +145,60 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </div>
       </a>
     </div>
+
+    <!-- Activity: last 7 days -->
+    <section aria-labelledby="activity-heading" class="space-y-4">
+      <div>
+        <h3 id="activity-heading" class="text-sm font-bold uppercase tracking-wider text-neon-cyan flex items-center gap-2">
+          <span>📈</span>
+          <span>Hoạt động 7 ngày qua</span>
+        </h3>
+        <p class="text-[11px] text-slate-500 mt-1">Lượt chơi chỉ tính các tài khoản đã đăng nhập; khách vãng lai không được ghi nhận.</p>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <a href="/admin/users" class="bg-arcade-900 border border-arcade-800 hover:border-neon-yellow/60 rounded-2xl p-4 sm:p-6 transition-all block">
+          <div class="text-[11px] text-slate-400 font-mono font-bold mb-2">🆕 NGƯỜI DÙNG MỚI</div>
+          <div id="stat-new-users" class="text-2xl sm:text-3xl font-black text-neon-yellow font-mono">--</div>
+          <div id="stat-users-extra" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-arcade-800/80">--</div>
+        </a>
+
+        <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 sm:p-6">
+          <div class="text-[11px] text-slate-400 font-mono font-bold mb-2">🎮 NGƯỜI CHƠI HOẠT ĐỘNG</div>
+          <div id="stat-active-players" class="text-2xl sm:text-3xl font-black text-neon-cyan font-mono">--</div>
+          <div class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-arcade-800/80">Tài khoản có chơi game trong 7 ngày</div>
+        </div>
+
+        <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 sm:p-6">
+          <div class="text-[11px] text-slate-400 font-mono font-bold mb-2">▶️ TỔNG LƯỢT CHƠI</div>
+          <div id="stat-total-plays" class="text-2xl sm:text-3xl font-black text-neon-green font-mono">--</div>
+          <div class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-arcade-800/80">Cộng dồn từ trước đến nay</div>
+        </div>
+
+        <a id="stat-crash-card" href="/admin/reports" class="bg-arcade-900 border border-arcade-800 hover:border-red-500/60 rounded-2xl p-4 sm:p-6 transition-all block">
+          <div class="text-[11px] text-slate-400 font-mono font-bold mb-2">🚨 BÁO LỖI CHƯA XỬ LÝ</div>
+          <div id="stat-open-crashes" class="text-2xl sm:text-3xl font-black text-slate-200 font-mono">--</div>
+          <div id="stat-failed-uploads" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-arcade-800/80">--</div>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 sm:p-6">
+          <h4 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2"><span>🔥</span><span>Game được chơi nhiều nhất</span></h4>
+          <ol id="top-games-list" class="space-y-2"></ol>
+          <p id="top-games-empty" class="hidden text-xs text-slate-500">Chưa có lượt chơi nào được ghi nhận.</p>
+        </div>
+
+        <div class="bg-arcade-900 border border-arcade-800 rounded-2xl p-4 sm:p-6">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <h4 class="text-sm font-bold text-slate-200 flex items-center gap-2"><span>🚨</span><span>Báo lỗi mới nhất</span></h4>
+            <a href="/admin/reports" class="text-[11px] text-red-300 hover:underline whitespace-nowrap">Xem tất cả →</a>
+          </div>
+          <ul id="latest-crashes-list" class="space-y-2"></ul>
+          <p id="latest-crashes-empty" class="hidden text-xs text-slate-500">Không có báo lỗi nào đang chờ xử lý. 🎉</p>
+        </div>
+      </div>
+    </section>
 
     <!-- Crawler Promo Banner -->
     <div class="bg-gradient-to-r from-neon-cyan/20 via-arcade-900 to-neon-pink/20 border-2 border-neon-cyan/50 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-neon-cyan">
@@ -218,12 +284,23 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           </a>
 
           <a
+            href="/admin/users"
+            class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
+          >
+            <span class="text-xl block mb-1">👥</span>
+            <span class="font-bold text-xs text-slate-200 group-hover:text-neon-yellow block">
+              Quản Lý Người Dùng
+            </span>
+            <span class="text-[10px] text-slate-400 block mt-1">Tài khoản, vai trò và trạng thái</span>
+          </a>
+
+          <a
             href="/admin/user-imports"
             class="p-4 bg-arcade-800/80 hover:bg-arcade-700/80 border border-arcade-700 rounded-xl transition-all block group"
           >
             <span class="text-xl block mb-1">🛡️</span>
             <span class="font-bold text-xs text-slate-200 group-hover:text-neon-green block">
-              Kiểm Soát Imports
+              Game Người Dùng Tải Lên
             </span>
             <span class="text-[10px] text-slate-400 block mt-1">Giám sát dung lượng và file</span>
           </a>
@@ -294,7 +371,78 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         if (usersEl) usersEl.textContent = String(d.totalUsers);
         if (importsEl) importsEl.textContent = String(d.totalImports);
         if (storageEl) storageEl.textContent = d.storageFormatted;
+
+        if (d.activity) renderActivity(d.activity);
       }
     });
+
+    const setText = (id: string, value: string | number) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    };
+
+    // SQLite datetime('now') is UTC without a zone marker ("YYYY-MM-DD HH:MM:SS").
+    const formatDbDate = (value: string) => {
+      const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value.replace(' ', 'T')}Z`);
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+    };
+
+    function renderActivity(a: any) {
+      setText('stat-hidden-text', `${a.games.hidden} Đang ẩn`);
+      setText('stat-featured-text', `${a.games.featured} Ưa thích`);
+      setText('stat-new-users', a.users.newLast7Days);
+      setText('stat-users-extra', `${a.users.google} dùng Google · ${a.users.blocked} bị khóa`);
+      setText('stat-active-players', a.plays.activePlayersLast7Days);
+      setText('stat-total-plays', a.plays.total);
+      setText('stat-open-crashes', a.crashReports.open);
+      setText('stat-failed-uploads', `${a.failedUploadsLast7Days} lượt upload lỗi trong 7 ngày`);
+      if (a.crashReports.open > 0) {
+        document.getElementById('stat-open-crashes')?.classList.replace('text-slate-200', 'text-red-400');
+        document.getElementById('stat-crash-card')?.classList.add('border-red-500/50');
+      }
+
+      const topList = document.getElementById('top-games-list');
+      if (topList) {
+        topList.replaceChildren();
+        a.topGames.forEach((g: any, index: number) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center gap-3 text-xs';
+          const rank = document.createElement('span');
+          rank.className = 'w-6 h-6 flex-shrink-0 rounded-full bg-arcade-800 text-neon-cyan font-mono font-bold flex items-center justify-center';
+          rank.textContent = String(index + 1);
+          const name = document.createElement('a');
+          name.className = 'flex-1 min-w-0 truncate font-semibold text-slate-200 hover:text-neon-cyan';
+          name.href = `/game/${encodeURIComponent(g.slug)}`;
+          name.textContent = g.name;
+          const count = document.createElement('span');
+          count.className = 'flex-shrink-0 font-mono text-slate-400';
+          count.textContent = `${g.plays} lượt · ${g.players} người`;
+          li.append(rank, name, count);
+          topList.appendChild(li);
+        });
+        document.getElementById('top-games-empty')?.classList.toggle('hidden', a.topGames.length > 0);
+      }
+
+      const crashList = document.getElementById('latest-crashes-list');
+      if (crashList) {
+        crashList.replaceChildren();
+        a.crashReports.latest.forEach((r: any) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center gap-3 text-xs';
+          const type = document.createElement('span');
+          type.className = 'flex-shrink-0 px-1.5 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-500/30 font-mono text-[10px]';
+          type.textContent = r.error_type;
+          const name = document.createElement('span');
+          name.className = 'flex-1 min-w-0 truncate text-slate-200';
+          name.textContent = r.game_name;
+          const time = document.createElement('span');
+          time.className = 'flex-shrink-0 text-slate-500 font-mono';
+          time.textContent = formatDbDate(r.created_at);
+          li.append(type, name, time);
+          crashList.appendChild(li);
+        });
+        document.getElementById('latest-crashes-empty')?.classList.toggle('hidden', a.crashReports.latest.length > 0);
+      }
+    }
   </script>
 </AdminLayout>

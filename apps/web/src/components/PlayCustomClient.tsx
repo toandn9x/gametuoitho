@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAuthToken } from '../lib/api';
+import { getAuthToken, handleUnauthorized } from '../lib/api';
 import EmulatorPlayer from './EmulatorPlayer';
 
 export default function PlayCustomClient() {
@@ -15,6 +15,7 @@ export default function PlayCustomClient() {
     if (!token) {
       setError('Vui lòng đăng nhập tài khoản để chơi game riêng tư đã import của bạn.');
       setLoading(false);
+      handleUnauthorized(false);
       return;
     }
 
@@ -37,6 +38,7 @@ export default function PlayCustomClient() {
           const res = await fetch('/api/v1/me/imports', {
             headers: { Authorization: `Bearer ${token}` },
           });
+          if (res.status === 401) handleUnauthorized(true);
           if (!res.ok) throw new Error(`Không thể lấy danh sách import (HTTP ${res.status})`);
           const json = await res.json();
           const item = (json.data || []).find((it: any) => it.id === importId);
@@ -49,6 +51,7 @@ export default function PlayCustomClient() {
           const res = await fetch('/api/v1/me/library', {
             headers: { Authorization: `Bearer ${token}` },
           });
+          if (res.status === 401) handleUnauthorized(true);
           if (!res.ok) throw new Error(`Không thể lấy danh sách thư viện (HTTP ${res.status})`);
           const json = await res.json();
           const item = (json.data || []).find((it: any) => it.id === libraryId);
@@ -69,6 +72,7 @@ export default function PlayCustomClient() {
         });
 
         if (!jarRes.ok) {
+          if (jarRes.status === 401) handleUnauthorized(true);
           if (jarRes.status === 401 || jarRes.status === 403) {
             throw new Error('Bạn không có quyền truy cập tải file game riêng tư này.');
           }

@@ -1,157 +1,369 @@
-# Nền Tảng Game Tuổi Thơ (J2ME Retro Platform)
+# Game Tuổi Thơ — Hướng dẫn setup và deploy
 
-Nền tảng lưu trữ, quản lý và trải nghiệm các tựa game Java cổ điển (J2ME) thời kỳ hoàng kim của điện thoại Nokia, Motorola, Sony Ericsson trên nền tảng Web hiện đại, sẵn sàng mở rộng cho ứng dụng Native Android APK và iOS.
+Website lưu trữ và chơi game Java ME, gồm Web Astro/React, REST API Hono, Game Catalog và thư viện riêng của người dùng.
 
-**Trạng thái nghiệm thu:** Web MVP đang được review và sửa lỗi; emulator chưa được nghiệm thu theo lựa chọn của người dùng. Theo dõi bằng chứng và các việc còn mở trong [delivery board](docs/delivery-board.md). Các mục tính năng bên dưới cần được kiểm chứng theo `plan.md` trước khi coi là hoàn thành.
+**Website đã triển khai:** [gametuoitho.ngoc98toan.workers.dev](https://gametuoitho.ngoc98toan.workers.dev).
 
----
+Đây là hướng dẫn chung cho setup, deploy và vận hành. Với Cloudflare, bạn tạo tài nguyên/token/key trên giao diện web, điền file local rồi [chạy deploy.bat](#manual-deploy). Không cần kết nối GitHub.
 
-## ⚡ Chế Độ Chạy 1 Server Duy Nhất (Single Process + SQLite)
+- [Chạy local](#local)
+- [Deploy Cloudflare bằng token/key](#cloudflare)
+- [Tạo admin và nhập game](#admin)
+- [Bật đăng nhập Google](#google-login)
+- [Cập nhật, sao lưu và khôi phục](#operations)
+- [Tự host trên VPS](#vps)
+- [Các lệnh phát triển và kiểm tra](#checks)
+- [Xử lý lỗi](#troubleshooting)
+- [Phạm vi đã kiểm chứng](#verification)
 
-Repo hiện có adapter local để chạy **Frontend, Backend API và SQLite trong 1 tiến trình Node.js** trên **1 cổng mạng**. Mục tiêu triển khai Cloudflare Workers/D1/R2 vẫn theo `plan.md`; triển khai production chưa được nghiệm thu.
+## Môi trường và dữ liệu
 
-- 🌐 **Web Frontend (Astro 5 + React 19 + Tailwind CSS)**: Tự động phục vụ giao diện người dùng, trang chi tiết game và Web Emulator iframe.
-- 🔌 **Backend REST API (Hono)**: Cung cấp đầy đủ endpoint `/api/v1/*` (xác thực, catalog, tìm kiếm, upload file, thư viện cá nhân, trang quản trị admin).
-- 🗄️ **Cơ sở dữ liệu cục bộ (SQLite / better-sqlite3)**: Tự động khởi tạo schema và seed dữ liệu vào file `gametuoitho.sqlite`.
-- 📁 **Lưu trữ file cục bộ (Local Storage)**: Lưu file game `.jar` và ảnh bìa trong thư mục `./uploads/`, hỗ trợ HTTP 206 `Range` streaming cho trình giả lập Web.
+| Môi trường | Web/API | Database | File JAR/JAD/ảnh |
+| --- | --- | --- | --- |
+| Local thông thường | Một tiến trình Node.js, mặc định cổng 4321 | SQLite tại gốc repo | Thư mục `uploads/` tại gốc repo |
+| Cloudflare production | Một Worker + Static Assets, cùng domain | D1 | Bucket Tigris PRIVATE |
+| Giả lập Workers local | Wrangler, mặc định cổng 8787 | D1 giả lập | R2 giả lập offline |
 
-### Khởi Chạy Nhanh
+D1/SQLite chỉ lưu metadata; file game nằm trong storage. Game user import luôn riêng tư và không tự xuất hiện trong Catalog. Deploy cloud không tự chuyển database hoặc file game đang có trên máy.
 
-#### 1. Cài đặt thư viện và thiết lập biến môi trường
-Server yêu cầu biến môi trường `JWT_SECRET` có độ dài tối thiểu 32 ký tự ngẫu nhiên để ký và xác thực token JWT. Khuyến nghị đặt `HOST=127.0.0.1` khi chạy local trên máy cá nhân để tránh bind công khai trên `0.0.0.0`.
+<a id="local"></a>
 
-**Trên Linux / macOS (Bash):**
-```bash
-pnpm install
+## 1. Chạy local
 
-# Thiết lập JWT_SECRET ngẫu nhiên (tối thiểu 32 ký tự) và bind local
-export JWT_SECRET=$(openssl rand -hex 32)
-export HOST=127.0.0.1
-```
+### Chuẩn bị
 
-**Trên Windows (PowerShell):**
+- Node.js 22 và pnpm 10, cùng phiên bản chính với cấu hình CI của repo.
+- Mở terminal tại thư mục gốc có `pnpm-workspace.yaml`.
+- Local thông thường không cần tài khoản Cloudflare, Tigris hoặc thẻ thanh toán.
+
+### Cài đặt và khởi động
+
+Trên Windows PowerShell:
+
 ```powershell
-pnpm install
+pnpm install --frozen-lockfile
 
-# Thiết lập JWT_SECRET ngẫu nhiên bảo mật (tối thiểu 32 ký tự) và bind local
-$b = New-Object byte[] 48; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); $env:JWT_SECRET = [Convert]::ToBase64String($b)
-$env:HOST = "127.0.0.1"
-```
+$jwtBytes = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($jwtBytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
+$env:HOST = '127.0.0.1'
 
-#### 2. Khởi tạo tài khoản Quản trị viên (Admin) đầu tiên
-Hệ thống không cài sẵn tài khoản hay mật khẩu mặc định vì lý do bảo mật. Bạn có thể bootstrap admin đầu tiên qua một trong hai cách:
-
-- **Cách A: Dùng CLI tương tác hoặc biến môi trường (Khuyến nghị):**
-  ```bash
-  # Nhập tương tác an toàn qua terminal (mật khẩu được ẩn và không lưu vào lịch sử shell):
-  pnpm --filter @gametuoitho/api create-admin
-
-  # Hoặc thiết lập qua biến môi trường trước khi chạy CLI:
-  ADMIN_BOOTSTRAP_PASSWORD="<your-secure-password>" pnpm --filter @gametuoitho/api create-admin --username admin --email admin@example.com
-  ```
-  *(Cảnh báo: Nếu bạn dùng trực tiếp cờ `--password "..."`, mật khẩu có thể bị lưu lại trong lịch sử shell của hệ thống; không khuyến nghị trên máy dùng chung).*
-- **Cách B: Thiết lập biến môi trường trước khi chạy server:**
-  ```bash
-  # Bash:
-  export ADMIN_BOOTSTRAP_USERNAME="admin"
-  export ADMIN_BOOTSTRAP_EMAIL="admin@example.com"
-  export ADMIN_BOOTSTRAP_PASSWORD="<your-secure-password>"
-  ```
-  ```powershell
-  # PowerShell:
-  $env:ADMIN_BOOTSTRAP_USERNAME = "admin"
-  $env:ADMIN_BOOTSTRAP_EMAIL = "admin@example.com"
-  $env:ADMIN_BOOTSTRAP_PASSWORD = "<your-secure-password>"
-  ```
-  *Lưu ý:* Cơ chế bootstrap môi trường mang tính chất idempotent; nếu database đã có ít nhất một admin, các biến này sẽ tự động bị bỏ qua và mật khẩu không bao giờ được ghi vào log.
-
-#### 3. Build giao diện và chạy server
-```bash
-# Build frontend web tĩnh
 pnpm build
-
-# Khởi chạy server hợp nhất (Mặc định cổng 4321)
 pnpm start
 ```
 
-Truy cập ngay trên trình duyệt:
-- 🕹️ **Website & Chơi Game:** [http://localhost:4321](http://localhost:4321)
-- ⚙️ **Quản trị hệ thống (Admin):** [http://localhost:4321/admin](http://localhost:4321/admin) (Đăng nhập bằng tài khoản admin vừa tạo)
-- 📑 **REST API v1:** [http://localhost:4321/api/v1](http://localhost:4321/api/v1)
-- 🏥 **Kiểm tra trạng thái (Health):** [http://localhost:4321/health](http://localhost:4321/health)
+Trên Linux/macOS:
 
-### Lưu Ý An Toàn & Bảo Mật (Security Advisory)
-> [!WARNING]
-> - **Cơ sở dữ liệu cũ:** Nếu bạn đang sử dụng cơ sở dữ liệu (`gametuoitho.sqlite`) từ phiên bản cũ từng chứa tài khoản quản trị viên hoặc mật khẩu thử nghiệm công khai trong lịch sử commit, bạn **BẮT BUỘC** phải xóa file database cũ (`rm gametuoitho.sqlite`) để hệ thống khởi tạo lại sạch từ đầu, sau đó tạo admin mới bằng cơ chế bootstrap trên.
-> - **Đổi mật khẩu:** Hiện tại giao diện người dùng Web chưa hỗ trợ chức năng đổi mật khẩu (backlog limitation). Do đó trên môi trường phát triển local, cách an toàn nhất để đặt lại tài khoản là tạo mới database.
-
-### Tùy Biến Cổng & Môi Trường
-Bạn có thể thay đổi cổng chạy hoặc đường dẫn lưu file qua các biến môi trường:
 ```bash
-# Đổi sang cổng 8080 (hoặc bất kỳ cổng nào trống)
-PORT=8080 pnpm start
-
-# Trên Windows PowerShell
-$env:PORT=8080; pnpm start
+pnpm install --frozen-lockfile
+export JWT_SECRET="$(openssl rand -hex 48)"
+export HOST=127.0.0.1
+pnpm build
+pnpm start
 ```
 
----
+Mở [website local](http://localhost:4321), [trang admin](http://localhost:4321/admin), [health](http://localhost:4321/health) hoặc [API Catalog](http://localhost:4321/api/v1/games).
 
-## 🚀 Tính Năng Nổi Bật
-- 🎮 **Chơi Game Trực Tiếp Trên Trình Duyệt:** Tích hợp Web Emulator chạy mượt mà đồ họa 2D Canvas và 3D WebGL (M3G), âm thanh MIDI FluidSynth.
-- 📱 **Điều Khiển Linh Hoạt:** Bàn phím ảo Touch Keypad tùy biến cho cả màn hình dọc và xoay ngang, hỗ trợ đầy đủ phím bấm máy tính.
-- 📚 **Game Catalog Phong Phú:** Quản lý hàng trăm tựa game huyền thoại (Ninja School, Diamond Rush, Bounce Tales, Avatar, Asphalt 3, Space Impact, v.v.).
-- 💾 **Thư Viện Riêng (User Library):** Người dùng có thể đăng ký tài khoản, lưu game yêu thích, xem lịch sử chơi và tự upload/import file JAR riêng của mình.
-- 🛡️ **Hệ Thống Quản Trị Toàn Diện (Admin Portal):** Quản lý Catalog, duyệt game, upload phiên bản mới, kiểm duyệt file tải lên, theo dõi dung lượng lưu trữ.
-- 🔒 **Bảo Mật Tối Đa ([AGENTS.md](AGENTS.md)):** Không thực thi nhị phân JAR trên server, phân quyền nghiêm ngặt theo JWT Token, kiểm tra Magic Bytes file JAR (`0x50 0x4B 0x03 0x04`).
+Server tự chạy các migration còn thiếu và seed 8 thể loại khi database chưa có thể loại. Không có game hay tài khoản/mật khẩu mặc định. Sau khi server tạo database lần đầu, tạo admin theo [mục 3](#admin).
 
----
+Giữ cùng `JWT_SECRET` giữa các lần chạy nếu muốn duy trì phiên đăng nhập. Các lệnh tạo khóa ở trên sinh khóa mới mỗi lần thực hiện; khi khóa thay đổi, cần đăng nhập lại. `.env.deploy.local` phục vụ helper deploy cloud, không được server Node tự nạp.
 
-## 📂 Cấu Trúc Dự Án (Monorepo)
-- `apps/web`: Website người dùng và trang quản trị (Astro 5 + React 19 + Tailwind CSS).
-- `apps/api`: RESTful API backend (Hono + TypeScript + SQLite / D1 + Local Storage / R2).
-- `apps/emulator-web`: Gói trình giả lập độc lập chạy trong Web Sandbox (CheerpJ + FreeJ2ME).
-- `packages/shared-types`: Các kiểu dữ liệu dùng chung (Types & Interfaces).
-- `packages/api-contracts`: Định dạng request/response API và Zod schemas.
-- `packages/shared-utils`: Các hàm tiện ích, mã hóa mật khẩu PBKDF2 WebCrypto, xử lý file và validation.
-- `database/`: Schema migrations và seed data cho SQLite / Cloudflare D1.
-- `docs/`: Toàn bộ tài liệu kiến trúc, database, deployment và security.
+### Biến môi trường local
 
-### Luồng Thêm Game Vào Catalog & Trải Nghiệm
-1. **Thêm qua Admin Upload:**
-   - Quản trị viên truy cập `/admin/games/create`, điền metadata (tên, thể loại, nhà phát triển, năm phát hành) và tải lên file JAR (kèm JAD/ảnh bìa tùy chọn).
-   - Game được tạo ở trạng thái **`DRAFT`** (nháp, chưa xuất bản) và asset ở trạng thái `ACTIVE`.
-2. **Thêm qua Nguồn Crawler:**
-   - Quản trị viên truy cập `/admin/crawler`, tìm kiếm game từ nguồn `gametuoitho.cc` và bấm "Nhập Game".
-   - File JAR và ảnh được tải về kiểm thực an toàn, tạo bản ghi game ở trạng thái **`DRAFT`** (không tự động public ra Catalog).
-3. **Kiểm tra và Xuất bản (Publish):**
-   - Quản trị viên kiểm tra phiên bản JAR hợp lệ, sau đó bấm "Xuất bản" (`status = 'PUBLISHED'`, `visibility = 'PUBLIC'`).
-   - Game lập tức xuất hiện trên Catalog công khai và người dùng có thể chơi trực tiếp hoặc thêm vào Thư viện cá nhân.
+| Biến | Giá trị mặc định / cách dùng |
+| --- | --- |
+| `JWT_SECRET` | Dùng khóa ngẫu nhiên ít nhất 32 ký tự; bắt buộc khi `NODE_ENV=production` |
+| `HOST` | Nên đặt `127.0.0.1` khi chạy trên máy |
+| `PORT` | `4321` |
+| `DB_PATH` | `gametuoitho.sqlite` tại gốc repo |
+| `UPLOADS_DIR` | `uploads/` tại gốc repo |
+| `WEB_DIST` | `apps/web/dist` |
+| `GOOGLE_CLIENT_ID` | Để trống nếu chưa bật Google login |
 
----
+Đổi `DB_PATH` hoặc `UPLOADS_DIR` không tự chuyển dữ liệu cũ sang nơi mới.
 
-## 🛠️ Lệnh Phát Triển & Kiểm Thử
-```bash
-# Chạy server hợp nhất ở chế độ dev (tự động reload khi sửa code)
-pnpm dev
+### Giả lập Cloudflare trên máy
 
-# Chạy riêng API dev server
-pnpm dev:api
+Để thử đúng entrypoint Worker, mở [apps/api/.dev.vars.example](apps/api/.dev.vars.example), lưu bản riêng thành `apps/api/.dev.vars` và đặt `JWT_SECRET` ngẫu nhiên ít nhất 32 ký tự. Sau đó agent hoặc người phát triển chạy:
 
-# Chạy riêng Web Frontend dev server
-pnpm dev:web
+```powershell
+pnpm cf:dev
+```
 
-# Chạy toàn bộ kiểm thử tự động API & DB
-pnpm test
+Lệnh này build giao diện, migrate/seed D1 local và chạy Wrangler với `--env local`. Môi trường dùng D1/R2 giả lập, không gọi Tigris thật. `.dev.vars` đã được git-ignore.
 
-# Chạy kiểm tra kiểu TypeScript monorepo
-pnpm lint
+<a id="cloudflare"></a>
 
-# Build các ứng dụng
-pnpm --filter @gametuoitho/api build
-pnpm --filter @gametuoitho/web build
+## 2. Deploy Cloudflare bằng token/key
 
-# Bộ nghiệm thu PM độc lập
+Mô hình đang dùng là **Workers + D1 + Tigris PRIVATE**. D1 lưu dữ liệu tài khoản/game; Tigris lưu file. Không cần kích hoạt R2 cho phương án này.
+
+### Bước 1 — Tạo Worker bằng web
+
+1. Đăng nhập [Cloudflare Dashboard](https://dash.cloudflare.com/) và chọn account.
+2. Mở **Workers & Pages → Create application → Hello World / Create Worker**.
+3. Đặt tên `gametuoitho`, bấm **Deploy**. Nếu đã có Worker, dùng lại tên hiện có.
+4. Copy **Account ID** của account chứa Worker; đây không phải Zone ID.
+
+Worker Hello World chỉ là chỗ chuẩn bị. Helper sẽ phát hành Web/API của repo lên Worker này.
+
+### Bước 2 — Tạo D1
+
+1. Cloudflare → **Storage & databases → D1 SQL Database → Create database**.
+2. Đặt tên `gametuoitho-d1` và tạo.
+3. Mở database, copy **Database ID** và tên thực tế.
+
+Nếu đã có database cần dùng, giữ đúng ID đó. Agent sẽ chạy migration; không cần tự tạo bảng hoặc gõ SQL.
+
+### Bước 3 — Tạo Cloudflare API token
+
+1. Cloudflare → **My Profile → API Tokens → Create Token**.
+2. Chọn mẫu **Edit Cloudflare Workers**, đặt tên như `gametuoitho-deploy`.
+3. Xác nhận đủ các quyền sau:
+
+| Quyền | Mức truy cập | Mục đích |
+| --- | --- | --- |
+| Account → Workers Scripts | Edit | Phát hành code, static assets và Worker secrets |
+| Account → D1 | Edit | Chạy migration và seed |
+
+Nếu UI sử dụng role Workers mới, chọn **Workers → Editor** cho Worker đã tạo. Giữ các quyền cần thiết của mẫu và giới hạn tài nguyên vào đúng account chứa Worker/D1. Quyền Read xem được thông tin nhưng không đủ để deploy.
+
+4. Bấm **Continue / Create Token**, lưu token vào file local ở bước 5. Token thường chỉ hiển thị một lần.
+
+Không cần Cloudflare Global API Key. Có thể sửa quyền token hiện có qua **API Tokens → token đang dùng → Edit**.
+
+Nguồn: [tạo API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/), [quyền Workers](https://developers.cloudflare.com/workers/authorization/workers/).
+
+### Bước 4 — Tạo Tigris bucket và key
+
+1. Đăng nhập [Tigris Dashboard](https://console.storage.dev/).
+2. Tạo bucket, chọn tier **Standard** và giữ **PRIVATE**. Nếu đã có bucket `game`, có thể dùng lại.
+3. Vào **Access Keys → Create New Access Key**.
+4. Chọn **ReadWrite** và chọn cụ thể bucket cần dùng. Key phải đọc, liệt kê, ghi và xóa được object trong bucket; không cần quyền Admin toàn organization.
+5. Lưu cả **Access Key ID** và **Secret Access Key** vào file local ở bước 5.
+
+Một key chưa được gán bucket có thể xem danh sách tên bucket nhưng bị `403 AccessDenied` khi truy cập nội dung. Tạo key mà không chọn bucket chưa đủ. Nếu cả `CreatePolicy` cũng bị 403, cần tài khoản quản lý bucket cấp quyền qua dashboard.
+
+Giữ bucket private khi sửa quyền. API sẽ kiểm tra JWT, chủ sở hữu và trạng thái asset trước khi đọc file từ Tigris.
+
+Nguồn: [quản lý access key](https://www.tigrisdata.com/docs/iam/manage-access-key/), [tạo bucket](https://www.tigrisdata.com/docs/buckets/create-bucket/), [giá và hạn mức](https://www.tigrisdata.com/pricing/).
+
+### Bước 5 — Điền file local
+
+Mở [.env.deploy.local](.env.deploy.local) ở gốc repo bằng VS Code. Nếu chưa có, mở [.env.deploy.local.example](.env.deploy.local.example) rồi **Save As** thành `.env.deploy.local`.
+
+```dotenv
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_API_TOKEN=
+
+WORKER_NAME=gametuoitho
+D1_DATABASE_ID=
+D1_DATABASE_NAME=gametuoitho-d1
+
+TIGRIS_BUCKET=
+TIGRIS_ACCESS_KEY_ID=
+TIGRIS_SECRET_ACCESS_KEY=
+
+JWT_SECRET=
+GOOGLE_CLIENT_ID=
+```
+
+| Trường | Điền gì |
+| --- | --- |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID 32 ký tự hex, đúng account chứa Worker/D1 |
+| `CLOUDFLARE_API_TOKEN` | Token có quyền Workers Scripts Edit và D1 Edit |
+| `WORKER_NAME` | Tên Worker thực tế |
+| `D1_DATABASE_ID` | UUID database |
+| `D1_DATABASE_NAME` | Tên database thực tế |
+| `TIGRIS_BUCKET` | Tên bucket PRIVATE, ví dụ `game` |
+| `TIGRIS_ACCESS_KEY_ID`, `TIGRIS_SECRET_ACCESS_KEY` | Cặp key ReadWrite đã chọn bucket |
+| `JWT_SECRET` | Có thể để trống: giữ secret trên Worker, hoặc tạo ngẫu nhiên nếu lần đầu chưa có |
+| `GOOGLE_CLIENT_ID` | Để trống nếu chưa dùng đăng nhập Google |
+
+Dán token/key trên một dòng, không thêm `Bearer` hoặc khoảng trắng. Nếu tự đặt `JWT_SECRET`, dùng khóa ngẫu nhiên ít nhất 32 ký tự. Bấm **Ctrl+S**.
+
+File private đã được git-ignore. Không gửi token/key vào chat, ảnh chụp màn hình hoặc `wrangler.toml`.
+
+<a id="manual-deploy"></a>
+
+### Bước 6 — Chạy deploy.bat
+
+Nhấp đúp **[deploy.bat](deploy.bat)** tại gốc dự án. Script tự đọc `.env.deploy.local`, cài dependency, build và deploy.
+
+Chờ thông báo **SUCCESS**, rồi mở [website](https://gametuoitho.ngoc98toan.workers.dev) và nhấn **Ctrl+F5** để tải bản mới.
+
+Nếu có lỗi, xem trên cửa sổ đang mở hoặc file log mới nhất trong `logs/deploy/`. Log ghi rõ bước lỗi và mã lỗi; token/key được che. Sửa lỗi xong, chạy lại `deploy.bat`.
+
+<a id="admin"></a>
+
+## 3. Tạo admin và nhập game
+
+### Admin local
+
+Chạy server lần đầu để tạo database, rồi mở terminal khác tại gốc repo:
+
+```powershell
+pnpm --filter @gametuoitho/api create-admin
+```
+
+Nhập username, email và mật khẩu theo câu hỏi tương tác. CLI dùng database local và chỉ bootstrap khi chưa có admin. Nếu dùng `DB_PATH` riêng, đặt cùng đường dẫn cho server và CLI. Không dùng lệnh này để tạo admin trên D1 cloud.
+
+### Admin Cloudflare qua UI
+
+1. Đăng ký tài khoản thật trên website đã deploy.
+2. Cloudflare → **D1 → database của website → Studio / Data Studio → users**.
+3. Tìm chính xác username/email vừa đăng ký.
+4. Sửa ô `role` từ `USER` sang `ADMIN`, bấm **Save / Apply changes**.
+5. Đăng xuất, đăng nhập lại rồi mở `/admin`.
+
+D1 Studio hỗ trợ sửa dữ liệu trong bảng; không cần gõ SQL. [Tài liệu Studio](https://developers.cloudflare.com/workers/local-development/local-explorer/#d1-and-durable-objects-sql-studio).
+
+### Các mục quản trị
+
+| Mục | Đường dẫn | Công dụng |
+| --- | --- | --- |
+| Game Catalog | `/admin/games` | Metadata, phiên bản, xuất bản/ẩn game |
+| Nhập game | `/admin/games/create`, `/admin/crawler` | Upload hoặc nhập từ nguồn được phép, tạo DRAFT |
+| Quản lý người dùng | `/admin/users` | Tìm kiếm, lọc, phân trang, khóa/mở khóa tài khoản |
+| Game người dùng tải lên | `/admin/user-imports` | Theo dõi game riêng tư của user |
+| Storage | `/admin/storage` | Kiểm tra tài nguyên và dọn dẹp file |
+| Báo cáo lỗi | `/admin/reports` | Xem lỗi client/emulator gửi lên |
+
+Quản lý tài khoản và quản lý game tải lên là hai chức năng riêng. API tài khoản gồm `GET /api/v1/admin/users` và `PUT /api/v1/admin/users/:id/status`, đều yêu cầu ADMIN ở server. Khóa/mở khóa thu hồi phiên cũ; màn hình này không đổi role hoặc khóa tài khoản ADMIN.
+
+Để xuất bản game: nhập JAR/JAD/ảnh → kiểm tra game DRAFT → xuất bản với `status=PUBLISHED`, `visibility=PUBLIC`. Chỉ dùng game có quyền phân phối. Game user import vẫn PRIVATE.
+
+Trong Game Catalog, đánh dấu ☆/★ để chọn game cho mục **Game ưa thích** trên trang chủ, tối đa 8 game công khai. Việc đánh dấu không tự xuất bản game nháp. Danh sách này khác yêu thích cá nhân tại `/me/favorites`.
+
+<a id="google-login"></a>
+
+## 4. Bật đăng nhập Google
+
+1. Mở [Google Cloud Console](https://console.cloud.google.com/), tạo/chọn project.
+2. Vào **Google Auth Platform**, cấu hình Branding/Audience/Contact information theo giao diện.
+3. Mở **Clients → Create client → Web application**.
+4. Thêm **Authorized JavaScript origins** đúng địa chỉ sử dụng, ví dụ:
+   - `http://localhost:4321`
+   - `http://localhost:8787` nếu thử Wrangler local
+   - `https://gametuoitho.ngoc98toan.workers.dev`
+   - Domain riêng nếu đã cấu hình.
+5. Tích hợp hiện tại dùng credential callback, không cần Authorized redirect URI. Copy **Client ID** dạng `....apps.googleusercontent.com`; không dùng Client secret.
+6. Kiểm tra Audience/Testing/Production và danh sách tài khoản được phép thử trong Google Console.
+
+Nguồn: [thiết lập Google Identity Services](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+
+**Trên local**, đặt Client ID trong môi trường của server rồi khởi động lại:
+
+```powershell
+$env:GOOGLE_CLIENT_ID = 'your-client-id.apps.googleusercontent.com'
+pnpm start
+```
+
+**Trên Cloudflare**, điền `GOOGLE_CLIENT_ID` trong `.env.deploy.local`, lưu và nhờ agent deploy lại. Với `pnpm cf:dev`, đặt trong `[env.local.vars]` của `apps/api/wrangler.toml`.
+
+Để trống Client ID thì nút Google bị ẩn. Lần đăng nhập Google đầu tạo USER; muốn làm admin thì cấp role như mục 3. Email trùng tài khoản mật khẩu không tự gộp: dùng phương thức đăng nhập cũ. Lỗi `origin_mismatch` cần đối chiếu chính xác scheme/domain/port, kể cả `localhost` và `127.0.0.1`.
+
+<a id="operations"></a>
+
+## 5. Cập nhật, sao lưu và khôi phục
+
+- **Local:** sau khi sửa code, build lại rồi khởi động lại server. Migration mới được áp dụng khi server chạy.
+- **Cloudflare:** giữ file private, nhờ agent deploy lại; helper chỉ áp dụng migration chưa chạy.
+- **Đổi token/key:** cập nhật cặp giá trị tương ứng trong file private. Đổi JWT sẽ buộc phiên cũ đăng nhập lại.
+- **Domain riêng:** Worker → Settings → Domains & Routes → Add → Custom domain, chọn domain đã quản lý trên Cloudflare.
+- **Log:** Worker → Observability / Logs → Live logs, rồi tái hiện thao tác bị lỗi.
+- **Sao lưu local:** dừng server để copy database SQLite và toàn bộ `uploads/` nhất quán, hoặc dùng công cụ SQLite backup khi đang chạy. Giữ bản sao trước khi chuyển dữ liệu.
+- **Sao lưu cloud:** lưu bản export/backup D1 và các object Tigris với nguyên storage key. Database và object phải tương ứng; không đổi bucket/ID để thay cho bước chuyển dữ liệu.
+- **Khôi phục code cloud:** Worker → Deployments → chọn version cũ → Rollback / Promote. Rollback code không hoàn tác migration hoặc khôi phục file đã xóa.
+
+Helper deploy không copy dữ liệu local lên cloud. Muốn chuyển game/tài khoản cần quy trình chuyển database và file riêng, sau khi sao lưu.
+
+<a id="vps"></a>
+
+## 6. Tự host trên VPS
+
+Dùng cùng server Node như local: cài dependency, build, đặt `NODE_ENV=production`, `JWT_SECRET` ổn định ít nhất 32 ký tự, `HOST=127.0.0.1` và `PORT` mong muốn rồi chạy `pnpm start`.
+
+Dùng process manager như systemd/PM2 để tự khởi động, reverse proxy để cấp HTTPS và giữ database/uploads ở nơi bền vững. Proxy cần cho phép payload 50 MB, chuyển tiếp `Host`/`X-Forwarded-For` và giữ header `Range` để tải game. Không thay SQLite bằng D1 chỉ bằng cách đổi biến môi trường của server Node.
+
+<a id="checks"></a>
+
+## 7. Các lệnh phát triển và kiểm tra
+
+Chạy tại gốc repo:
+
+| Lệnh | Mục đích |
+| --- | --- |
+| `pnpm dev` | Server hợp nhất có watch; sửa giao diện cần build lại Web |
+| `pnpm dev:api` | Alias chạy cùng API dev script/server hợp nhất |
+| `pnpm dev:web` | Astro dev riêng; cần cấu hình API phù hợp nếu chạy hai tiến trình |
+| `pnpm build` | Kiểm tra package và build Web |
+| `pnpm lint` | TypeScript monorepo |
+| `pnpm test` | API, Google auth, Tigris HTTP fixture và helper deploy |
+| `pnpm test:deploy` | Kiểm thử helper và launcher BAT bằng fixture; BAT chạy trên Windows |
+| `pnpm cf:build` | Build cloud với các page shell, không lấy dữ liệu game local |
+| `pnpm cf:dev` | Chạy Worker với D1/R2 local |
+
+Các kiểm tra chuyên biệt:
+
+```powershell
 pnpm --filter @gametuoitho/api exec tsx ../../tests/pm/asset-review.ts
 node tests/pm/admin-render-review.cjs
+node tests/pm/admin-users-render-review.cjs
+node tests/pm/emulator-crash-review.cjs
+node tests/pm/emulator-cache-review.cjs
 ```
+
+Các kiểm tra DOM dùng Chrome/Edge headless và fixture riêng; build Web trước khi chạy kiểm tra trang admin. Fixture không chứng minh dịch vụ cloud hoặc mọi game hoạt động. JAR fixture chỉ là dữ liệu, không được chạy trên server.
+
+Nếu cần chẩn đoán player, dùng `node scripts/diagnose-player.cjs --url <URL-trang-play> --wait-ms 30000`. Bản vá menu icon null của emulator có source, provenance và cách tái build tại [apps/emulator-web/patches/README.md](apps/emulator-web/patches/README.md).
+
+<a id="troubleshooting"></a>
+
+## 8. Xử lý lỗi
+
+| Hiện tượng | Cách xử lý |
+| --- | --- |
+| Local không có giao diện | Chạy `pnpm build`, rồi khởi động server hợp nhất |
+| Database khác sau đổi lệnh/môi trường | Kiểm tra `DB_PATH`, thư mục làm việc và server đang chạy; sao lưu trước khi đổi |
+| `create-admin` chưa thấy database | Chạy server lần đầu để tạo schema, dùng cùng `DB_PATH` |
+| Local đăng nhập mất sau restart | Giữ `JWT_SECRET` ổn định thay vì sinh lại mỗi lần |
+| Cloud vẫn là Hello World | Lần deploy chưa hoàn tất; xem bước lỗi của helper |
+| D1 báo 7500, đọc được nhưng không migrate | Token cần Account → D1 → Edit cho đúng account |
+| Worker secrets báo No access to the specified resource | Token cần Workers Scripts → Edit hoặc Workers → Editor cho đúng Worker |
+| Tigris LIST/PUT trả 403 | Key ReadWrite phải chọn đúng bucket/organization; thay cả cặp key trong file local |
+| Upload được nhưng xóa lỗi | Kiểm tra thêm quyền DeleteObject, log Tigris và kết quả API |
+| `/admin` trả 403 | Tài khoản cần role ADMIN; đăng xuất/đăng nhập lại sau khi cấp quyền |
+| Google không hiện nút | Kiểm tra `GOOGLE_CLIENT_ID` ở môi trường đang chạy |
+| Google `origin_mismatch` | Khớp chính xác origin đã khai báo trong Google Console |
+| Worker lỗi 1102 | Kiểm tra CPU/log và tối ưu tác vụ; không bỏ validation JAR để né giới hạn |
+| Mất game sau đổi bucket/D1 | Kiểm tra kho cũ và bản sao lưu; đổi cấu hình không chuyển file/DB |
+| Player trắng hoặc báo crash | Xem `/admin/reports`, log browser và script chẩn đoán; không tự tạo JAR thay file bị thiếu |
+
+Adapter Tigris dùng endpoint `https://t3.storage.dev`, region `auto`, SigV4, timeout 15 giây, `redirect: manual` và từ chối 3xx. Không dùng `redirect: error` trên Workers. URL file luôn qua `/api/v1/assets/raw/...`, không đưa key Tigris về trình duyệt.
+
+Theo dõi [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) và [Tigris pricing](https://www.tigrisdata.com/pricing/) trước khi tăng dữ liệu hoặc lưu lượng.
+
+<a id="verification"></a>
+
+## 9. Phạm vi đã kiểm chứng
+
+Lần triển khai **10/11/2026** đã xác minh Web/API/D1/Tigris thật: 13 kiểm tra HTTP/route, 22 kiểm tra auth/upload JAR nén/riêng tư/Range/admin/logout và 2 kiểm tra dashboard/storage analysis đều đạt. Chrome desktop 1280px và mobile emulation 390px tải được 8 thể loại qua API, không tràn ngang. Tài khoản và object thử đã được dọn.
+
+Version tại lần kiểm tra: `5cc30da2-f15c-4834-95c4-b0f04edcc328`. Ảnh: [desktop](docs/evidence/cloudflare/live-home-desktop.png), [mobile](docs/evidence/cloudflare/live-home-mobile.png).
+
+Đây là kết quả tại thời điểm triển khai, không phải giám sát liên tục. Chơi game thật trên cloud, Google login thật, crawler nguồn thật, tải lớn và tải đồng thời chưa được xác minh đầy đủ. Emulator vẫn chưa nghiệm thu rộng; giới hạn iframe cùng origin được mô tả trong tài liệu bảo mật.
+
+## Cấu trúc và tài liệu kỹ thuật
+
+| Đường dẫn | Nội dung |
+| --- | --- |
+| `apps/web/` | Giao diện người dùng, admin và player |
+| `apps/api/` | API, server Node, entrypoint Worker và storage driver |
+| `apps/emulator-web/` | Emulator và bản vá upstream |
+| `packages/` | Types, API contracts và tiện ích dùng chung |
+| `database/` | Migration và seed thể loại |
+| `tests/` | Mã kiểm thử tự động |
+| `docs/` | Tài liệu kỹ thuật và hình ảnh |
+
+Tham chiếu: [kiến trúc](docs/architecture.md), [database](docs/database.md), [bảo mật](docs/security.md), [tích hợp emulator](docs/emulator-integration.md), [kế hoạch](plan.md), [quy tắc agent](AGENTS.md), [kết nối Antigravity](docs/antigravity-agent-access.md).

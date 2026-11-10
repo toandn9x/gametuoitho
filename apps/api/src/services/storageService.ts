@@ -1,7 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { AssetRepository } from '../repositories/assetRepository';
-import { StorageDriver } from '../storage/storage';
+import { StorageDriver, StoredObjectInfo } from '../storage/storage';
 
 export interface StorageAnalysisResult {
   totalDiskBytes: number;
@@ -50,35 +48,12 @@ export interface CleanupStorageResult {
 export class StorageService {
   constructor(
     private assetRepo: AssetRepository,
-    private storage: StorageDriver,
-    private uploadsDir: string
+    private storage: StorageDriver
   ) {}
 
-  private scanDiskFiles(
-    dir: string,
-    baseDir: string = dir
-  ): { key: string; fullPath: string; size: number; mtimeMs: number }[] {
-    const results: { key: string; fullPath: string; size: number; mtimeMs: number }[] = [];
-    if (!fs.existsSync(dir)) return results;
-
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        results.push(...this.scanDiskFiles(fullPath, baseDir));
-      } else if (entry.isFile()) {
-        const stats = fs.statSync(fullPath);
-        // Normalize key with forward slashes
-        const relativeKey = path.relative(baseDir, fullPath).replace(/\\/g, '/');
-        results.push({
-          key: relativeKey,
-          fullPath,
-          size: stats.size,
-          mtimeMs: stats.mtimeMs,
-        });
-      }
-    }
-    return results;
+  /** Stored files, via the storage driver (local uploads folder or Cloudflare R2). */
+  private async listStoredFiles(): Promise<StoredObjectInfo[]> {
+    return this.storage.list ? this.storage.list() : [];
   }
 
   private formatBytes(bytes: number): string {
@@ -90,7 +65,7 @@ export class StorageService {
   }
 
   async analyzeStorage(): Promise<StorageAnalysisResult> {
-    const diskFiles = this.scanDiskFiles(this.uploadsDir);
+    const diskFiles = await this.listStoredFiles();
     const allDbKeys = await this.assetRepo.getAllStorageKeys();
     const dbAssets = await this.assetRepo.findAll(10000, 0);
 
@@ -177,7 +152,7 @@ export class StorageService {
     const safetyWindowMs = options.safetyWindowMs ?? 15 * 60 * 1000;
     const now = Date.now();
 
-    const diskFiles = this.scanDiskFiles(this.uploadsDir);
+    const diskFiles = await this.listStoredFiles();
     const allDbKeys = await this.assetRepo.getAllStorageKeys();
 
     // 1. Clean orphans
@@ -193,12 +168,10 @@ export class StorageService {
           }
 
           try {
-            if (fs.existsSync(file.fullPath)) {
-              fs.unlinkSync(file.fullPath);
-              freedBytes += file.size;
-              deletedFilesCount++;
-              deletedItems.push({ key: file.key, size: file.size });
-            }
+            await this.storage.delete(file.key);
+            freedBytes += file.size;
+            deletedFilesCount++;
+            deletedItems.push({ key: file.key, size: file.size });
           } catch (err: any) {
             console.warn(`[StorageService] Failed to delete orphan file ${file.key}:`, err);
           }
@@ -236,8 +209,8 @@ export class StorageService {
       }
     }
 
-    // Clean up empty directories in uploads
-    this.cleanEmptyDirs(this.uploadsDir);
+    // Clean up empty directories in uploads (local disk only)
+    await this.storage.pruneEmptyDirs?.();
 
     return {
       freedBytes,
@@ -247,23 +220,6 @@ export class StorageService {
       skippedItems,
       message: `Đã dọn dẹp ${deletedFilesCount} tệp tin, giải phóng ${this.formatBytes(freedBytes)} dung lượng lưu trữ!`,
     };
-  }
-
-  private cleanEmptyDirs(dir: string): void {
-    if (!fs.existsSync(dir)) return;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        const subDir = path.join(dir, entry.name);
-        this.cleanEmptyDirs(subDir);
-        try {
-          const remaining = fs.readdirSync(subDir);
-          if (remaining.length === 0) {
-            fs.rmdirSync(subDir);
-          }
-        } catch {}
-      }
-    }
   }
 
   async deleteAssetById(assetId: string): Promise<AssetDeleteResult> {

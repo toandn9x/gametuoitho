@@ -1,18 +1,68 @@
-name = "gametuoitho-api"
-main = "src/index.ts"
-compatibility_date = "2024-09-23"
+# Cloudflare Workers config: one Worker serves the web app + API on one domain.
+# Step-by-step guide: README.md#cloudflare
+#
+# Secrets are NEVER written in this file. From apps/api, set JWT and Tigris secrets with:
+#   npx wrangler@4 secret put JWT_SECRET --env=
+#   npx wrangler@4 secret put TIGRIS_ACCESS_KEY_ID --env=
+#   npx wrangler@4 secret put TIGRIS_SECRET_ACCESS_KEY --env=
+# For `wrangler dev` on your machine, copy .dev.vars.example to .dev.vars.
+
+name = "gametuoitho"
+main = "src/worker.ts"
+compatibility_date = "2025-09-15"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-JWT_SECRET = "super-secret-jwt-key-gametuoitho-prod"
-ENVIRONMENT = "production"
+# The built web app (apps/web/dist). Existing files are served directly by Cloudflare;
+# /admin pages always go through the Worker first so only ADMIN accounts receive them.
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+run_worker_first = ["/admin", "/admin/*"]
 
+[vars]
+ENVIRONMENT = "production"
+STORAGE_PROVIDER = "tigris"
+TIGRIS_ENDPOINT = "https://t3.storage.dev"
+TIGRIS_REGION = "auto"
+TIGRIS_BUCKET = "game"
+# Store TIGRIS_ACCESS_KEY_ID and TIGRIS_SECRET_ACCESS_KEY with wrangler secret put.
+# Create a PRIVATE bucket on Tigris. Do not enable public access.
+# "Sign in with Google": paste your OAuth Client ID (public, not a secret). Empty = Google button hidden.
+# How to create one: README.md#google-login.
+GOOGLE_CLIENT_ID = ""
+
+# Database (D1 = SQLite on Cloudflare). Replace database_id with the id printed by
+#   pnpm --filter @gametuoitho/api exec wrangler d1 create gametuoitho-d1
 [[d1_databases]]
 binding = "DB"
 database_name = "gametuoitho-d1"
-database_id = "gametuoitho-d1-prod-id"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "../../database/migrations"
 
-[[r2_buckets]]
+# Production uses Tigris over HTTPS, so enabling/paying for R2 is unnecessary.
+# Existing R2 deployments can set STORAGE_PROVIDER="r2" and restore their BUCKET binding.
+
+# Logs in the Cloudflare dashboard (Workers > gametuoitho > Logs).
+[observability]
+enabled = true
+
+# Offline development only: local D1 + local R2 simulator, no Tigris keys or cloud account required.
+# Resource bindings and vars do not inherit into named environments.
+[env.local.vars]
+ENVIRONMENT = "development"
+STORAGE_PROVIDER = "r2"
+GOOGLE_CLIENT_ID = ""
+# Intentionally unused in the offline R2 simulator.
+TIGRIS_ENDPOINT = ""
+TIGRIS_REGION = ""
+TIGRIS_BUCKET = ""
+
+[[env.local.d1_databases]]
+binding = "DB"
+database_name = "gametuoitho-d1"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "../../database/migrations"
+
+[[env.local.r2_buckets]]
 binding = "BUCKET"
-bucket_name = "gametuoitho-assets"
-preview_bucket_name = "gametuoitho-assets-preview"
+bucket_name = "gametuoitho-assets-local"

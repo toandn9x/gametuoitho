@@ -9,8 +9,18 @@
     "dev:api": "pnpm --filter @gametuoitho/api dev",
     "dev:web": "pnpm --filter @gametuoitho/web dev",
     "build": "pnpm --filter \"@gametuoitho/*\" build",
-    "test": "pnpm --filter \"@gametuoitho/*\" test",
-    "lint": "pnpm --filter \"@gametuoitho/*\" lint"
+    "build:web": "pnpm --filter @gametuoitho/web build",
+    "build:start": "pnpm build && pnpm start",
+    "restart": "pnpm build && pnpm start",
+    "test": "pnpm --filter \"@gametuoitho/*\" test && pnpm test:deploy",
+    "lint": "pnpm --filter \"@gametuoitho/*\" lint",
+    "cf:build": "node scripts/cf-build-web.mjs",
+    "cf:dev": "pnpm cf:build && pnpm --filter @gametuoitho/api cf:migrate:local && pnpm --filter @gametuoitho/api cf:seed:local && pnpm --filter @gametuoitho/api cf:dev",
+    "cf:migrate": "pnpm --filter @gametuoitho/api cf:migrate",
+    "cf:seed": "pnpm --filter @gametuoitho/api cf:seed",
+    "cf:deploy": "pnpm cf:build && pnpm --filter @gametuoitho/api cf:deploy",
+    "cf:deploy:token": "node scripts/cf-deploy-token.mjs",
+    "test:deploy": "node --test tests/deploy-token.test.mjs tests/deploy-bat.test.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

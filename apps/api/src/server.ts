@@ -8,6 +8,7 @@ import { SqliteDatabaseClient } from './repositories/db';
 import { LocalStorageDriver } from './storage/storage';
 import { runMigrations } from './repositories/migrationRunner';
 import { bootstrapAdmin } from './utils/bootstrapAdmin';
+import { ADMIN_PAGE_PATTERN, decideAdminPageAccess, FORBIDDEN_FALLBACK_HTML } from './middleware/adminPages';
 
 // Defensive error logging for unexpected process events (R06-fix01)
 process.on('unhandledRejection', (reason, promise) => {
@@ -109,7 +110,23 @@ if (isProduction) {
 }
 
 // 4. Create App and Attach Static Handlers
-const app = createApp(dbClient, storageDriver, UPLOADS_DIR);
+const app = createApp(dbClient, storageDriver);
+
+// Admin pages are static HTML, so they must be gated here before static serving: only ADMIN
+// accounts receive the admin UI (same rule as the Cloudflare Worker, see middleware/adminPages.ts).
+app.use('*', async (c, next) => {
+  if (!ADMIN_PAGE_PATTERN.test(c.req.path)) return next();
+  c.header('Cache-Control', 'no-store');
+
+  const decision = decideAdminPageAccess(c);
+  if (decision.kind === 'allow') return next();
+  if (decision.kind === 'login') return c.redirect(decision.location, 302);
+
+  // Signed in, but not an administrator.
+  const forbiddenPage = path.join(WEB_DIST_DIR, '403', 'index.html');
+  const html = fs.existsSync(forbiddenPage) ? fs.readFileSync(forbiddenPage, 'utf-8') : FORBIDDEN_FALLBACK_HTML;
+  return c.html(html, 403);
+});
 
 // Static Web Frontend Serving
 if (fs.existsSync(WEB_DIST_DIR)) {

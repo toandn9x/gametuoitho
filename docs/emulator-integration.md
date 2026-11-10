@@ -1,4 +1,4 @@
-# Tài liệu Tích hợp Web Emulator (Emulator Integration Report)
+# Tham chiếu tích hợp Web Emulator
 
 > **Trạng thái: CHƯA NGHIỆM THU.** Ngày 09/11/2026, người dùng yêu cầu tiếp tục sửa hệ thống và giữ emulator ở trạng thái chưa nghiệm thu. Nội dung khảo sát, license và khả năng tích hợp dưới đây cần được đối chiếu với upstream và bằng chứng thực tế trước khi dùng để kết luận. Chưa có đủ kết quả game/version/hash/browser/device theo gate Phase 0.
 
@@ -96,24 +96,14 @@ export interface GameEmulatorInstance {
 
 ---
 
-## 5. Ma trận tương thích chờ xác minh
-
-Các tên game dưới đây là danh sách dự kiến từ báo cáo ban đầu. Chưa có bằng chứng đủ để giữ các kết luận hiệu năng “hoàn hảo/mượt mà” trước đây; không dùng chúng để nghiệm thu.
-
-| Game dự kiến | JAR version/hash | Emulator revision | Browser/device | Khởi chạy, đồ họa, âm thanh, phím, RMS | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Ninja School | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Diamond Rush | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Bounce Tales | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Avatar | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Gomoku / Cờ Caro | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Space Impact | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
-| Asphalt 3 / game 3D | Chưa ghi nhận | Chưa ghi nhận | Chưa ghi nhận | Chưa có bằng chứng | CHƯA XÁC MINH |
+## 5. Tiêu chí tương thích
 
 Phase 0 cần ít nhất 10 game đại diện được phép dùng để kiểm thử, cùng kết quả và bằng chứng thực tế. JAR fixture hoặc archive chỉ có manifest không phải game chạy được. Không thực thi JAR trên server; kiểm thử chạy game thuộc trình duyệt/client. Hiện tiếp tục sửa hệ thống, chưa chuyển trạng thái emulator sang đạt.
 
 ---
 
-## 6. Hướng dẫn Triển khai & Yêu cầu HTTP Server
+## 6. Yêu cầu HTTP Server
+
+Setup và deploy website nằm trong [README](../README.md). Phần dưới chỉ mô tả yêu cầu của emulator.
 - CheerpJ yêu cầu máy chủ phân phối HTTP hỗ trợ tiêu đề `Range` (`Accept-Ranges: bytes` & `206 Partial Content`).
 - Cloudflare Pages, Cloudflare Workers, Cloudflare R2 và local server (`serve`, `hono/node-server`, `vite`) đều đáp ứng trọn vẹn yêu cầu này.

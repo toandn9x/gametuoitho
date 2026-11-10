@@ -31,9 +31,9 @@ flowchart TB
         UPLOAD[File Upload & Checksum Service]
     end
 
-    subgraph Storage["Cloudflare Infrastructure"]
+    subgraph Storage["Data and Asset Storage"]
         D1[(Cloudflare D1 / SQLite Database)]
-        R2[(Cloudflare R2 Object Storage)]
+        R2[(Tigris private / R2 / Local Storage)]
         CDN[Cloudflare CDN with Range Headers]
     end
 
@@ -66,3 +66,13 @@ flowchart TB
   Không bao giờ truyền Auth Token hay Admin Session Cookie vào context iframe.
   > [!NOTE]
   > **Giới hạn bảo mật (F3 - Người dùng đã tạm hoãn):** Trên thực tế, do emulator hiện chạy **cùng origin** với website chính, sự kết hợp giữa `allow-scripts` và `allow-same-origin` không thể cô lập hoàn toàn `localStorage`, IndexedDB hoặc cookie của site chính. Đây là hạn chế đã được ghi nhận trong Phase 0; việc tách sang origin/domain riêng biệt được hoãn lại theo lựa chọn của người dùng. Không coi cấu hình hiện tại là đã hoàn toàn an toàn về mặt cô lập origin.
+
+## 4. Storage driver
+
+Node local dùng SQLite và `LocalStorageDriver`; Worker production dùng D1 và `TigrisStorageDriver`. `storage/factory.ts` hỗ trợ Tigris và adapter R2 cho deployment có sẵn. Cấu hình và thao tác triển khai nằm trong [README](../README.md#cloudflare).
+
+Tigris dùng HTTPS, SigV4 qua `aws4fetch`, path-style `/{bucket}/{key}` và region `auto`. PUT/GET giữ nguyên bytes và Content-Type; DELETE chỉ thành công khi dịch vụ xác nhận. LIST dùng ListObjectsV2 với `encoding-type=url`, đọc hết các trang và giữ continuation token dạng chuỗi.
+
+Parser kiểm tra XML, cấm DTD/entity, kiểm tra key/size/date và từ chối token thiếu/lặp. Không coi response lỗi là storage trống để dọn file. Request có timeout 15 giây, không tự retry ghi/xóa, dùng `redirect: manual` và từ chối 3xx để không chuyển credentials sang nơi khác. Workers không hỗ trợ `redirect: error`.
+
+URL asset luôn qua `/api/v1/assets/raw/{encoded-key}`; API kiểm tra metadata/quyền trong database trước khi đọc object. Không đưa key storage về browser hoặc lưu binary/Base64 vào database. Thay provider không tự chuyển object và metadata.

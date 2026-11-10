@@ -1,5 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
+// Bundled into the code (no disk access), so the crawler works on Node and on Cloudflare Workers.
+import sourceCatalogJson from '../../../../database/gametuoitho_cc_catalog.json';
 import { GameRepository } from '../repositories/gameRepository';
 import { CategoryRepository } from '../repositories/categoryRepository';
 import { AssetRepository } from '../repositories/assetRepository';
@@ -45,6 +46,9 @@ export function computeStableSourceKey(id: string, filename: string): string {
   return `${id}_${hex}`;
 }
 
+// Parsed once per process / Worker isolate (services are rebuilt on every request).
+let sharedCatalog: SourceGameItem[] | null = null;
+
 export class CrawlerService {
   private cachedCatalog: SourceGameItem[] | null = null;
 
@@ -57,32 +61,14 @@ export class CrawlerService {
 
   private loadCatalog(): SourceGameItem[] {
     if (this.cachedCatalog) return this.cachedCatalog;
-
-    const possiblePaths = [
-      path.resolve(process.cwd(), 'database/gametuoitho_cc_catalog.json'),
-      path.resolve(process.cwd(), '../../database/gametuoitho_cc_catalog.json'),
-      path.resolve(__dirname, '../../../database/gametuoitho_cc_catalog.json'),
-      path.resolve(__dirname, '../../../../database/gametuoitho_cc_catalog.json'),
-    ];
-
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        try {
-          const raw = fs.readFileSync(p, 'utf-8');
-          const parsed = JSON.parse(raw) as SourceGameItem[];
-          this.cachedCatalog = parsed.map((item) => ({
-            ...item,
-            source_key: item.source_key || computeStableSourceKey(item.id, item.filename),
-          }));
-          return this.cachedCatalog!;
-        } catch (err) {
-          console.error('[CrawlerService] Error parsing catalog file:', err);
-        }
-      }
+    if (!sharedCatalog) {
+      sharedCatalog = (sourceCatalogJson as unknown as SourceGameItem[]).map((item) => ({
+        ...item,
+        source_key: item.source_key || computeStableSourceKey(item.id, item.filename),
+      }));
     }
-
-    console.warn('[CrawlerService] Catalog file not found in any path');
-    return [];
+    this.cachedCatalog = sharedCatalog;
+    return this.cachedCatalog;
   }
 
   async searchSourceGames(params: {

@@ -10,9 +10,11 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
 ---
 
 <!doctype html>
-<html lang="vi" class="dark">
+<html lang="vi" class="dark" data-admin-pending>
   <head>
     <meta charset="UTF-8" />
+    <!-- Hidden until the browser confirms an ADMIN session (second layer; the server gates /admin first). -->
+    <style is:inline>html[data-admin-pending] body { visibility: hidden; }</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
@@ -85,6 +87,18 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
           </a>
 
           <a
+            href="/admin/users"
+            class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeNav === 'users'
+                ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-arcade-800'
+            }`}
+          >
+            <span>👥</span>
+            <span>Quản Lý Người Dùng</span>
+          </a>
+
+          <a
             href="/admin/user-imports"
             class={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeNav === 'imports'
@@ -93,7 +107,7 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
             }`}
           >
             <span>📥</span>
-            <span>Game User Import</span>
+            <span>Game Người Dùng Tải Lên</span>
           </a>
 
           <a
@@ -178,6 +192,22 @@ const { title = 'Quản Trị Hệ Thống --- Game Tuổi Thơ', activeNav = 'd
         <slot />
       </main>
     </div>
+    <script>
+      import { getCurrentUser } from '../lib/api';
+
+      // Only an ADMIN account may see the admin UI. A 401 is redirected to /login by apiRequest.
+      getCurrentUser().then((res) => {
+        if (res.success && res.data?.role === 'ADMIN') {
+          document.documentElement.removeAttribute('data-admin-pending');
+        } else if (res.success) {
+          window.location.replace('/403/');
+        } else if (res.error?.code !== 'UNAUTHORIZED') {
+          // API unreachable / server error: show the page so the errors are visible.
+          document.documentElement.removeAttribute('data-admin-pending');
+        }
+      });
+    </script>
+
     <script>
       const sidebar = document.getElementById('admin-sidebar');
       const toggle = document.getElementById('admin-menu-toggle');

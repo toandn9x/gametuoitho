@@ -23,6 +23,74 @@ export function removeAuthToken(): void {
   document.cookie = 'token=; path=/; max-age=0';
 }
 
+// Pages that cannot work without a valid session.
+const PROTECTED_PAGE = /^\/(?:admin|me)(?:\/|$)|^\/play\/custom(?:\/|$)/;
+// Kept on window: each Astro island may bundle its own copy of this module, and only the first
+// 401 on a page should decide where to go (otherwise a later "no token" call overrides "expired").
+const UNAUTHORIZED_FLAG = '__gttUnauthorizedHandled';
+
+/**
+ * Called when the API answers 401. A stale token (expired, revoked, secret rotated) is dropped.
+ * On protected pages the user is sent to /login with the reason and the page to return to;
+ * on public pages a notice is shown instead so browsing/playing is not interrupted.
+ */
+export function handleUnauthorized(hadToken: boolean): void {
+  if (typeof window === 'undefined' || (window as any)[UNAUTHORIZED_FLAG]) return;
+  if (hadToken) removeAuthToken();
+
+  const { pathname, search } = window.location;
+  if (/^\/(?:login|register)(?:\/|$)/.test(pathname)) return;
+
+  if (PROTECTED_PAGE.test(pathname)) {
+    (window as any)[UNAUTHORIZED_FLAG] = true;
+    const params = new URLSearchParams({ reason: hadToken ? 'expired' : 'login', next: pathname + search });
+    window.location.replace(`/login?${params.toString()}`);
+  } else if (hadToken) {
+    (window as any)[UNAUTHORIZED_FLAG] = true;
+    showSessionExpiredNotice(pathname + search);
+  }
+}
+
+function showSessionExpiredNotice(next: string): void {
+  if (document.getElementById('session-expired-notice')) return;
+
+  const box = document.createElement('div');
+  box.id = 'session-expired-notice';
+  box.setAttribute('role', 'alert');
+  box.className =
+    'fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md flex items-center gap-3 px-4 py-3 rounded-2xl border border-neon-pink/50 bg-arcade-900/95 backdrop-blur text-sm text-slate-200 shadow-neon-pink';
+
+  const icon = document.createElement('span');
+  icon.textContent = '🔒';
+  icon.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('span');
+  text.className = 'flex-1 min-w-0';
+  text.textContent = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+
+  const login = document.createElement('a');
+  login.href = `/login?${new URLSearchParams({ reason: 'expired', next }).toString()}`;
+  login.className = 'flex-shrink-0 px-3 py-1.5 rounded-lg bg-neon-pink text-white text-xs font-bold hover:bg-neon-cyan hover:text-arcade-950 transition-colors';
+  login.textContent = 'Đăng nhập';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'flex-shrink-0 w-7 h-7 rounded-full text-slate-400 hover:text-white hover:bg-arcade-800';
+  close.setAttribute('aria-label', 'Đóng thông báo');
+  close.textContent = '✕';
+  close.addEventListener('click', () => box.remove());
+
+  box.append(icon, text, login, close);
+  document.body.appendChild(box);
+}
+
+/** Only same-site paths are allowed as a post-login destination (no open redirects). */
+export function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return null;
+  if (/^\/(?:login|register)(?:\/|$)/.test(next)) return null;
+  return next;
+}
+
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
@@ -45,6 +113,10 @@ export async function apiRequest<T = any>(
       ...options,
       headers,
     });
+
+    if (res.status === 401) {
+      handleUnauthorized(!!token);
+    }
 
     const text = await res.text();
     let data: any = null;
@@ -128,6 +200,24 @@ export async function registerUser(data: { username: string; email: string; pass
   const res = await apiRequest<{ user: User; token: string }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+
+  if (res.success && res.data?.token) {
+    setAuthToken(res.data.token);
+  }
+  return res;
+}
+
+/** Public sign-in options (e.g. whether "Sign in with Google" is enabled on this server). */
+export async function getAuthConfig() {
+  return apiRequest<{ googleClientId: string | null }>('/auth/config');
+}
+
+/** Exchange a Google ID token (from Google Identity Services) for a session on this site. */
+export async function loginWithGoogle(credential: string) {
+  const res = await apiRequest<{ user: User; token: string }>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
   });
 
   if (res.success && res.data?.token) {

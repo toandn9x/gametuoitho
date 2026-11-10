@@ -13,6 +13,8 @@ export interface User {
   updated_at: string;
 }
 
+export type AdminUser = Pick<User, 'id' | 'username' | 'email' | 'role' | 'status' | 'created_at' | 'updated_at'>;
+
 export type CategoryStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface Category {

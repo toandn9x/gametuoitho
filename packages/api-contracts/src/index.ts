@@ -31,6 +31,21 @@ export const LoginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof LoginSchema>;
 
+// Admin account management (separate from private game imports)
+export const AdminUserQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(1000000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(100).optional(),
+  role: z.enum(['USER', 'ADMIN']).optional(),
+  status: z.enum(['ACTIVE', 'BLOCKED']).optional(),
+});
+export type AdminUserQueryInput = z.infer<typeof AdminUserQuerySchema>;
+
+export const UpdateUserStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'BLOCKED']),
+}).strict();
+export type UpdateUserStatusInput = z.infer<typeof UpdateUserStatusSchema>;
+
 // Game Query Schema
 export const GameQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),

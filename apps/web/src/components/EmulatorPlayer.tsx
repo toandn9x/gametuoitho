@@ -114,12 +114,24 @@ export default function EmulatorPlayer({
     return () => window.removeEventListener('message', handleMsg);
   }, [directBytes, effectiveGameId, effectiveGameName, game?.slug, activeVersion?.id]);
 
+  // Follow the browser's real fullscreen state, so leaving fullscreen with Esc, F11 or the
+  // system back gesture restores the normal layout (toolbar, key guide) instead of getting stuck.
+  // fullscreenchange is fired at the element entering/leaving fullscreen.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === el);
+    el.addEventListener('fullscreenchange', syncFullscreen);
+    return () => el.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
+
   const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
     }
   };
 

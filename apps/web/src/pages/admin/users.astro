@@ -1,0 +1,19 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminUsersView from '../../components/AdminUsersView';
+---
+
+<AdminLayout title="Quản Lý Người Dùng" activeNav="users">
+  <div class="space-y-6">
+    <div class="border-b border-arcade-800 pb-4">
+      <h2 class="text-xl sm:text-2xl font-black text-slate-100 flex items-center gap-2">
+        <span>👥</span>
+        <span>Quản Lý Người Dùng</span>
+      </h2>
+      <p class="text-xs text-slate-400 mt-1">
+        Tra cứu tài khoản, xem vai trò và quản lý trạng thái hoạt động của thành viên.
+      </p>
+    </div>
+    <AdminUsersView client:load />
+  </div>
+</AdminLayout>

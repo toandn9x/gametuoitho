@@ -1016,7 +1016,6 @@ game-tuoi-tho/
 │   ├── architecture.md
 │   ├── database.md
 │   ├── emulator-integration.md
-│   ├── deployment.md
 │   └── security.md
 │
 ├── scripts/
