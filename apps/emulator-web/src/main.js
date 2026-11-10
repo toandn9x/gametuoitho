@@ -1,6 +1,7 @@
 import { LibMedia } from "../libmedia/libmedia.js";
-import { LibMidi, createUnlockingAudioContext } from "../libmidi/libmidi.js";
-import { codeMap, KeyRepeatManager } from "./key.js";
+import { LibMidi, createUnlockingAudioContext, resumeAudioContext } from "../libmidi/libmidi.js";
+import { codeMap, keySymbol, KeyRepeatManager } from "./key.js";
+import { bindCanvasPointerEvents } from "./pointer.js";
 import { EventQueue } from "./eventqueue.js";
 import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js";
 import { KeyMapper } from "./keyMapper.js";
@@ -31,6 +32,10 @@ const keyRepeatManager = new KeyRepeatManager();
 const keyMapper = new KeyMapper();
 
 window.evtQueue = evtQueue;
+
+// Same-origin parent controls call this directly during touchstart/touchend.
+// Parent gestures do not bubble into this document's audio-unlock listeners.
+window.unlockGameAudio = () => resumeAudioContext(window.libmidi?.context);
 
 function autoscale() {
     if (!scaleSet) return;
@@ -66,11 +71,8 @@ function autoscale() {
 }
 
 function setListeners() {
-    let mouseDown = false;
-    let noMouse = false;
-
     setKbdHandler((isDown, key) => {
-        const symbol = key.startsWith('Digit') ? key.substring(5) : '\x00';
+        const symbol = keySymbol(key);
         keyRepeatManager.post(isDown, key, {symbol, ctrlKey: false, shiftKey: false});
     });
 
@@ -90,7 +92,7 @@ function setListeners() {
 
         if (codeMap[effectiveKey]) {
             keyRepeatManager.post(isDown, effectiveKey, {
-                symbol: e.key.length == 1 ? e.key.charCodeAt(0) : '\x00',
+                symbol: keySymbol(effectiveKey, e.key),
                 ctrlKey: e.ctrlKey,
                 shiftKey: e.shiftKey
             })
@@ -142,26 +144,13 @@ function setListeners() {
         if (type !== 'KEY_EVENT' || typeof pressed !== 'boolean' || typeof code !== 'string') return;
 
         // Code validation: code must exist in codeMap
-        if (!codeMap[code]) return;
+        if (!Object.hasOwn(codeMap, code)) return;
 
-        // Resolve custom mapping if applicable
-        let effectiveKey = code;
-        const action = keyMapper.getActionForKey(code);
-        if (action) {
-            const canonicalKeys = keyMapper.getDefaultKeysForAction(action);
-            if (canonicalKeys.length > 0) {
-                effectiveKey = canonicalKeys[0];
-            }
-        }
-
-        if (codeMap[effectiveKey]) {
-            const symbol = effectiveKey.startsWith('Digit') ? effectiveKey.substring(5) : '\x00';
-            keyRepeatManager.post(pressed, effectiveKey, {
-                symbol,
-                ctrlKey: false,
-                shiftKey: false
-            });
-        }
+        // The parent keypad sends canonical phone keys. Custom PC keyboard
+        // mappings must not turn its number/soft keys into a different action.
+        keyRepeatManager.post(pressed, code, {
+            symbol: keySymbol(code), ctrlKey: false, shiftKey: false
+        });
     });
 
     keyRepeatManager.register((kind, key, args) => {
@@ -180,97 +169,10 @@ function setListeners() {
         }
     });
 
-    display.addEventListener('mousedown', async e => {
-        display.focus();
-        if (noMouse) return;
-
-        evtQueue.queueEvent({
-            kind: 'pointerpressed',
-            x: e.offsetX / display.currentCSSZoom | 0,
-            y: e.offsetY / display.currentCSSZoom | 0,
-        });
-
-        mouseDown = true;
-
-        e.preventDefault();
-    });
-
-    display.addEventListener('mousemove', async e => {
-        if (noMouse) return;
-        if (!mouseDown) return;
-
-        evtQueue.queueEvent({
-            kind: 'pointerdragged',
-            x: e.offsetX / display.currentCSSZoom | 0,
-            y: e.offsetY / display.currentCSSZoom | 0,
-        });
-
-        e.preventDefault();
-    });
-
-    document.addEventListener('mouseup', async e => {
-        if (noMouse) return;
-        if (!mouseDown) return;
-
-        mouseDown = false;
-
-        evtQueue.queueEvent({
-            kind: 'pointerreleased',
-            x: (e.pageX - display.offsetLeft) / display.currentCSSZoom | 0,
-            y: (e.pageY - display.offsetTop) / display.currentCSSZoom | 0,
-        });
-
-        e.preventDefault();
-    });
-
-
-    display.addEventListener('touchstart', async e => {
-        display.focus();
-        noMouse = true;
-
-        const rect = display.getBoundingClientRect();
-        const touch = e.changedTouches[0];
-
-        evtQueue.queueEvent({
-            kind: 'pointerpressed',
-            x: (touch.clientX - rect.left) / display.currentCSSZoom | 0,
-            y: (touch.clientY - rect.top) / display.currentCSSZoom | 0,
-        });
-
-        e.preventDefault();
-    }, {passive: false});
-
-    display.addEventListener('touchmove', async e => {
-        noMouse = true;
-
-        const rect = display.getBoundingClientRect();
-        const touch = e.changedTouches[0];
-
-        evtQueue.queueEvent({
-            kind: 'pointerdragged',
-            x: (touch.clientX - rect.left) / display.currentCSSZoom | 0,
-            y: (touch.clientY - rect.top) / display.currentCSSZoom | 0,
-        });
-
-        e.preventDefault();
-    }, {passive: false});
-
-    display.addEventListener('touchend', async e => {
-        noMouse = true;
-
-        const rect = display.getBoundingClientRect();
-        const touch = e.changedTouches[0];
-
-        evtQueue.queueEvent({
-            kind: 'pointerreleased',
-            x: (touch.clientX - rect.left) / display.currentCSSZoom | 0,
-            y: (touch.clientY - rect.top) / display.currentCSSZoom | 0,
-        });
-
-        e.preventDefault();
-    });
+    bindCanvasPointerEvents(display, event => evtQueue.queueEvent(event));
 
     document.addEventListener('mousedown', e => {
+        if (window.parent !== window) return;
         if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A')) return;
         if (display && display.style.display !== 'none' && scaleSet) {
             console.log('refocus');
@@ -279,6 +181,9 @@ function setListeners() {
     });
 
     display.addEventListener('blur', e => {
+        // Embedded controls live in the parent document. Refocusing here can
+        // cancel an in-progress iOS touch and move the outer page unexpectedly.
+        if (window.parent !== window) return;
         if (document.activeElement && (document.activeElement.tagName === 'BUTTON' || document.activeElement.tagName === 'A')) {
             return;
         }
@@ -361,6 +266,16 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// CheerpJ can reject with an object that has no toString, so String(error) throws. Inside a .catch
+// that used to break the error screen too: the player stayed on the loading text and sent no report.
+function errorText(error) {
+    try {
+        return error?.stack || String(error);
+    } catch {
+        return Object.prototype.toString.call(error);
+    }
+}
+
 let errorReported = false;
 function showError(message, canRetry = true, details = {}) {
     // A Java exception can be swallowed by FreeJ2ME without rejecting main().
@@ -389,11 +304,11 @@ function showError(message, canRetry = true, details = {}) {
     loadingEl.innerHTML = `
         <div class="error-container" style="text-align: center; padding: 20px; max-width: 340px; margin: 0 auto; color: #ff0055;">
             <div style="font-size: 36px; margin-bottom: 12px;">⚠️</div>
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #ff0055; font-family: 'Press Start 2P', monospace;">LỖI TẢI GAME</div>
-            <div style="font-size: 16px; margin-bottom: 20px; color: #e2e8f0; font-family: 'VT323', monospace;">${escapeHtml(message)}</div>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #ff0055; font-family: var(--ui-font);">LỖI TẢI GAME</div>
+            <div style="font-size: 16px; margin-bottom: 20px; color: #e2e8f0; font-family: var(--ui-font);">${escapeHtml(message)}</div>
             <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                ${canRetry ? `<button id="btn-retry" style="background: #00ffff; color: #0a0a0f; border: none; padding: 8px 18px; font-family: 'VT323', monospace; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 6px;">Thử lại</button>` : ''}
-                <button id="btn-back" style="background: #252535; color: #e2e8f0; border: 1px solid #4a4a60; padding: 8px 18px; font-family: 'VT323', monospace; font-size: 20px; cursor: pointer; border-radius: 6px;">Quay lại</button>
+                ${canRetry ? `<button id="btn-retry" style="background: #00ffff; color: #0a0a0f; border: none; padding: 8px 18px; font-family: var(--ui-font); font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 6px;">Thử lại</button>` : ''}
+                <button id="btn-back" style="background: #252535; color: #e2e8f0; border: 1px solid #4a4a60; padding: 8px 18px; font-family: var(--ui-font); font-size: 20px; cursor: pointer; border-radius: 6px;">Quay lại</button>
             </div>
         </div>
     `;
@@ -412,7 +327,7 @@ function showError(message, canRetry = true, details = {}) {
 }
 
 async function init() {
-    document.querySelector("#loading .loading-text").textContent = "Loading Sandbox";
+    document.querySelector("#loading .loading-text").textContent = "Đang chuẩn bị trình giả lập…";
 
     display = document.getElementById('display');
     screenCtx = display.getContext('2d');
@@ -420,6 +335,9 @@ async function init() {
     setListeners();
 
     window.libmidi = new LibMidi(createUnlockingAudioContext());
+    if (window.libmidi.context?.state === 'suspended') {
+        document.querySelector("#loading .loading-text").textContent = 'Chạm màn hình hoặc phím Nokia để khởi động…';
+    }
     await window.libmidi.init();
     window.libmidi.midiPlayer.addEventListener('end-of-media', e => {
         window.evtQueue.queueEvent({kind: 'player-eom', player: e.target});
@@ -498,7 +416,7 @@ async function init() {
         }
     });
 
-    document.querySelector("#loading .loading-text").textContent = "Loading...";
+    document.querySelector("#loading .loading-text").textContent = "Đang khởi tạo trình giả lập…";
 
     const lib = await cheerpjRunLibrary(cheerpjWebRoot+"/freej2me-web.jar");
 
@@ -581,7 +499,7 @@ async function init() {
         console.error('[FreeJ2ME] Error running JAR:', e);
         showError("Trình giả lập gặp lỗi khi chạy game.", true, {
             errorType: 'CRASH',
-            stack: [e?.stack || String(e), window.emulatorDiagnostics?.snapshot()].filter(Boolean).join('\n'),
+            stack: [errorText(e), window.emulatorDiagnostics?.snapshot()].filter(Boolean).join('\n'),
         });
     });
 }
@@ -590,7 +508,9 @@ window.emulatorDiagnostics?.onFatal(({ message, stack }) => {
     showError(message, true, { errorType: 'CRASH', stack });
 });
 init().catch(error => {
+    // The console history holds the actual cause (e.g. CheerpJ's network error), so send it too.
     showError('Không thể khởi tạo trình giả lập. Vui lòng thử tải lại.', true, {
-        errorType: 'EMULATOR_ERROR', stack: error?.stack || String(error),
+        errorType: 'EMULATOR_ERROR',
+        stack: [errorText(error), window.emulatorDiagnostics?.snapshot()].filter(Boolean).join('\n'),
     });
 });

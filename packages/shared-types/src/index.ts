@@ -123,6 +123,15 @@ export interface UserGameActivity {
   play_count: number;
 }
 
+export interface PlayHistoryItem extends UserGameActivity {
+  game_name: string | null;
+  game_slug: string | null;
+  custom_name: string | null;
+  developer: string | null;
+  category_name: string | null;
+  cover_url: string | null;
+}
+
 export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface UploadJob {

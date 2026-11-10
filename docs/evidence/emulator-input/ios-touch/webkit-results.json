@@ -1,0 +1,941 @@
+{
+  "target": "http://127.0.0.1:4398/play/ninja-school-2",
+  "checks": [
+    {
+      "name": "actual emulator JS input handler polls in WebKit fixture",
+      "pass": true
+    },
+    {
+      "name": "trusted WebKit touch sends soft-key press/release",
+      "pass": true
+    },
+    {
+      "name": "F1: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "F1: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "F1: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "F2: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "F2: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "F2: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "Enter: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "Enter: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "Enter: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "ArrowUp: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowUp: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "ArrowUp: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "ArrowDown: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowDown: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "ArrowDown: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "ArrowRight: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowRight: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "ArrowRight: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "Digit5: trusted touch sends press/release to iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit5: touch and pointer do not duplicate key events",
+      "pass": true
+    },
+    {
+      "name": "Digit5: emulator queue consumer polls press/release",
+      "pass": true
+    },
+    {
+      "name": "focus hand-off does not release a live touch contact",
+      "pass": true
+    },
+    {
+      "name": "touchend after focus hand-off releases the key once",
+      "pass": true
+    },
+    {
+      "name": "no uncaught WebKit exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "audioFallback": true,
+  "blockedMutations": [],
+  "engine": "26.6",
+  "scope": "Real WebKit, iPhone settings, actual built player + actual emulator JS input handler. The Java event consumer and game canvas are a fixture; no JVM/JAR execution. Not a physical iPhone/iOS 27 test.",
+  "input": {
+    "messages": [
+      {
+        "code": "F2",
+        "pressed": true
+      },
+      {
+        "code": "F2",
+        "pressed": false
+      },
+      {
+        "code": "F1",
+        "pressed": true
+      },
+      {
+        "code": "F1",
+        "pressed": false
+      },
+      {
+        "code": "F1",
+        "pressed": true
+      },
+      {
+        "code": "F1",
+        "pressed": false
+      },
+      {
+        "code": "F2",
+        "pressed": true
+      },
+      {
+        "code": "F2",
+        "pressed": false
+      },
+      {
+        "code": "Enter",
+        "pressed": true
+      },
+      {
+        "code": "Enter",
+        "pressed": false
+      },
+      {
+        "code": "ArrowUp",
+        "pressed": true
+      },
+      {
+        "code": "ArrowUp",
+        "pressed": false
+      },
+      {
+        "code": "ArrowDown",
+        "pressed": true
+      },
+      {
+        "code": "ArrowDown",
+        "pressed": false
+      },
+      {
+        "code": "ArrowLeft",
+        "pressed": true
+      },
+      {
+        "code": "ArrowLeft",
+        "pressed": false
+      },
+      {
+        "code": "ArrowRight",
+        "pressed": true
+      },
+      {
+        "code": "ArrowRight",
+        "pressed": false
+      },
+      {
+        "code": "Digit5",
+        "pressed": true
+      },
+      {
+        "code": "Digit5",
+        "pressed": false
+      },
+      {
+        "code": "Enter",
+        "pressed": true
+      },
+      {
+        "code": "Enter",
+        "pressed": false
+      }
+    ],
+    "queued": [
+      {
+        "kind": "keydown",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 2245
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 2247
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 3472
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 3473
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 6365
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 6367
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 6881
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 6882
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 7388
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 7390
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          38,
+          0,
+          false,
+          false
+        ],
+        "at": 7868
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          38,
+          0,
+          false,
+          false
+        ],
+        "at": 7869
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          40,
+          0,
+          false,
+          false
+        ],
+        "at": 8371
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          40,
+          0,
+          false,
+          false
+        ],
+        "at": 8372
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          37,
+          0,
+          false,
+          false
+        ],
+        "at": 8909
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          37,
+          0,
+          false,
+          false
+        ],
+        "at": 8910
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          39,
+          0,
+          false,
+          false
+        ],
+        "at": 9414
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          39,
+          0,
+          false,
+          false
+        ],
+        "at": 9415
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          53,
+          53,
+          false,
+          false
+        ],
+        "at": 9924
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          53,
+          53,
+          false,
+          false
+        ],
+        "at": 9925
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 10296
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 10379
+      }
+    ],
+    "consumed": [
+      {
+        "kind": "keyup",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 2247
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 3472
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 3473
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 6365
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          112,
+          0,
+          false,
+          false
+        ],
+        "at": 6367
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 6881
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          113,
+          0,
+          false,
+          false
+        ],
+        "at": 6882
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 7389
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 7390
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          38,
+          0,
+          false,
+          false
+        ],
+        "at": 7868
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          38,
+          0,
+          false,
+          false
+        ],
+        "at": 7869
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          40,
+          0,
+          false,
+          false
+        ],
+        "at": 8371
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          40,
+          0,
+          false,
+          false
+        ],
+        "at": 8372
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          37,
+          0,
+          false,
+          false
+        ],
+        "at": 8909
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          37,
+          0,
+          false,
+          false
+        ],
+        "at": 8910
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          39,
+          0,
+          false,
+          false
+        ],
+        "at": 9414
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          39,
+          0,
+          false,
+          false
+        ],
+        "at": 9415
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          53,
+          53,
+          false,
+          false
+        ],
+        "at": 9925
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          53,
+          53,
+          false,
+          false
+        ],
+        "at": 9925
+      },
+      {
+        "kind": "keydown",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 10296
+      },
+      {
+        "kind": "keyup",
+        "args": [
+          13,
+          0,
+          false,
+          false
+        ],
+        "at": 10379
+      }
+    ]
+  },
+  "parentEvents": [
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 2558
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 2562
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 2565
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 2566
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 3786
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 3787
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 3788
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 3789
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 6676
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 6678
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 6684
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 6685
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 7199
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 7200
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 7202
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 7203
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 7696
+    },
+    {
+      "type": "touchstart",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 7697
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 7699
+    },
+    {
+      "type": "touchend",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 7699
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8181
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8183
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8185
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8187
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8690
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8691
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8692
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 8692
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9227
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9229
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9230
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9231
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9732
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9733
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9735
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 9736
+    },
+    {
+      "type": "pointerdown",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 10239
+    },
+    {
+      "type": "touchstart",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 10240
+    },
+    {
+      "type": "pointerup",
+      "pointerType": "touch",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 10241
+    },
+    {
+      "type": "touchend",
+      "target": "SPAN",
+      "active": "BODY",
+      "at": 10241
+    },
+    {
+      "type": "touchstart",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 10617
+    },
+    {
+      "type": "focus",
+      "target": "BODY",
+      "active": "BODY",
+      "at": 10617
+    },
+    {
+      "type": "blur",
+      "active": "BODY",
+      "at": 10617
+    },
+    {
+      "type": "touchend",
+      "target": "BUTTON",
+      "active": "BODY",
+      "at": 10701
+    }
+  ]
+}

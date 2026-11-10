@@ -61,6 +61,16 @@ export const codeMap = {
     'KeyZ': 90,
 };
 
+// Java KeyEvent takes a numeric UTF-16 char, not a JS string ("5" is not 53).
+export function keySymbol(code, key) {
+    if (typeof key === 'string' && key.length === 1) return key.charCodeAt(0);
+    if (/^(Digit|Numpad)[0-9]$/.test(code)) return code.charCodeAt(code.length - 1);
+    if (code === 'NumpadMultiply') return 42;
+    if (code === 'NumpadDivide') return 35;
+    if (code === 'Space') return 32;
+    return 0;
+}
+
 
 
 export class KeyRepeatManager {

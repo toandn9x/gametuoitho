@@ -1,11 +1,26 @@
 // helpers
 
+// Invoke resume() synchronously in the original user-gesture call stack.
+// A postMessage or a timer loses that activation on iOS/WebKit.
+export function resumeAudioContext(audioCtx) {
+    if (!audioCtx || audioCtx.state === 'closed') return Promise.resolve(false);
+    if (audioCtx.state === 'running') return Promise.resolve(true);
+    try {
+        return Promise.resolve(audioCtx.resume()).then(
+            () => audioCtx.state === 'running',
+            () => false
+        );
+    } catch {
+        return Promise.resolve(false);
+    }
+}
+
 export function unlockAudioContext(audioCtx) {
-    if (audioCtx.state !== 'suspended') return;
+    if (audioCtx.state === 'running' || audioCtx.state === 'closed') return;
     const b = document.body;
     const events = ['touchstart','touchend', 'mousedown','keydown'];
     events.forEach(e => b.addEventListener(e, unlock, false));
-    function unlock() { audioCtx.resume().then(clean); }
+    function unlock() { resumeAudioContext(audioCtx).then(unlocked => { if (unlocked) clean(); }); }
     function clean() { events.forEach(e => b.removeEventListener(e, unlock)); }
 }
 

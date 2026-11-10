@@ -6,7 +6,7 @@
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc --noEmit",
-    "test": "tsx ../../tests/api.test.ts && tsx ../../tests/google-auth.test.ts && tsx ../../tests/tigris-storage.test.ts && tsx ../../tests/crawler-duplicates.test.ts",
+    "test": "tsx ../../tests/api.test.ts && tsx ../../tests/google-auth.test.ts && tsx ../../tests/tigris-storage.test.ts && tsx ../../tests/crawler-duplicates.test.ts && tsx ../../tests/byte-range.test.ts && tsx ../../tests/recent-games.test.ts",
     "lint": "tsc --noEmit",
     "create-admin": "tsx src/cli/createAdmin.ts",
     "cf:dev": "npx --yes wrangler@4 dev --env local",

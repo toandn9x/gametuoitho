@@ -1,7 +1,7 @@
 import { Hono, Context } from 'hono';
 import { LibraryService } from '../services/libraryService';
 import { requireAuth } from '../middleware/auth';
-import { AddToLibrarySchema, AddImportToLibrarySchema, RecordActivitySchema } from '@gametuoitho/api-contracts';
+import { AddToLibrarySchema, AddImportToLibrarySchema, RecordActivitySchema, PlayHistoryQuerySchema } from '@gametuoitho/api-contracts';
 import { AppEnv } from '../types';
 
 export const userLibraryRoutes = (getService: (c: Context<AppEnv>) => LibraryService) => {
@@ -120,10 +120,19 @@ export const userLibraryRoutes = (getService: (c: Context<AppEnv>) => LibrarySer
   });
 
   // History / Activity
+  router.use('/history', async (c, next) => {
+    c.header('Cache-Control', 'private, no-store');
+    await next();
+  });
+
   router.get('/history', async (c) => {
+    const parsed = PlayHistoryQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ success: false, error: { message: 'Giới hạn phải từ 1 đến 50' } }, 400);
+    }
     const libraryService = getService(c);
     const user = c.get('user')!;
-    const history = await libraryService.getPlayHistory(user.id);
+    const history = await libraryService.getPlayHistory(user.id, parsed.data.limit);
     return c.json({ success: true, data: history });
   });
 

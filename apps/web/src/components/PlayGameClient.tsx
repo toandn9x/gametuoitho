@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Game, GameVersion } from '@gametuoitho/shared-types';
-import { getGameDetail, recordPlay } from '../lib/api';
+import { getGameDetail } from '../lib/api';
 import EmulatorPlayer from './EmulatorPlayer';
 
 interface PlayGameClientProps {
@@ -64,13 +64,6 @@ export default function PlayGameClient({ slug, initialGame, initialVersions }: P
       document.title = `Đang Chơi: ${game.name} --- Game Tuổi Thơ Web Player`;
     }
   }, [game?.name]);
-
-  // Record play event
-  useEffect(() => {
-    if (game?.id) {
-      recordPlay(game.id).catch(() => {});
-    }
-  }, [game?.id]);
 
   if (loading) {
     return (

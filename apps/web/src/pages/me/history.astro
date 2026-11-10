@@ -1,30 +1,20 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import RecentGames from '../../components/RecentGames';
 ---
 
-<Layout title="Lịch Sử Chơi Game --- Game Tuổi Thơ">
+<Layout title="Chơi gần đây --- Game Tuổi Thơ">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="border-b border-arcade-800 pb-6 mb-8">
-      <h1 class="text-3xl font-black text-slate-100 flex items-center gap-3">
+      <h1 class="text-2xl sm:text-3xl font-black text-slate-100 flex items-center gap-3">
         <span class="text-neon-cyan">🕒</span>
-        <span>Lịch Sử Chơi Game</span>
+        <span>Chơi gần đây</span>
       </h1>
       <p class="text-slate-400 text-sm mt-1">
-        Theo dõi những tựa game bạn vừa trải nghiệm gần đây
+        Tiếp tục những game bạn vừa chơi, mới nhất ở đầu danh sách.
       </p>
     </div>
 
-    <div id="history-container">
-      <div class="text-center py-20 bg-arcade-900 rounded-3xl border border-arcade-800">
-        <span class="text-5xl">🕹️</span>
-        <h3 class="text-lg font-bold text-slate-200 mt-4">Chưa có lịch sử chơi gần đây</h3>
-        <p class="text-xs text-slate-400 mt-1">
-          Mỗi khi bạn mở chơi bất kỳ game nào trên hệ thống, lịch sử sẽ được tự động ghi nhận tại đây
-        </p>
-        <a href="/games" class="inline-block mt-4 text-xs font-bold text-neon-cyan hover:underline">
-          Chơi game ngay
-        </a>
-      </div>
-    </div>
+    <RecentGames client:load fullPage />
   </div>
 </Layout>

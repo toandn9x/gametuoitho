@@ -2,6 +2,8 @@
 
 Website lưu trữ và chơi game Java ME, gồm Web Astro/React, REST API Hono, Game Catalog và thư viện riêng của người dùng.
 
+Sau khi đăng nhập, mục **Chơi gần đây** trên trang chủ hiển thị 6 game vừa mở chơi, mới nhất trước. Chọn **Xem tất cả** hoặc menu tài khoản → **Chơi gần đây** để xem tối đa 50 game. Lịch sử lưu theo tài khoản, gồm cả game import riêng tư; game chơi lại chỉ xuất hiện một lần và được đưa lên đầu.
+
 **Website đã triển khai:** [gametuoitho.toandn9x.workers.dev](https://gametuoitho.toandn9x.workers.dev).
 
 Đây là hướng dẫn chung cho setup, deploy và vận hành. Với Cloudflare, bạn tạo tài nguyên/token/key trên giao diện web, điền file local rồi [chạy deploy.bat](#manual-deploy). Không cần kết nối GitHub.
@@ -312,11 +314,15 @@ node tests/pm/admin-render-review.cjs
 node tests/pm/admin-users-render-review.cjs
 node tests/pm/emulator-crash-review.cjs
 node tests/pm/emulator-cache-review.cjs
+node tests/pm/emulator-input-review.cjs
+node tests/pm/mobile-input-browser-review.cjs --url https://gametuoitho.toandn9x.workers.dev/play/ninja-school-2
 ```
 
 Các kiểm tra DOM dùng Chrome/Edge headless và fixture riêng; build Web trước khi chạy kiểm tra trang admin. Fixture không chứng minh dịch vụ cloud hoặc mọi game hoạt động. JAR fixture chỉ là dữ liệu, không được chạy trên server.
 
 Nếu cần chẩn đoán player, dùng `node scripts/diagnose-player.cjs --url <URL-trang-play> --wait-ms 30000`. Bản vá menu icon null của emulator có source, provenance và cách tái build tại [apps/emulator-web/patches/README.md](apps/emulator-web/patches/README.md).
+
+Để kiểm tra chạm trên mobile giả lập: thêm `--viewport 390x844 --input-mode touch --tap-key F1,F1` (hai lần chạm phím mềm trái), hoặc `--tap-screen 120,160` để chạm vào tọa độ gốc của canvas. Script lưu ảnh trước/sau và log input trong thư mục tạm. Chữ trong màn hình game do JAR vẽ; chỉ các vùng game có xử lý pointer mới phản hồi chạm. Một số màn hình cần phím mềm trái/phải, không dùng nút OK.
 
 <a id="troubleshooting"></a>
 
@@ -351,6 +357,16 @@ Theo dõi [Workers limits](https://developers.cloudflare.com/workers/platform/li
 Lần triển khai **10/11/2026** đã xác minh Web/API/D1/Tigris thật: 13 kiểm tra HTTP/route, 22 kiểm tra auth/upload JAR nén/riêng tư/Range/admin/logout và 2 kiểm tra dashboard/storage analysis đều đạt. Chrome desktop 1280px và mobile emulation 390px tải được 8 thể loại qua API, không tràn ngang. Tài khoản và object thử đã được dọn.
 
 Version tại lần kiểm tra: `5cc30da2-f15c-4834-95c4-b0f04edcc328`. Ảnh: [desktop](docs/evidence/cloudflare/live-home-desktop.png), [mobile](docs/evidence/cloudflare/live-home-mobile.png).
+
+Input local ngày 10/11/2026: 7 kiểm tra bridge/phím/tọa độ, 10 kiểm tra crash và 120 kiểm tra cache đạt. Chrome giả lập touch 390×844 chạy Ninja School 2 (JAR `5ac8d83a…`) nhận hai lần chạm F1 và chuyển đến menu “Chơi mới”: [ảnh](docs/evidence/emulator-input/ninja-school-2-keypad-touch.png), [log input](docs/evidence/emulator-input/ninja-school-2-input.json). Chạm trực tiếp menu ở bản JAR này chưa kích hoạt “Chơi mới” dù bridge nhận đúng tọa độ; file khác bản Ninja School 2 mà gametuoitho.cc phục vụ. Chưa kiểm tra trên điện thoại thật.
+
+Kiểm tra bổ sung ngày 10/11/2026: Ninja School 2 đạt **42/42 trên bản online** và **42/42 trên bản local** bằng Chrome giả lập Android 390×844, gửi sự kiện touch thật qua DevTools. Các cặp nhấn/nhả của OK, D-pad, số, `*`, `#`, phím mềm, giữ phím và hủy chạm đều tới iframe và được vòng xử lý Java lấy ra; phím mềm trái làm game chuyển màn. [Kết quả online](docs/evidence/emulator-input/mobile-browser/online-results.json), [kết quả local](docs/evidence/emulator-input/mobile-browser/local-results.json). Script chặn API ghi dữ liệu. Tại lần kiểm tra này bản online vẫn dùng mã input cũ; cần deploy để đưa bản sửa local lên. Kết quả chưa xác nhận cho điện thoại thật hoặc Safari.
+
+Sau phản hồi Chrome trên iPhone iOS 27 không nhận phím, bàn phím Nokia có nhánh Touch Events native với `passive: false`, theo dõi từng ngón tay và không nhả phím vì iframe đổi focus. Chuột/bút vẫn dùng Pointer Events. Emulator nhúng không tự giành lại focus khi đang chạm bàn phím ngoài iframe. Bản sửa đạt 8/8 kiểm tra input, [29/29 kiểm tra WebKit](docs/evidence/emulator-input/ios-touch/webkit-results.json) và [42/42 hồi quy Chrome](docs/evidence/emulator-input/ios-touch/chromium-results.json). WebKit 26.6 chạy player và handler input thật nhưng dùng fixture thay Java/game vì WebKit Windows thiếu WebAudio, còn thử nghiệm JAR đầy đủ tại đây chưa đạt; kết quả không xác nhận Ninja School 2 chạy hoàn chỉnh trên iPhone iOS 27. Ca Chrome chạy game thật.
+
+Kiểm tra WebKit bổ sung cần Playwright và browser WebKit đã cài; có thể đặt `PLAYWRIGHT_MODULE_PATH` và `WEBKIT_EXECUTABLE_PATH` nếu dùng bản cài sẵn. Chạy `node tests/pm/ios-webkit-input-review.cjs --url http://127.0.0.1:4321/play/ninja-school-2 --fixture` sau khi build và khởi động server. Script chặn API ghi dữ liệu và ghi rõ phạm vi fixture trong kết quả.
+
+Với URL người dùng xác nhận `/play/ninja-school-1` (HTTPS), nhánh Touch Events đã có trên website nhưng chưa chuyển thao tác ở phím Nokia sang hàm mở khóa âm thanh trong iframe. Bản sửa bổ sung gọi `unlockGameAudio()` đồng bộ trong thao tác nhấn/nhả, cho phép `autoplay` ở iframe, giữ khả năng thử lại khi `AudioContext.resume()` bị từ chối và xử lý trạng thái `interrupted`. Ca WebKit mô phỏng AudioContext bị khóa đạt [30/31 với player online trước sửa](docs/evidence/emulator-input/ninja-school-1/online-webkit-audio-gate-results.json), [31/31 với bản local sau sửa](docs/evidence/emulator-input/ninja-school-1/local-webkit-audio-gate-results.json). Đây là fixture kiểm tra điều kiện user gesture, không phải phát âm thanh thật trên iPhone. Ninja School 1 thật trên Chrome đạt [42/42 online](docs/evidence/emulator-input/ninja-school-1/online-chromium-results.json), [42/42 local](docs/evidence/emulator-input/ninja-school-1/local-chromium-results.json); kiểm tra input đạt 9/9. Cần deploy bản bổ sung và xác nhận lại trên iPhone iOS 27.
 
 Đây là kết quả tại thời điểm triển khai, không phải giám sát liên tục. Chơi game thật trên cloud, Google login thật, crawler nguồn thật, tải lớn và tải đồng thời chưa được xác minh đầy đủ. Emulator vẫn chưa nghiệm thu rộng; giới hạn iframe cùng origin được mô tả trong tài liệu bảo mật.
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi" class="emulator-player">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,9 +32,8 @@
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="manifest.json" />
-</head>
+    <link rel="stylesheet" href="ui.css" />
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
     :root {
         /* Neon colors */
@@ -83,7 +82,7 @@
           #0a0a0f;
         background-size: 200% 200%;
         /* animation: stars-twinkle 10s ease-in-out infinite; */
-        font-family: 'VT323', monospace;
+        font-family: var(--ui-font);
         font-size: 1.2em;
     }
 
@@ -184,7 +183,7 @@
     }
 
     .loading-text {
-        font-family: 'Press Start 2P', cursive;
+        font-family: var(--ui-font);
         font-size: 0.8em;
         color: var(--neon-yellow);
         text-shadow: 0 0 10px var(--neon-yellow);
@@ -239,7 +238,7 @@
         border-radius: 0;
         font-size: 1.3em;
         font-weight: bold;
-        font-family: 'Press Start 2P', cursive;
+        font-family: var(--ui-font);
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -262,7 +261,7 @@
         margin-top: 3px;
         color: var(--arcade-black);
         opacity: 0.7;
-        font-family: 'VT323', monospace;
+        font-family: var(--ui-font);
     }
 
     .key:hover {
@@ -441,6 +440,7 @@
     }
 
 </style>
+</head>
 <body>
     <div id="screen-area">
         <canvas tabindex="0" id="display" style="display: none;"></canvas>
@@ -448,7 +448,7 @@
             <div class="cartridge-loader">
                 <img src="favicon.svg" alt="J2ME Player" />
             </div>
-            <div class="loading-text">LOADING...</div>
+            <div class="loading-text" role="status" aria-live="polite">Đang tải trình giả lập…</div>
         </div>
     </div>
     <div id="left-keys" class="keypad-part">

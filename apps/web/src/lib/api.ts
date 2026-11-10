@@ -1,5 +1,8 @@
 import { ApiResponse } from '@gametuoitho/api-contracts';
-import { Game, GameVersion, Category, User, UserLibraryItem } from '@gametuoitho/shared-types';
+import { Game, GameVersion, Category, User, UserLibraryItem, PlayHistoryItem } from '@gametuoitho/shared-types';
+
+export const AUTH_CHANGED_EVENT = 'gtt:auth-changed';
+export const PLAY_HISTORY_UPDATED_EVENT = 'gtt:play-history-updated';
 
 export const API_BASE_URL = typeof window !== 'undefined'
   ? (window as any).__PUBLIC_API_URL__ || '/api/v1'
@@ -15,12 +18,14 @@ export function setAuthToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('gametuoitho_token', token);
   document.cookie = `token=${token}; path=/; max-age=604800`;
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function removeAuthToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('gametuoitho_token');
   document.cookie = 'token=; path=/; max-age=0';
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 // Pages that cannot work without a valid session.
@@ -114,7 +119,7 @@ export async function apiRequest<T = any>(
       headers,
     });
 
-    if (res.status === 401) {
+    if (res.status === 401 && getAuthToken() === token) {
       handleUnauthorized(!!token);
     }
 
@@ -297,15 +302,22 @@ export async function toggleFavorite(gameId: string) {
   });
 }
 
-export async function getHistory() {
-  return apiRequest<any[]>('/me/history');
+export async function getHistory(limit = 20, signal?: AbortSignal) {
+  return apiRequest<PlayHistoryItem[]>(`/me/history?limit=${limit}`, { signal, cache: 'no-store' });
 }
 
 export async function recordPlay(gameId?: string, userLibraryId?: string) {
-  return apiRequest('/me/history', {
+  // Guests can play catalog games without creating an authenticated history request.
+  const token = getAuthToken();
+  if (!token) return { success: false };
+  const result = await apiRequest('/me/history', {
     method: 'POST',
     body: JSON.stringify({ game_id: gameId, user_library_id: userLibraryId, activity_type: 'PLAY' }),
   });
+  if (result.success && getAuthToken() === token) {
+    window.dispatchEvent(new Event(PLAY_HISTORY_UPDATED_EVENT));
+  }
+  return result;
 }
 
 // Admin API

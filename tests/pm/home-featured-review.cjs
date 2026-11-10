@@ -164,6 +164,10 @@ async function main() {
     await cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
     // Only this test's origin receives a synthetic test-session token. Never persist token in artifacts.
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(base)})localStorage.setItem('gametuoitho_token',${JSON.stringify(token)});` });
+    // Real browser login stores both localStorage and a same-site session cookie.
+    // Admin HTML is authenticated on the server before its client scripts can run.
+    const cookie = await cdp.send('Network.setCookie', { name: 'token', value: token, url: base, path: '/', sameSite: 'Lax' });
+    assert.ok(cookie.success, 'Own fixture session cookie must be available to the admin page request');
     await navigate('/');
     await waitFor(() => cdp.evaluate(`document.querySelector(${JSON.stringify(featuredRegion)})?.textContent.includes('Chưa có game ưa thích nào được chọn.')`), 'truthful initial homepage empty state');
     check('homepage does not substitute newest games when no stars are selected', (await cards(featuredRegion)).length === 0);

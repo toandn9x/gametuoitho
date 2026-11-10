@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { recordPlay, reportGameCrash } from '../lib/api';
 import { Game, GameVersion } from '@gametuoitho/shared-types';
 import { DEFAULT_KEY_MAPPINGS, KEYBOARD_HINT_MESSAGE, DEFAULT_KEYS_NOTE } from '../constants/keyMapping';
+import { bindTouchKeypad, type TouchKeypadBinding } from '../lib/touchKeypad';
 import './Nokia1280.css';
 
 export interface EmulatorPlayerProps {
   game?: Game;
   gameId?: string;
+  userLibraryId?: string;
   gameName?: string;
   activeVersion?: GameVersion;
   versions?: GameVersion[];
@@ -18,6 +20,7 @@ export interface EmulatorPlayerProps {
 export default function EmulatorPlayer({
   game,
   gameId,
+  userLibraryId,
   gameName,
   activeVersion,
   jarUrl,
@@ -43,18 +46,24 @@ export default function EmulatorPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const crashReportedRef = useRef(false);
+  const recordedTargetRef = useRef('');
+  const keypadPointersRef = useRef(new Map<number, string>());
+  const keypadRootRef = useRef<HTMLDivElement>(null);
+  const touchKeypadRef = useRef<TouchKeypadBinding | null>(null);
   const handleEmulatorLoad = () => {
     crashReportedRef.current = false;
     setEmulatorError(null);
     setCrashReportStatus(null);
+    keypadPointersRef.current.clear();
+    touchKeypadRef.current?.releaseAll();
   };
 
   useEffect(() => {
-    // Record play history
-    if (effectiveGameId) {
-      recordPlay(effectiveGameId).catch(() => {});
-    }
-  }, [effectiveGameId]);
+    const target = userLibraryId ? `import:${userLibraryId}` : effectiveGameId ? `game:${effectiveGameId}` : '';
+    if (!target || (!effectiveJarUrl && !directBytes) || recordedTargetRef.current === target) return;
+    recordedTargetRef.current = target;
+    recordPlay(userLibraryId ? undefined : effectiveGameId, userLibraryId).catch(() => {});
+  }, [effectiveGameId, userLibraryId, effectiveJarUrl, directBytes]);
 
   // Handle messages from emulator iframe
   useEffect(() => {
@@ -137,32 +146,79 @@ export default function EmulatorPlayer({
 
   // Helper to send keypad click to emulator iframe via postMessage with targetOrigin
   const sendKey = (code: string, pressed: boolean) => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    const gameWindow = iframeRef.current?.contentWindow as (Window & { unlockGameAudio?: () => unknown }) | null;
+    if (!gameWindow) return;
+    // Keep the original touch/click activation across the same-origin iframe.
+    // Calling only postMessage cannot unlock suspended WebAudio on iPhone.
+    try { gameWindow.unlockGameAudio?.(); } catch { /* A frame still navigating may be inaccessible. */ }
     const targetOrigin = window.location.origin;
-    iframeRef.current.contentWindow.postMessage(
+    gameWindow.postMessage(
       { type: 'KEY_EVENT', code, pressed },
       targetOrigin
     );
   };
 
+  useEffect(() => {
+    const root = keypadRootRef.current;
+    if (!root) return;
+    const binding = bindTouchKeypad(root, sendKey);
+    touchKeypadRef.current = binding;
+    return () => {
+      binding.destroy();
+      if (touchKeypadRef.current === binding) touchKeypadRef.current = null;
+    };
+  }, [skin]);
+
+  useEffect(() => {
+    const releaseAll = () => {
+      for (const code of new Set(keypadPointersRef.current.values())) sendKey(code, false);
+      keypadPointersRef.current.clear();
+      touchKeypadRef.current?.releaseAll();
+    };
+    const visibilityChanged = () => { if (document.hidden) releaseAll(); };
+    // Focusing our game iframe also blurs the parent window. That must not
+    // release a finger still holding the D-pad while the canvas refocuses.
+    const windowBlur = () => {
+      // iOS can report BODY briefly during a focus hand-off to/from an iframe.
+      // A finger still on a key owns its lifetime until touchend/cancel or hide.
+      if (touchKeypadRef.current?.hasActiveTouches()) return;
+      if (document.activeElement !== iframeRef.current) releaseAll();
+    };
+    window.addEventListener('blur', windowBlur);
+    document.addEventListener('visibilitychange', visibilityChanged);
+    return () => {
+      releaseAll();
+      window.removeEventListener('blur', windowBlur);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+    };
+  }, []);
+
   // Pointer event handlers for virtual keypad buttons
+  const releasePointer = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const code = keypadPointersRef.current.get(e.pointerId);
+    if (!code) return;
+    e.preventDefault();
+    keypadPointersRef.current.delete(e.pointerId);
+    if (![...keypadPointersRef.current.values()].includes(code)) sendKey(code, false);
+  };
   const createKeyHandlers = (code: string) => ({
+    'data-emulator-key': code,
     onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch' && 'ontouchstart' in window) {
+        e.preventDefault();
+        return; // Native non-passive touchstart handles this contact exactly once.
+      }
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       e.preventDefault();
-      sendKey(code, true);
+      const wasPressed = [...keypadPointersRef.current.values()].includes(code);
+      keypadPointersRef.current.set(e.pointerId, code);
+      // Keep receiving release/cancel when a finger drifts outside the key.
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* Pointer already cancelled. */ }
+      if (!wasPressed) sendKey(code, true);
     },
-    onPointerUp: (e: React.PointerEvent) => {
-      e.preventDefault();
-      sendKey(code, false);
-    },
-    onPointerCancel: (e: React.PointerEvent) => {
-      e.preventDefault();
-      sendKey(code, false);
-    },
-    onPointerLeave: (e: React.PointerEvent) => {
-      e.preventDefault();
-      sendKey(code, false);
-    },
+    onPointerUp: releasePointer,
+    onPointerCancel: releasePointer,
+    onLostPointerCapture: releasePointer,
   });
 
   const isDirectMode = !!directBytes;
@@ -451,7 +507,7 @@ export default function EmulatorPlayer({
 
       {/* Screen Presentation according to Skin */}
       {skin === 'nokia' ? (
-        <div className="nokia1280 order-3 lg:order-1" role="group" aria-label="Điện thoại Nokia 1280">
+        <div ref={keypadRootRef} className="nokia1280 order-3 lg:order-1" role="group" aria-label="Điện thoại Nokia 1280">
           <div className="nokia1280__top" aria-hidden="true">
             <div className="nokia1280__speaker" />
             <span className="nokia1280__brand">NOKIA</span>
@@ -464,6 +520,7 @@ export default function EmulatorPlayer({
                 onLoad={handleEmulatorLoad}
                 src={emulatorSrc ? `${emulatorSrc}&skin=nokia1280&fractionScale=true` : emulatorSrc}
                 sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+                allow="autoplay"
                 title={effectiveGameName}
               />
             </div>
@@ -547,6 +604,7 @@ export default function EmulatorPlayer({
               src={emulatorSrc}
               className="w-full h-full border-0"
               sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+              allow="autoplay"
               title={effectiveGameName}
             />
           </div>
@@ -559,6 +617,7 @@ export default function EmulatorPlayer({
             src={emulatorSrc}
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+            allow="autoplay"
             title={effectiveGameName}
           />
         </div>

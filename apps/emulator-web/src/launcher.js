@@ -15,7 +15,7 @@ let state = {
 let defaultSettings = {};
 
 async function main() {
-    document.querySelector("#loading .loading-text").textContent = "Loading Sandbox";
+    document.querySelector("#loading .loading-text").textContent = "Đang chuẩn bị trình giả lập…";
 
     // CheerpJ 4.x automatically persists /files directory to IndexedDB
     // No additional options needed for persistence
@@ -25,7 +25,7 @@ async function main() {
 
     lib = await cheerpjRunLibrary(cheerpjWebRoot+"/freej2me-web.jar");
 
-    document.querySelector("#loading .loading-text").textContent = "Loading...";
+    document.querySelector("#loading .loading-text").textContent = "Đang tải thư viện game…";
 
     launcherUtil = await lib.pl.zb3.freej2me.launcher.LauncherUtil;
 
@@ -37,6 +37,7 @@ async function main() {
     await reloadUI();
 
     document.getElementById("loading").style.display = "none";
+    document.documentElement.classList.remove('is-loading');
     document.getElementById("main").style.display = "";
 
     // Initialize keyboard mapper UI

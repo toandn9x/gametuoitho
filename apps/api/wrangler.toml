@@ -14,10 +14,12 @@ compatibility_flags = ["nodejs_compat"]
 
 # The built web app (apps/web/dist). Existing files are served directly by Cloudflare;
 # /admin pages always go through the Worker first so only ADMIN accounts receive them.
+# The emulator library JAR also goes through the Worker, which answers its Range requests
+# (Static Assets ignore Range, and the emulator then cannot start on Safari/iPhone).
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
-run_worker_first = ["/admin", "/admin/*"]
+run_worker_first = ["/admin", "/admin/*", "/emulator/freej2me-web.jar"]
 
 [vars]
 ENVIRONMENT = "production"

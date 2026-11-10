@@ -8,17 +8,22 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const options = { url: 'http://127.0.0.1:4321/play/thachsanh', 'wait-ms': '90000' };
 for (let index = 2; index < process.argv.length; index += 2) {
   const key = process.argv[index].replace(/^--/, '');
-  if (!['url', 'wait-ms', 'output-dir', 'keys', 'key-delay-ms', 'viewport', 'tap-key'].includes(key) || !process.argv[index + 1]) throw new Error('Usage: node scripts/diagnose-player.cjs [--url URL] [--wait-ms 90000] [--output-dir PATH] [--keys Enter,ArrowDown] [--key-delay-ms 800] [--viewport 390x844] [--tap-key Enter]');
+  if (!['url', 'wait-ms', 'output-dir', 'keys', 'key-delay-ms', 'viewport', 'tap-key', 'tap-screen', 'input-mode'].includes(key) || !process.argv[index + 1]) throw new Error('Usage: node scripts/diagnose-player.cjs [--url URL] [--wait-ms 90000] [--output-dir PATH] [--keys Enter,ArrowDown] [--key-delay-ms 800] [--viewport 390x844] [--tap-key Enter] [--tap-screen X,Y] [--input-mode mouse|touch]');
   options[key] = process.argv[index + 1];
 }
 const waitMs = Number(options['wait-ms']);
 const keys = options.keys ? options.keys.split(',') : [];
 const keyDelayMs = Number(options['key-delay-ms'] || 800);
+const touchInput = options['input-mode'] === 'touch';
+if (options['input-mode'] && !['mouse', 'touch'].includes(options['input-mode'])) throw new Error('--input-mode must be mouse or touch');
+const screenTap = options['tap-screen']?.match(/^(\d{1,4}),(\d{1,4})$/);
+if (options['tap-screen'] && !screenTap) throw new Error('--tap-screen must be X,Y in native game pixels');
 if (!Number.isFinite(keyDelayMs) || keyDelayMs < 0 || keyDelayMs > 3000) throw new Error('--key-delay-ms must be between 0 and 3000');
 const viewport = /^(\d{3,4})x(\d{3,4})$/.exec(options.viewport || '1280x1000');
 if (!viewport || +viewport[1] < 320 || +viewport[1] > 1920 || +viewport[2] < 480 || +viewport[2] > 1600) throw new Error('--viewport must be WIDTHxHEIGHT, width 320–1920, height 480–1600');
 const tapSelectors = { Enter: '.nokia1280__select', F1: '.nokia1280__sidekeys:first-child button:first-child', F2: '.nokia1280__sidekeys:last-child button:first-child', '5': '.nokia1280__numbers button:nth-child(5)' };
-if (options['tap-key'] && !Object.hasOwn(tapSelectors, options['tap-key'])) throw new Error('--tap-key supports Enter,F1,F2,5');
+const tapKeys = options['tap-key'] ? options['tap-key'].split(',') : [];
+if (tapKeys.length > 12 || tapKeys.some(key => !Object.hasOwn(tapSelectors, key))) throw new Error('--tap-key supports up to 12 comma-separated keys: Enter,F1,F2,5');
 const keyCodes = { Enter: 13, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, F1: 112, F2: 113, Escape: 27, '2': 50, '4': 52, '5': 53, '6': 54, '8': 56 };
 if (keys.length > 12 || keys.some(key => !Object.hasOwn(keyCodes, key))) throw new Error('Use at most 12 keys from Enter,ArrowUp,ArrowDown,ArrowLeft,ArrowRight,F1,F2,Escape,2,4,5,6,8');
 if (!Number.isFinite(waitMs) || waitMs < 0 || waitMs > 90000) throw new Error('--wait-ms must be between 0 and 90000');
@@ -161,7 +166,8 @@ async function main() {
     });
     await enable();
     await cdp.send('Page.enable');
-    await cdp.send('Emulation.setDeviceMetricsOverride', { width: +viewport[1], height: +viewport[2], deviceScaleFactor: 1, mobile: false });
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: +viewport[1], height: +viewport[2], deviceScaleFactor: 1, mobile: touchInput });
+    if (touchInput) await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     log('browser-version', await cdp.send('Browser.getVersion'));
     await cdp.send('Page.navigate', { url: targetUrl.href });
     print('Navigated; collecting Java console, browser exceptions and network failures. Service worker bypass and HTTP cache disabled.');
@@ -199,17 +205,32 @@ async function main() {
     while (!fatal && Date.now() < until) {
       await delay(Math.min(10000, until - Date.now()));
       await sample();
-      if (!tapped && options['tap-key'] && Date.now() < until) {
+      if (!tapped && (options['tap-key'] || screenTap) && Date.now() < until) {
         tapped = true;
-        const selector = JSON.stringify(tapSelectors[options['tap-key']]);
-        const position = await cdp.send('Runtime.evaluate', { expression: `(()=>{const b=document.querySelector(${selector}); if(!b)return null; b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()`, returnByValue: true });
-        const point = position.result?.value;
-        if (!point) throw new Error('Requested phone button was not found');
-        for (const type of ['mousePressed', 'mouseReleased']) {
-          await cdp.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
-          await delay(120);
+        await cdp.send('Runtime.evaluate', { expression: `(()=>{const w=document.querySelector('iframe')?.contentWindow,q=w?.evtQueue;if(!q)return;const original=q.queueEvent;q.queueEvent=function(event,...args){w.console.log('[Input]',JSON.stringify(event));return original.call(this,event,...args);};})()` });
+        for (const [index, key] of [...tapKeys, ...(screenTap ? [null] : [])].entries()) {
+          const selector = JSON.stringify(tapSelectors[key]);
+          const expression = key === null
+            ? `(()=>{const f=document.querySelector('iframe'),c=f?.contentDocument?.querySelector('#display');if(!c)return null; f.scrollIntoView({block:'center'});const a=f.getBoundingClientRect(),r=c.getBoundingClientRect(); return {x:a.left+r.left+${Number(screenTap?.[1])}*r.width/c.width,y:a.top+r.top+${Number(screenTap?.[2])}*r.height/c.height};})()`
+            : `(()=>{const b=document.querySelector(${selector}); if(!b)return null; b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()`;
+          const position = await cdp.send('Runtime.evaluate', { expression, returnByValue: true });
+          const point = position.result?.value;
+          if (!point) throw new Error('Requested phone button/canvas was not found');
+          const before = await cdp.send('Page.captureScreenshot', { format: 'png' });
+          fs.writeFileSync(path.join(outputDir, `player-before-input-${index}.png`), Buffer.from(before.data, 'base64'));
+          if (touchInput) {
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...point, id: 1 }] });
+            await delay(120);
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          } else {
+            for (const type of ['mousePressed', 'mouseReleased']) {
+              await cdp.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
+              await delay(120);
+            }
+          }
+          log('input-tap', { key, screen: key === null ? options['tap-screen'] : undefined, mode: touchInput ? 'touch' : 'mouse' });
+          await delay(1000);
         }
-        log('input-tap', { key: options['tap-key'] });
         await cdp.send('Runtime.evaluate', { expression: "document.querySelector('.nokia1280')?.scrollIntoView({block:'start'})" });
       }
       if (!exercised && keys.length && Date.now() < until) {

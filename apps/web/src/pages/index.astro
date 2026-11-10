@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.astro';
 import FeaturedGames from '../components/FeaturedGames';
 import CategoryList from '../components/CategoryList';
+import RecentGames from '../components/RecentGames';
 ---
 
 <Layout title="Game Tuổi Thơ --- Chơi Game Java ME Nokia Kinh Điển Trực Tiếp Trên Web">
@@ -23,6 +24,8 @@ import CategoryList from '../components/CategoryList';
 
       <CategoryList client:load />
     </section>
+
+    <RecentGames client:load />
 
     <!-- Admin-curated favorite games -->
     <section aria-labelledby="favorite-games-heading">

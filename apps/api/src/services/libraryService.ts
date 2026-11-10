@@ -3,6 +3,7 @@ import { GameRepository } from '../repositories/gameRepository';
 import { AssetRepository } from '../repositories/assetRepository';
 import { StorageDriver } from '../storage/storage';
 import { generateId } from '@gametuoitho/shared-utils';
+import { PlayHistoryItem } from '@gametuoitho/shared-types';
 
 export class LibraryService {
   constructor(
@@ -121,11 +122,26 @@ export class LibraryService {
   }
 
   async recordPlay(userId: string, gameId?: string, userLibraryId?: string) {
-    // Security (R06-B): userLibraryId must belong to userId
+    if (Boolean(gameId) === Boolean(userLibraryId)) {
+      throw new Error('Cần cung cấp một game hoặc một mục thư viện');
+    }
+
     if (userLibraryId) {
       const item = await this.libraryRepo.findById(userLibraryId);
       if (!item || item.user_id !== userId) {
         throw new Error('Mục thư viện không tồn tại hoặc không thuộc quyền sở hữu của bạn');
+      }
+      if (item.source_type === 'CATALOG') {
+        // The same catalog game has one history entry, including launches from the library.
+        gameId = item.game_id || undefined;
+        userLibraryId = undefined;
+        if (!gameId) throw new Error('Game không còn khả dụng');
+      } else {
+        const asset = item.custom_asset_id ? await this.assetRepo.findById(item.custom_asset_id) : null;
+        if (!asset || asset.owner_user_id !== userId || asset.status !== 'ACTIVE' ||
+            asset.asset_type !== 'JAR' || !asset.storage_key.startsWith(`users/${userId}/`)) {
+          throw new Error('File game riêng tư không còn khả dụng');
+        }
       }
     }
 
@@ -141,11 +157,11 @@ export class LibraryService {
     return { success: true };
   }
 
-  async getPlayHistory(userId: string, limit = 20) {
+  async getPlayHistory(userId: string, limit = 20): Promise<PlayHistoryItem[]> {
     const history = await this.libraryRepo.getPlayHistory(userId, limit);
-    return history.map((h) => ({
-      ...h,
-      cover_url: h.cover_storage_key ? this.storage.getUrl(h.cover_storage_key) : null,
+    return history.map(({ cover_storage_key, ...item }) => ({
+      ...item,
+      cover_url: cover_storage_key ? this.storage.getUrl(cover_storage_key) : null,
     }));
   }
 

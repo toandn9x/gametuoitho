@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Game } from '@gametuoitho/shared-types';
 import { addGameToLibrary } from '../lib/api';
+import GameIcon from './GameIcon';
 
 interface GameCardProps {
   game: Game;
@@ -29,78 +30,47 @@ export default function GameCard({ game }: GameCardProps) {
   };
 
   return (
-    <div className="group relative bg-arcade-800/80 border border-arcade-700/80 rounded-xl overflow-hidden hover:border-neon-cyan/70 transition-all duration-300 hover:shadow-neon-cyan flex flex-col h-full">
-      {/* Cover image */}
-      <a href={`/game/${game.slug}`} className="block relative aspect-[4/3] bg-arcade-950 overflow-hidden">
-        {game.cover_url ? (
-          <img
-            src={game.cover_url}
-            alt={game.name}
-            className="w-full h-full object-cover [image-rendering:pixelated] group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-arcade-850 to-arcade-950 text-slate-500">
-            <span className="text-4xl mb-2">🎮</span>
-            <span className="text-[10px] font-mono uppercase text-neon-cyan/60 tracking-wider">J2ME Classic</span>
-          </div>
-        )}
-
-        {/* Category tag */}
-        {game.category_name && (
-          <span className="absolute top-2 left-2 max-w-[60%] truncate bg-arcade-900/90 text-neon-yellow border border-neon-yellow/30 text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded backdrop-blur-sm">
-            {game.category_name}
-          </span>
-        )}
-
-        {/* Release year */}
-        {game.release_year && (
-          <span className="absolute top-2 right-2 bg-arcade-900/90 text-slate-300 border border-slate-700 text-[10px] font-mono px-1.5 py-0.5 rounded">
-            {game.release_year}
-          </span>
-        )}
-      </a>
-
-      {/* Content */}
-      <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between min-w-0">
-        <div className="min-w-0">
+    <article className="game-card group flex h-full min-w-0 flex-col rounded-2xl border border-arcade-700/70 bg-arcade-800/50 p-4 transition-colors hover:border-neon-cyan/50 hover:bg-arcade-800">
+      <div className="flex min-w-0 items-start gap-3">
+        <a href={`/game/${game.slug}`} aria-label={`Xem ${game.name}`} className="shrink-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-neon-cyan">
+          <GameIcon src={game.cover_url} name={game.name} />
+        </a>
+        <div className="min-w-0 flex-1">
           <a href={`/game/${game.slug}`} className="block">
-            <h3 className="font-bold text-slate-100 group-hover:text-neon-cyan transition-colors line-clamp-2 sm:line-clamp-1 text-sm sm:text-base leading-snug">
+            <h3 className="line-clamp-2 break-words text-sm font-bold leading-snug text-slate-100 transition-colors group-hover:text-neon-cyan sm:text-base">
               {game.name}
             </h3>
           </a>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-1 truncate">
-            {game.developer || 'Nokia / J2ME'}
-          </p>
-          {game.description && (
-            <p className="hidden sm:line-clamp-2 text-xs text-slate-400/80 mt-2 leading-relaxed">
-              {game.description}
-            </p>
+          {(game.developer || game.publisher) && (
+            <p className="mt-1 truncate text-xs text-slate-400">{game.developer || game.publisher}</p>
           )}
-        </div>
-
-        {/* Actions */}
-        <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-arcade-700/50 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
-          <a
-            href={`/play/${game.slug}`}
-            className="flex-1 text-center py-2 px-3 bg-neon-cyan text-arcade-950 font-bold text-xs rounded hover:bg-neon-yellow transition-all shadow-sm"
-          >
-            ▶ Chơi ngay
-          </a>
-          <button
-            onClick={handleAddToLibrary}
-            disabled={added || loading}
-            title={added ? 'Đã có trong thư viện' : 'Lưu vào thư viện cá nhân'}
-            className={`px-3 py-2 border rounded text-xs whitespace-nowrap transition-colors ${
-              added
-                ? 'bg-neon-green/20 border-neon-green text-neon-green'
-                : 'border-arcade-600 hover:border-neon-cyan text-slate-300 hover:text-neon-cyan bg-arcade-700/50'
-            }`}
-          >
-            {added ? '✓ Đã lưu' : '+ Thư viện'}
-          </button>
+          <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px]">
+            {game.category_name && <span className="truncate text-neon-cyan/80">{game.category_name}</span>}
+            {game.release_year && <span className="shrink-0 font-mono text-slate-500">{game.release_year}</span>}
+          </div>
         </div>
       </div>
-    </div>
+      {game.description && (
+        <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-400">{game.description}</p>
+      )}
+      <div className="mt-auto flex items-center gap-2 pt-4">
+        <a
+          href={`/play/${game.slug}`}
+          className="flex-1 rounded-lg bg-neon-cyan px-3 py-2 text-center text-xs font-bold text-arcade-950 transition-colors hover:bg-neon-yellow"
+        >
+          ▶ Chơi ngay
+        </a>
+        <button
+          onClick={handleAddToLibrary}
+          disabled={added || loading}
+          title={added ? 'Đã có trong thư viện' : 'Lưu vào thư viện cá nhân'}
+          className={`shrink-0 rounded-lg border px-3 py-2 text-xs transition-colors disabled:cursor-default ${added
+            ? 'border-neon-green/40 bg-neon-green/10 text-neon-green'
+            : 'border-arcade-600 text-slate-300 hover:border-neon-cyan hover:text-neon-cyan'}`}
+        >
+          {loading ? 'Đang lưu...' : added ? '✓ Đã lưu' : '+ Thư viện'}
+        </button>
+      </div>
+    </article>
   );
 }

@@ -89,7 +89,7 @@ export default function UserNav() {
             href="/me/history"
             className="block px-4 py-2 text-slate-200 hover:bg-arcade-700 hover:text-neon-yellow transition-colors"
           >
-            🕒 Lịch sử chơi
+            🕒 Chơi gần đây
           </a>
 
           {user.role === 'ADMIN' && (

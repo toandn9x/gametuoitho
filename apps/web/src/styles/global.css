@@ -8,6 +8,12 @@
   }
 }
 
+@layer components {
+  .game-list-grid {
+    @apply grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3;
+  }
+}
+
 /* Custom retro arcade scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

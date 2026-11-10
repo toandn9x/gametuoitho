@@ -115,11 +115,17 @@ export type AddImportToLibraryInput = z.infer<typeof AddImportToLibrarySchema>;
 
 // Play History / Activity Schema
 export const RecordActivitySchema = z.object({
-  game_id: z.string().optional(),
-  user_library_id: z.string().optional(),
-  activity_type: z.enum(['PLAY', 'FAVORITE']),
+  game_id: z.string().trim().min(1).optional(),
+  user_library_id: z.string().trim().min(1).optional(),
+  activity_type: z.literal('PLAY'),
+}).refine((value) => Boolean(value.game_id) !== Boolean(value.user_library_id), {
+  message: 'Cần cung cấp một game hoặc một mục thư viện',
 });
 export type RecordActivityInput = z.infer<typeof RecordActivitySchema>;
+
+export const PlayHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
 
 // Bulk Delete Assets Schema
 export const BulkDeleteAssetsSchema = z.object({

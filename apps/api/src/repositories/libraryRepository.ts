@@ -1,5 +1,5 @@
 import { DatabaseClient } from './db';
-import { UserLibraryItem, UserGameActivity } from '@gametuoitho/shared-types';
+import { UserLibraryItem, UserGameActivity, PlayHistoryItem } from '@gametuoitho/shared-types';
 
 export class LibraryRepository {
   constructor(private db: DatabaseClient) {}
@@ -101,7 +101,7 @@ export class LibraryRepository {
     if (existing) {
       await this.db.execute(
         `UPDATE user_game_activity 
-         SET play_count = play_count + 1, last_played_at = datetime('now') 
+         SET play_count = play_count + 1, last_played_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
          WHERE id = ?`,
         [existing.id]
       );
@@ -109,26 +109,49 @@ export class LibraryRepository {
       const id = crypto.randomUUID();
       await this.db.execute(
         `INSERT INTO user_game_activity (id, user_id, game_id, user_library_id, activity_type, last_played_at, play_count)
-         VALUES (?, ?, ?, ?, 'PLAY', datetime('now'), 1)`,
+         VALUES (?, ?, ?, ?, 'PLAY', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 1)`,
         [id, userId, gameId || null, userLibraryId || null]
       );
     }
   }
 
-  async getPlayHistory(userId: string, limit = 20): Promise<any[]> {
+  async getPlayHistory(userId: string, limit = 20): Promise<(Omit<PlayHistoryItem, 'cover_url'> & { cover_storage_key: string | null })[]> {
     const sql = `
-      SELECT 
-        act.*,
-        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.name ELSE NULL END as game_name,
-        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN g.slug ELSE NULL END as game_slug,
-        CASE WHEN g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC' THEN a.storage_key ELSE NULL END as cover_storage_key,
-        l.custom_name
-      FROM user_game_activity act
-      LEFT JOIN games g ON act.game_id = g.id
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id
-      LEFT JOIN user_library l ON act.user_library_id = l.id AND l.user_id = act.user_id
-      WHERE act.user_id = ? AND act.activity_type = 'PLAY'
-      ORDER BY act.last_played_at DESC
+      WITH history AS (
+        SELECT act.id, act.user_id, g.id as game_id,
+          CASE WHEN g.id IS NULL THEN l.id ELSE NULL END as user_library_id,
+          act.activity_type, act.last_played_at,
+          SUM(act.play_count) OVER (
+            PARTITION BY COALESCE('game:' || g.id, 'import:' || l.id)
+          ) as play_count,
+          g.name as game_name, g.slug as game_slug, g.developer,
+          cat.name as category_name, a.storage_key as cover_storage_key,
+          CASE WHEN g.id IS NULL THEN l.custom_name ELSE NULL END as custom_name,
+          act.rowid as activity_order,
+          ROW_NUMBER() OVER (
+            PARTITION BY COALESCE('game:' || g.id, 'import:' || l.id)
+            ORDER BY julianday(act.last_played_at) DESC, act.rowid DESC
+          ) as history_rank
+        FROM user_game_activity act
+        LEFT JOIN user_library l ON act.user_library_id = l.id AND l.user_id = act.user_id
+        LEFT JOIN games g ON g.id = COALESCE(act.game_id,
+          CASE WHEN l.source_type = 'CATALOG' THEN l.game_id END)
+          AND g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC'
+        LEFT JOIN categories cat ON g.category_id = cat.id
+        LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
+        LEFT JOIN game_assets custom ON l.custom_asset_id = custom.id
+          AND custom.owner_user_id = act.user_id AND custom.status = 'ACTIVE'
+          AND custom.asset_type = 'JAR'
+          AND substr(custom.storage_key, 1, length('users/' || act.user_id || '/')) = 'users/' || act.user_id || '/'
+        WHERE act.user_id = ? AND act.activity_type = 'PLAY'
+          AND ((act.game_id IS NOT NULL AND act.user_library_id IS NULL)
+            OR (act.game_id IS NULL AND l.id IS NOT NULL))
+          AND (g.id IS NOT NULL OR (l.source_type = 'IMPORT' AND custom.id IS NOT NULL))
+      )
+      SELECT id, user_id, game_id, user_library_id, activity_type, last_played_at,
+        play_count, game_name, game_slug, developer, category_name, custom_name, cover_storage_key
+      FROM history WHERE history_rank = 1
+      ORDER BY julianday(last_played_at) DESC, activity_order DESC
       LIMIT ?
     `;
     return this.db.query(sql, [userId, limit]);

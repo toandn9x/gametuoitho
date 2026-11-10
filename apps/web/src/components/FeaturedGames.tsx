@@ -39,14 +39,14 @@ export default function FeaturedGames({ initialGames = [], featuredOnly = false 
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="game-list-grid">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="bg-arcade-850/60 border border-arcade-800 rounded-xl overflow-hidden animate-pulse h-72"
+            className="bg-arcade-850/60 border border-arcade-800 rounded-2xl p-4 animate-pulse"
           >
-            <div className="aspect-[4/3] bg-arcade-800/80" />
-            <div className="p-4 space-y-3">
+            <div className="flex items-start gap-3"><div className="h-14 w-14 shrink-0 rounded-xl bg-arcade-800/80 sm:h-16 sm:w-16" /><div className="h-4 w-1/2 rounded bg-arcade-700/60" /></div>
+            <div className="mt-4 space-y-3">
               <div className="h-4 bg-arcade-700/60 rounded w-3/4" />
               <div className="h-3 bg-arcade-700/40 rounded w-1/2" />
             </div>
@@ -69,7 +69,7 @@ export default function FeaturedGames({ initialGames = [], featuredOnly = false 
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+    <div className="game-list-grid">
       {games.slice(0, 8).map((game) => (
         <GameCard key={game.id} game={game} />
       ))}

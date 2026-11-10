@@ -1,0 +1,226 @@
+{
+  "target": "http://127.0.0.1:4398/play/ninja-school-2",
+  "checks": [
+    {
+      "name": "actual game is visible and Java event loop is polling",
+      "pass": true
+    },
+    {
+      "name": "browser uses mobile touch input",
+      "pass": true,
+      "detail": {
+        "touch": 5,
+        "coarse": true,
+        "width": 390,
+        "ua": "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36"
+      }
+    },
+    {
+      "name": "touching soft-left visibly changes the actual game",
+      "pass": true,
+      "detail": {
+        "before": {
+          "hash": 1833631168,
+          "width": 240,
+          "height": 320
+        },
+        "after": {
+          "hash": 3270425715,
+          "width": 240,
+          "height": 320
+        }
+      }
+    },
+    {
+      "name": "Enter: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Enter: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "ArrowUp: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowUp: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "ArrowDown: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowDown: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "ArrowRight: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "ArrowRight: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit1: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit1: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit2: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit2: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit3: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit3: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit4: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit4: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit5: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit5: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit6: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit6: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit7: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit7: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit8: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit8: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit9: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit9: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "NumpadMultiply: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "NumpadMultiply: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "Digit0: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "Digit0: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "NumpadDivide: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "NumpadDivide: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "F2: touch press/release reaches iframe",
+      "pass": true
+    },
+    {
+      "name": "F2: Java polling consumes press and release",
+      "pass": true
+    },
+    {
+      "name": "hold repeats and release is delivered after finger drifts outside",
+      "pass": true
+    },
+    {
+      "name": "touch cancellation releases the key",
+      "pass": true
+    },
+    {
+      "name": "no uncaught browser exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "blockedMutations": [],
+  "exceptions": [],
+  "responses": [
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/diagnostics.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/main.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/pointer.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/eventqueue.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/key.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/screenKbd.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4398/emulator/src/keyMapper.js",
+      "status": 200
+    }
+  ],
+  "failure": null,
+  "browserLog": "\r\nDevTools listening on ws://127.0.0.1:54417/devtools/browser/f1f79b83-012d-483d-bbcf-edfba538201b\r\nCreated TensorFlow Lite XNNPACK delegate for CPU.\r\n[29472:13884:1110/165548.633:ERROR:chrome\\updater\\ipc\\update_service_dialer_win.cc:77] Failed to open named pipe server process 26544: Access is denied. (0x5)\r\n[29472:13884:1110/165548.847:ERROR:chrome\\updater\\ipc\\update_service_dialer_win.cc:77] Failed to open named pipe server process 26544: Access is denied. (0x5)\r\n"
+}

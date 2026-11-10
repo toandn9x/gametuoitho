@@ -88,7 +88,7 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
   };
   const module = { exports: {} };
   const context = vm.createContext({
-    module, exports: module.exports, window, document: {},
+    module, exports: module.exports, window, document: { addEventListener() {}, removeEventListener() {} },
     console: { error: (...args) => errors.push(args) },
     require(name) {
       if (name.endsWith('.css')) return {};
@@ -98,6 +98,7 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
         reportGameCrash: payload => { calls.push(payload); return reportResult(payload); },
       };
       if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [], KEYBOARD_HINT_MESSAGE: '', DEFAULT_KEYS_NOTE: '' };
+      if (name === '../lib/touchKeypad') return { bindTouchKeypad() { throw new Error('No DOM keypad in this crash-only fixture'); } };
       throw new Error(`Unexpected dependency: ${name}`);
     },
   });

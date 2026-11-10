@@ -20,5 +20,5 @@ export const DEFAULT_KEY_MAPPINGS: KeyGuideItem[] = [
   { key: 'Numpad /', action: '#', description: 'Phím thăng (#)' },
 ];
 
-export const KEYBOARD_HINT_MESSAGE = 'Bấm vào màn hình game để điều khiển bằng bàn phím';
+export const KEYBOARD_HINT_MESSAGE = 'Dùng phím Nokia hoặc bàn phím; game hỗ trợ cảm ứng có thể chạm trực tiếp.';
 export const DEFAULT_KEYS_NOTE = 'Đây là thiết lập phím mặc định của giả lập.';

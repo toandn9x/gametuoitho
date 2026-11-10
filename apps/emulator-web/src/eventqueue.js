@@ -28,12 +28,13 @@ export class EventQueue {
 
     async waitForEvent() {
         this.started = true;
-        if (this.queue.length > 1) {
-            return this.queue.shift();
+        // Drain every queued event, including the last key-up. A resolved wake-up
+        // can outlive its event, so an empty queue must wait again instead of
+        // returning undefined to the Java dispatcher.
+        while (this.queue.length === 0) {
+            await this.promise;
+            this.refreshPromise();
         }
-
-        await this.promise;
-        this.refreshPromise(); // refresh here
         return this.queue.shift();
     }
 }

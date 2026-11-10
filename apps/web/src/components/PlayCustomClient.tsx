@@ -7,6 +7,7 @@ export default function PlayCustomClient() {
   const [error, setError] = useState<string | null>(null);
   const [gameTitle, setGameTitle] = useState('Game Đã Import');
   const [jarBuffer, setJarBuffer] = useState<ArrayBuffer | null>(null);
+  const [userLibraryId, setUserLibraryId] = useState<string>();
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +34,7 @@ export default function PlayCustomClient() {
       try {
         let title = 'Game Đã Import';
         let jarUrl = '';
+        let resolvedLibraryId = '';
 
         if (importId) {
           const res = await fetch('/api/v1/me/imports', {
@@ -47,6 +49,7 @@ export default function PlayCustomClient() {
           }
           title = item.custom_name || title;
           jarUrl = item.jar_url;
+          resolvedLibraryId = item.id;
         } else if (libraryId) {
           const res = await fetch('/api/v1/me/library', {
             headers: { Authorization: `Bearer ${token}` },
@@ -60,6 +63,7 @@ export default function PlayCustomClient() {
           }
           title = item.custom_name || item.name || title;
           jarUrl = item.custom_jar_url || item.jar_url;
+          resolvedLibraryId = item.id;
         }
 
         if (!jarUrl) {
@@ -83,6 +87,7 @@ export default function PlayCustomClient() {
         if (isMounted) {
           setGameTitle(title);
           setJarBuffer(buf);
+          setUserLibraryId(resolvedLibraryId);
           if (typeof document !== 'undefined' && title) {
             document.title = `Đang Chơi: ${title} --- Game Tuổi Thơ Web Player`;
           }
@@ -160,6 +165,7 @@ export default function PlayCustomClient() {
       <EmulatorPlayer
         gameName={gameTitle}
         directBytes={jarBuffer}
+        userLibraryId={userLibraryId}
       />
     </div>
   );

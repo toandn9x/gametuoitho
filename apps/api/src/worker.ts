@@ -4,6 +4,7 @@
  * One Worker serves the whole site on one domain:
  * - /api/v1/*        → the Hono API (D1 database + private Tigris storage; R2 optional)
  * - /admin, /admin/* → admin pages, only for ADMIN accounts (same rule as the Node server)
+ * - /emulator/freej2me-web.jar → served with Range support (needed by the emulator on Safari/iPhone)
  * - everything else  → the built web app (Workers Static Assets). Cloudflare serves existing files
  *                      directly; the Worker only sees requests that match no file, and answers them
  *                      with the page shells (games added after the last web build) or the 404 page.
@@ -13,6 +14,7 @@
 import type { Context } from 'hono';
 import { createApp } from './index';
 import { ADMIN_PAGE_PATTERN, decideAdminPageAccess, FORBIDDEN_FALLBACK_HTML } from './middleware/adminPages';
+import { RANGE_ASSET_PATHS, withByteRange } from './middleware/byteRange';
 import type { AppEnv } from './types';
 
 const app = createApp();
@@ -52,6 +54,17 @@ app.use('*', async (c, next) => {
   const page = await c.env.ASSETS.fetch(c.req.raw);
   return withStatus(page, page.status, { 'Cache-Control': 'no-store' });
 });
+
+// Emulator files read in byte ranges (Static Assets alone answer Range with the whole file).
+for (const assetPath of RANGE_ASSET_PATHS) {
+  app.get(assetPath, async (c) => {
+    if (!c.env.ASSETS) return c.notFound();
+    const range = c.req.header('Range');
+    if (!range) return c.env.ASSETS.fetch(c.req.raw);
+    // Ask for the plain file (no Range, no If-None-Match) so the slice is taken from a full 200 body.
+    return withByteRange(range, await c.env.ASSETS.fetch(new Request(c.req.url)));
+  });
+}
 
 // Requests that matched no static file (API routes registered earlier take precedence).
 app.on(['GET', 'HEAD'], '*', async (c) => {
