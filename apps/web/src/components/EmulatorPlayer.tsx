@@ -295,7 +295,7 @@ export default function EmulatorPlayer({
   });
 
   const isDirectMode = !!directBytes;
-  const effectiveAppId = activeVersion?.id || effectiveGameId || 'game';
+  const effectiveAppId = activeVersion?.id || userLibraryId || effectiveGameId || 'game';
   const emulatorBaseSrc = isDirectMode
     ? `/emulator/run.html?mode=direct&appId=${encodeURIComponent(effectiveAppId)}`
     : effectiveJarUrl

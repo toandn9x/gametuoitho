@@ -572,7 +572,10 @@ async function init() {
             return;
         }
 
-        args = ['jar', jarFilePath];
+        // A temporary JAR filename does not override FreeJ2ME's manifest-based RMS path.
+        const SaveIsolation = await lib.pl.zb3.freej2me.launcher.SaveIsolation;
+        const installedAppId = await SaveIsolation.prepare(jarFilePath, jarName);
+        args = ['app', installedAppId];
     }
 
     FreeJ2ME.main(args).catch(e => {

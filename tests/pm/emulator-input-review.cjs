@@ -53,7 +53,7 @@ async function bridge() {
   const canvas = eventTarget({ width: 240, height: 320, style: {}, focus() {}, setPointerCapture() {}, getBoundingClientRect: () => rect, getContext: () => ({ canvas }) });
   const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: { postMessage: message => parentMessages.push(message) }, innerWidth: 180, innerHeight: 240 });
   const document = eventTarget({ hidden: false, documentElement: { dataset: {} }, querySelector: () => ({ textContent: '' }), getElementById: id => id === 'display' ? canvas : { style: {} } });
-  let natives, javaProperties;
+  let natives, javaProperties, launchArgs, saveIdentity;
   const file = 'apps/emulator-web/src/main.js';
   const ast = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const inert = ts.createPrinter().printFile(ts.factory.updateSourceFile(ast, ast.statements.filter(node =>
@@ -65,7 +65,12 @@ async function bridge() {
     LibMidi: class { midiPlayer = { addEventListener() {} }; async init() {} }, LibMedia: class {}, createUnlockingAudioContext() {},
     canvasFontNatives: {}, canvasGraphicsNatives: {}, gles2Natives: {}, jsReferenceNatives: {}, mediaBridgeNatives: {}, midiBridgeNatives: {},
     cheerpjInit: async options => { natives = options.natives; javaProperties = options.javaProperties; },
-    cheerpjRunLibrary: async () => ({ org: { recompile: { freej2me: { FreeJ2ME: { main: async () => {} } } } } }),
+    cheerpjRunLibrary: async () => ({
+      org: { recompile: { freej2me: { FreeJ2ME: { main: async args => { launchArgs = args; } } } } },
+      pl: { zb3: { freej2me: { launcher: { SaveIsolation: { prepare: async (file, id) => {
+        saveIdentity = { file, id }; return '_gtt_' + id;
+      } } } } } },
+    }),
     cheerpOSAddStringFile() {}, fetch: async () => ({ ok: true, arrayBuffer: async () => { const bytes = new Uint8Array(22); bytes[0] = 80; bytes[1] = 75; return bytes.buffer; } }),
     AbortSignal, crypto: require('node:crypto').webcrypto, localStorage: storage, console: { log() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
   });
@@ -80,13 +85,18 @@ async function bridge() {
   } } } } } };
   const listener = Object.fromEntries(['keyPressed', 'keyReleased', 'pointerPressed', 'pointerDragged', 'pointerReleased'].map(kind => [kind, async event => delivered.push({ kind, ...event })]));
   const dispatch = () => natives.Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener);
-  return { window, document, canvas, delivered, dispatch, settingsStore, parentMessages, javaProperties, screenKey: context.screenKey,
+  return { window, document, canvas, delivered, dispatch, settingsStore, parentMessages, javaProperties, launchArgs, saveIdentity, screenKey: context.screenKey,
     command(data, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data, ...overrides }); },
     key(code, pressed, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data: { type: 'KEY_EVENT', code, pressed }, ...overrides }); } };
 }
 
 async function main() {
   ({ resumeAudioContext } = await audioModule);
+  await test('downloaded games launch the isolated installed app rather than the shared manifest identity', async () => {
+    const runtime = await bridge();
+    assert.deepEqual(plain(runtime.launchArgs), ['app', '_gtt_' + runtime.saveIdentity.id]);
+    assert.equal(runtime.saveIdentity.file, '/str/' + runtime.saveIdentity.id + '.jar');
+  });
   await test('virtual device identity survives reloads and reaches Java without a temporary fallback', async () => {
     const source = ts.createSourceFile('main.js', read('apps/emulator-web/src/main.js'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
     const getter = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'getVirtualBluetoothAddress').getText(source);
@@ -126,7 +136,11 @@ async function main() {
   });
   await test('every skin enables fractional fit for URL games and direct imported bytes', () => {
     const jarUrl = '/api/v1/assets/raw/fixture.jar?download=1&name=game';
-    for (const skin of ['nokia', 'arcade', 'clean', 'split']) for (const direct of [false, true]) {
+    for (const skin of ['nokia', 'arcade', 'clean', 'split']) for (const direct of [false, true]) for (const identity of [
+      { props: { gameId: 'fixture', activeVersion: { id: 'version-1' } }, expected: 'version-1' },
+      { props: { userLibraryId: 'private-a' }, expected: 'private-a' },
+      { props: { userLibraryId: 'private-b' }, expected: 'private-b' },
+    ]) {
       const React = { createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }),
         useState: value => [value === 'nokia' ? skin : value, () => {}], useRef: value => ({ current: value }), useEffect() {} };
       const requireDependency = name => {
@@ -143,7 +157,7 @@ async function main() {
       const split = loadSplitControls(React), nokia = { exports: {} }, player = { exports: {} };
       vm.runInNewContext(compile(read('apps/web/src/components/Nokia1280.tsx'), 'Nokia1280.tsx'), { module: nokia, exports: nokia.exports, require: requireDependency });
       vm.runInNewContext(compile(read('apps/web/src/components/EmulatorPlayer.tsx'), 'EmulatorPlayer.tsx'), { module: player, exports: player.exports, require: requireDependency });
-      const tree = player.exports.default({ gameId: 'fixture', activeVersion: { id: 'version-1' }, jarUrl,
+      const tree = player.exports.default({ ...identity.props, jarUrl,
         ...(direct ? { directBytes: new Uint8Array([80, 75]) } : {}) });
       function frame(node) {
         if (!node || typeof node !== 'object') return;
@@ -154,7 +168,7 @@ async function main() {
       assert.equal(url.searchParams.get('fractionScale'), 'true', `${skin}, direct=${direct}`);
       assert.equal(url.searchParams.getAll('fractionScale').length, 1);
       assert.equal(url.searchParams.get('skin'), null, 'the game URL is independent of its current skin');
-      assert.equal(url.searchParams.get('appId'), 'version-1');
+      assert.equal(url.searchParams.get('appId'), identity.expected, 'private imports must also get distinct save identities');
       assert.equal(url.searchParams.get('mode'), direct ? 'direct' : null);
       assert.equal(url.searchParams.get('jar'), direct ? null : jarUrl);
     }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getCurrentUser, logoutUser } from '../lib/api';
+import { AUTH_CHANGED_EVENT, getAuthToken, getCurrentUser, logoutUser } from '../lib/api';
 import { User } from '@gametuoitho/shared-types';
 
 export default function UserNav() {
@@ -8,13 +8,40 @@ export default function UserNav() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    getCurrentUser()
-      .then((res) => {
-        if (res.success && res.data) {
-          setUser(res.data);
-        }
-      })
-      .finally(() => setLoading(false));
+    let active = true;
+    let generation = 0;
+    const refresh = async () => {
+      const request = ++generation;
+      const token = getAuthToken();
+      const current = () => active && request === generation && getAuthToken() === token;
+      setUser(null);
+      setOpen(false);
+      setLoading(true);
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await getCurrentUser();
+        if (current()) setUser(res.success && res.data ? res.data : null);
+      } catch {
+        if (current()) setUser(null);
+      } finally {
+        if (current()) setLoading(false);
+      }
+    };
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === 'gametuoitho_token' || event.key === null) void refresh();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, refresh);
+    window.addEventListener('storage', storageChanged);
+    void refresh();
+    return () => {
+      active = false;
+      generation++;
+      window.removeEventListener(AUTH_CHANGED_EVENT, refresh);
+      window.removeEventListener('storage', storageChanged);
+    };
   }, []);
 
   if (loading) {

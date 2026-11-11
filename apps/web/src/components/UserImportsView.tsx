@@ -1,28 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { getUserImports, uploadJarFile, removeGameFromLibrary } from '../lib/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { AUTH_CHANGED_EVENT, getAuthToken, getUserImports, uploadJarFile, removeGameFromLibrary } from '../lib/api';
 import { UserLibraryItem } from '@gametuoitho/shared-types';
 
 export default function UserImportsView() {
   const [imports, setImports] = useState<UserLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [customName, setCustomName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const requestGeneration = useRef(0);
 
   const loadData = () => {
+    const request = ++requestGeneration.current;
+    const token = getAuthToken();
+    const current = () => request === requestGeneration.current && getAuthToken() === token;
+    setImports([]);
+    setLoading(true);
+    setLoadError(null);
     getUserImports()
       .then((res) => {
-        if (res.success && res.data) {
+        if (!current()) return;
+        if (res.success && Array.isArray(res.data)) {
           setImports(res.data);
+        } else {
+          setImports([]);
+          setLoadError(res.error?.message || 'Không thể tải danh sách game đã import. Vui lòng thử lại.');
         }
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!current()) return;
+        setImports([]);
+        setLoadError('Không thể tải danh sách game đã import. Vui lòng thử lại.');
+      })
+      .finally(() => { if (current()) setLoading(false); });
   };
 
   useEffect(() => {
+    const refresh = () => {
+      setError(null);
+      setSuccess(null);
+      setSelectedFile(null);
+      setCustomName('');
+      const fileInput = document.getElementById('jar-file-input') as HTMLInputElement | null;
+      if (fileInput) fileInput.value = '';
+      loadData();
+    };
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === 'gametuoitho_token' || event.key === null) refresh();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, refresh);
+    window.addEventListener('storage', storageChanged);
     loadData();
+    return () => {
+      requestGeneration.current++;
+      window.removeEventListener(AUTH_CHANGED_EVENT, refresh);
+      window.removeEventListener('storage', storageChanged);
+    };
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,8 +94,11 @@ export default function UserImportsView() {
     setError(null);
     setSuccess(null);
 
+    const token = getAuthToken();
     try {
-      await uploadJarFile(selectedFile, customName.trim());
+      const res = await uploadJarFile(selectedFile, customName.trim());
+      if (getAuthToken() !== token) return;
+      if (!res.success) throw new Error(res.error?.message || 'Lỗi khi import file');
       setSuccess(`Đã import thành công "${customName}"!`);
       setSelectedFile(null);
       setCustomName('');
@@ -67,6 +106,7 @@ export default function UserImportsView() {
       if (fileInput) fileInput.value = '';
       loadData();
     } catch (err: any) {
+      if (getAuthToken() !== token) return;
       setError(err.message || 'Lỗi khi import file');
     } finally {
       setUploading(false);
@@ -75,14 +115,17 @@ export default function UserImportsView() {
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa game "${name}"? File sẽ bị gỡ khỏi tài khoản.`)) return;
+    const token = getAuthToken();
     try {
       const res = await removeGameFromLibrary(id);
+      if (getAuthToken() !== token) return;
       if (res.success) {
-        setImports(imports.filter((item) => item.id !== id));
+        setImports(current => current.filter((item) => item.id !== id));
       } else {
         alert(res.error?.message || 'Xóa thất bại');
       }
     } catch {
+      if (getAuthToken() !== token) return;
       alert('Đã xảy ra lỗi');
     }
   };
@@ -153,7 +196,7 @@ export default function UserImportsView() {
       <div>
         <h2 className="text-xl font-black text-slate-100 mb-4 flex items-center gap-2">
           <span>📦</span>
-          <span>Danh Sách Game Đã Import ({imports.length})</span>
+          <span>Danh Sách Game Đã Import ({loadError ? '—' : imports.length})</span>
         </h2>
 
         {loading ? (
@@ -161,6 +204,11 @@ export default function UserImportsView() {
             {[1, 2].map((n) => (
               <div key={n} className="h-16 bg-arcade-850 rounded-xl border border-arcade-800" />
             ))}
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-500/30 bg-arcade-900 p-6 text-sm text-red-300">
+            <p>{loadError}</p>
+            <button type="button" onClick={loadData} className="mt-3 font-bold text-neon-cyan hover:underline">Thử lại</button>
           </div>
         ) : imports.length === 0 ? (
           <div className="text-center py-12 bg-arcade-900 rounded-2xl border border-arcade-800">

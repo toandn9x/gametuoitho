@@ -6,7 +6,14 @@
   "upstreamJarSha256": "c9fcc5faca09f184e7a056855d1c244ce6909fde1b166cb3fd6e15e22db0fd0a",
   "menuPatchedJarSha256": "36d880b9a3069bc16fffe89a6339b6594d1dd0e22ae8c529a2fa1aaf875be5c6",
   "identityPatchedJarSha256": "88c8f369b4fda623ba9e55a8548e819cf70e440e0e63a19f800edd13812c1c83",
-  "patchedJarSha256": "efbff57227ae85625d35d16a770754aac56e74412d52a770cdc4c51f08cc82d7",
+  "bluetoothPatchedJarSha256": "efbff57227ae85625d35d16a770754aac56e74412d52a770cdc4c51f08cc82d7",
+  "patchedJarSha256": "49827a756255d3018f2f51a92849bf1df9aca70f379615a745f287f8bebdc8ae",
+  "saveIsolationPatch": {
+    "sourceFile": "SaveIsolation.java",
+    "sourceSha256": "d0bed8849d556c87910a7e97f3625e4347b2499f7f757643ae66a7553265452e",
+    "addedOn": "2026-11-11",
+    "change": "Install and launch under the host identity, independently of MIDlet-Name. Copy legacy RMS/config only when the installed JAR matches exactly and its save is unclaimed or claimed by this identity. Never overwrite or remove legacy saves."
+  },
   "bluetoothPatch": {
     "sourceFile": "LocalDevice.java",
     "sourceSha256": "6cbb0dd02edb1c383f4fb16c97f573efdc7568083ba39dbed2c204884d295575",

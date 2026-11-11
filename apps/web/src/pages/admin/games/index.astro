@@ -43,7 +43,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           data-status="ALL"
           class="status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-neon-cyan text-arcade-950 shadow-neon-cyan"
         >
-          Tất Cả (<span id="count-all">0</span>)
+          Tất Cả (<span id="count-all">—</span>)
         </button>
         <button
           data-status="PUBLISHED"
@@ -184,6 +184,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         </table>
       </div>
     </div>
+    <nav id="games-pagination" aria-label="Phân trang game" class="hidden flex flex-wrap items-center justify-between gap-3 text-xs">
+      <p id="games-page-info" aria-live="polite" class="text-slate-400"></p>
+      <div class="flex gap-2">
+        <button type="button" id="games-prev-page" disabled class="rounded-lg border border-arcade-700 bg-arcade-800 px-4 py-2 text-slate-200 hover:border-neon-cyan disabled:opacity-40 disabled:cursor-default">← Trang trước</button>
+        <button type="button" id="games-next-page" disabled class="rounded-lg border border-arcade-700 bg-arcade-800 px-4 py-2 text-slate-200 hover:border-neon-cyan disabled:opacity-40 disabled:cursor-default">Trang sau →</button>
+      </div>
+    </nav>
     <!-- Room under the last row while the floating bulk toolbar is shown -->
     <div id="bulk-toolbar-spacer" class="hidden h-28 sm:h-20" aria-hidden="true"></div>
   </div>
@@ -372,6 +379,33 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     let currentStatus = urlParams.get('status') || 'ALL';
     let currentSearch = urlParams.get('search') || '';
     let currentFeaturedOnly = urlParams.get('featured') === 'true';
+    const gamesPageSize = 100;
+    const initialPage = Number(urlParams.get('page'));
+    let currentPage = Number.isInteger(initialPage) && initialPage > 0 && initialPage <= 1000000 ? initialPage : 1;
+    let gamesTotalPages = 1;
+    const gamesPager = document.getElementById('games-pagination')!;
+    const gamesPageInfo = document.getElementById('games-page-info')!;
+    const gamesPrevPage = document.getElementById('games-prev-page') as HTMLButtonElement;
+    const gamesNextPage = document.getElementById('games-next-page') as HTMLButtonElement;
+
+    function setGamesPage(page: number) {
+      currentPage = page;
+      const url = new URL(window.location.href);
+      if (page === 1) url.searchParams.delete('page');
+      else url.searchParams.set('page', String(page));
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    gamesPrevPage.addEventListener('click', () => {
+      if (gamesPrevPage.disabled || currentPage <= 1) return;
+      setGamesPage(currentPage - 1);
+      void loadGames();
+    });
+    gamesNextPage.addEventListener('click', () => {
+      if (gamesNextPage.disabled || currentPage >= gamesTotalPages) return;
+      setGamesPage(currentPage + 1);
+      void loadGames();
+    });
 
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     const clearSearchBtn = document.getElementById('clear-search-btn') as HTMLButtonElement;
@@ -509,9 +543,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       document.getElementById('bulk-toolbar-spacer')?.classList.toggle('hidden', count === 0);
 
       const allCheckboxes = document.querySelectorAll<HTMLInputElement>('.game-checkbox');
-      if (allCheckboxes.length > 0) {
-        selectAllHeader.checked = Array.from(allCheckboxes).every((cb) => cb.checked);
-      }
+      selectAllHeader.checked = count > 0 && allCheckboxes.length > 0 && Array.from(allCheckboxes).every((cb) => cb.checked);
     }
 
     // Load categories at runtime (R05F-A)
@@ -632,8 +664,33 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       }
     });
 
+    function showGamesMessage(message: string, isError = false) {
+      const tbody = document.getElementById('games-table-body')!;
+      tbody.textContent = '';
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 8;
+      cell.className = `px-6 py-8 text-center font-mono ${isError ? 'text-red-300' : 'text-slate-500'}`;
+      if (isError) cell.setAttribute('role', 'alert');
+      const text = document.createElement('p');
+      text.textContent = message;
+      cell.appendChild(text);
+      if (isError) {
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.textContent = 'Thử lại';
+        retry.className = 'mt-3 font-bold text-neon-cyan hover:underline';
+        retry.addEventListener('click', () => { void loadGames(); });
+        cell.appendChild(retry);
+      }
+      row.appendChild(cell);
+      tbody.appendChild(row);
+    }
+
     async function loadGames() {
       const generation = ++gamesLoadGeneration;
+      gamesPrevPage.disabled = true;
+      gamesNextPage.disabled = true;
       gamesCache = [];
       selectedGameIds.clear();
       updateBulkToolbar();
@@ -649,32 +706,43 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       loadingTr.appendChild(loadingTd);
       tbody.appendChild(loadingTr);
 
-      const res = await getAdminGames(1, 100, currentStatus, currentSearch, currentFeaturedOnly);
+      const res = await getAdminGames(currentPage, gamesPageSize, currentStatus, currentSearch, currentFeaturedOnly).catch(() => null);
       if (generation !== gamesLoadGeneration) return;
 
-      if (!res.success || !res.data || res.data.length === 0) {
+      if (!res?.success || !Array.isArray(res.data)) {
+        gamesPager.classList.add('hidden');
+        showGamesMessage(res?.error?.message || 'Không thể tải danh sách game. Vui lòng thử lại.', true);
+        return;
+      }
+
+      const total = typeof res.total === 'number' && res.total >= 0 ? res.total : res.data.length;
+      gamesTotalPages = Math.max(1, Math.ceil(total / gamesPageSize));
+      if (currentPage > gamesTotalPages) {
+        setGamesPage(gamesTotalPages);
+        await loadGames();
+        return;
+      }
+      gamesPager.classList.toggle('hidden', gamesTotalPages <= 1);
+      gamesPageInfo.textContent = `Trang ${currentPage} / ${gamesTotalPages} · ${total} game`;
+      gamesPrevPage.disabled = currentPage <= 1;
+      gamesNextPage.disabled = currentPage >= gamesTotalPages;
+      const countAllEl = document.getElementById('count-all');
+      if (countAllEl && currentStatus === 'ALL' && !currentSearch && !currentFeaturedOnly) {
+        countAllEl.textContent = String(total);
+      }
+
+      if (res.data.length === 0) {
         const emptyMsg = currentFeaturedOnly && currentStatus === 'ALL' && !currentSearch
           ? 'Chưa có game nào trong mục Game ưa thích. Bấm ☆ ở cột "Ưa thích" để chọn game.'
           : currentSearch || currentStatus !== 'ALL' || currentFeaturedOnly
             ? `Không tìm thấy game nào phù hợp với bộ lọc (Trạng thái: ${currentStatus}${currentFeaturedOnly ? ', chỉ Game ưa thích' : ''}${currentSearch ? `, Từ khóa: "${currentSearch}"` : ''}).`
             : 'Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".';
 
-        tbody.textContent = '';
-        const emptyTr = document.createElement('tr');
-        const emptyTd = document.createElement('td');
-        emptyTd.colSpan = 8;
-        emptyTd.className = 'px-6 py-8 text-center text-slate-500 font-mono';
-        emptyTd.textContent = emptyMsg;
-        emptyTr.appendChild(emptyTd);
-        tbody.appendChild(emptyTr);
+        showGamesMessage(emptyMsg);
         return;
       }
 
       gamesCache = res.data;
-      const countAllEl = document.getElementById('count-all');
-      if (countAllEl && currentStatus === 'ALL' && !currentSearch && !currentFeaturedOnly) {
-        countAllEl.textContent = String(res.data.length);
-      }
 
       tbody.textContent = '';
       for (const game of res.data) {
@@ -946,6 +1014,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         const target = e.currentTarget as HTMLElement;
         const newStatus = target.getAttribute('data-status') || 'ALL';
         currentStatus = newStatus;
+        setGamesPage(1);
 
         // Update URL query
         const url = new URL(window.location.href);
@@ -963,6 +1032,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     // "★ Ưa thích" filter: independent of the status tab and the search box
     document.getElementById('featured-filter')?.addEventListener('click', () => {
       currentFeaturedOnly = !currentFeaturedOnly;
+      setGamesPage(1);
       const url = new URL(window.location.href);
       if (currentFeaturedOnly) {
         url.searchParams.set('featured', 'true');
@@ -979,6 +1049,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       clearTimeout(searchTimeout);
       const val = searchInput.value.trim();
       currentSearch = val;
+      setGamesPage(1);
 
       if (val) {
         clearSearchBtn?.classList.remove('hidden');
@@ -1002,6 +1073,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     clearSearchBtn?.addEventListener('click', () => {
       searchInput.value = '';
       currentSearch = '';
+      setGamesPage(1);
       clearSearchBtn.classList.add('hidden');
       const url = new URL(window.location.href);
       url.searchParams.delete('search');

@@ -7,6 +7,8 @@ export default function GameCatalogView() {
   const [games, setGames] = useState<Game[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const [search, setSearch] = useState('');
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -39,6 +41,7 @@ export default function GameCatalogView() {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setError(null);
 
     getGames({
       search: search.trim() || undefined,
@@ -49,12 +52,21 @@ export default function GameCatalogView() {
       limit: 16,
     })
       .then((res) => {
-        if (isMounted && res.success && res.data) {
+        if (!isMounted) return;
+        if (res.success && Array.isArray(res.data)) {
           setGames(featuredOnly ? res.data.filter(game => game.is_featured === true) : res.data);
           if (res.pagination) {
             setPagination(res.pagination);
           }
+        } else {
+          setGames([]);
+          setError(res.error?.message || 'Không thể tải danh sách game. Vui lòng thử lại.');
         }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setGames([]);
+        setError('Không thể tải danh sách game. Vui lòng thử lại.');
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -63,7 +75,7 @@ export default function GameCatalogView() {
     return () => {
       isMounted = false;
     };
-  }, [search, featuredOnly, selectedCategory, sort, page]);
+  }, [search, featuredOnly, selectedCategory, sort, page, retry]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,6 +186,11 @@ export default function GameCatalogView() {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div role="alert" className="rounded-2xl border border-red-500/30 bg-arcade-900 p-6 text-sm text-red-300">
+            <p>{error}</p>
+            <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-3 font-bold text-neon-cyan hover:underline">Thử lại</button>
+          </div>
         ) : games.length > 0 ? (
           <div className="game-list-grid">
             {games.map((game) => (
@@ -204,7 +221,7 @@ export default function GameCatalogView() {
       </div>
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
+      {!loading && !error && pagination.totalPages > 1 && (
         <div className="mt-12 flex justify-center items-center gap-2">
           {pagination.page > 1 && (
             <button

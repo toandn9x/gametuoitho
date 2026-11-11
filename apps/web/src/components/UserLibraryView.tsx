@@ -1,36 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import { getUserLibrary, removeGameFromLibrary } from '../lib/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { AUTH_CHANGED_EVENT, getAuthToken, getUserLibrary, removeGameFromLibrary } from '../lib/api';
 import { UserLibraryItem } from '@gametuoitho/shared-types';
 import { GameCardView } from './GameCard';
 
 export default function UserLibraryView() {
   const [items, setItems] = useState<UserLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestGeneration = useRef(0);
 
   const loadData = () => {
+    const request = ++requestGeneration.current;
+    const token = getAuthToken();
+    const current = () => request === requestGeneration.current && getAuthToken() === token;
+    setItems([]);
+    setLoading(true);
+    setLoadError(null);
     getUserLibrary()
       .then((res) => {
-        if (res.success && res.data) {
+        if (!current()) return;
+        if (res.success && Array.isArray(res.data)) {
           setItems(res.data);
+        } else {
+          setItems([]);
+          setLoadError(res.error?.message || 'Không thể tải thư viện. Vui lòng thử lại.');
         }
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!current()) return;
+        setItems([]);
+        setLoadError('Không thể tải thư viện. Vui lòng thử lại.');
+      })
+      .finally(() => { if (current()) setLoading(false); });
   };
 
   useEffect(() => {
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === 'gametuoitho_token' || event.key === null) loadData();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, loadData);
+    window.addEventListener('storage', storageChanged);
     loadData();
+    return () => {
+      requestGeneration.current++;
+      window.removeEventListener(AUTH_CHANGED_EVENT, loadData);
+      window.removeEventListener('storage', storageChanged);
+    };
   }, []);
 
   const handleRemove = async (id: string, name: string) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa "${name}" khỏi thư viện?`)) return;
+    const token = getAuthToken();
     try {
       const res = await removeGameFromLibrary(id);
+      if (getAuthToken() !== token) return;
       if (res.success) {
         setItems(current => current.filter((item) => item.id !== id));
       } else {
         alert(res.error?.message || 'Xóa thất bại');
       }
     } catch {
+      if (getAuthToken() !== token) return;
       alert('Đã xảy ra lỗi khi xóa');
     }
   };
@@ -43,6 +73,13 @@ export default function UserLibraryView() {
         ))}
       </div>
     );
+  }
+
+  if (loadError) {
+    return <div role="alert" className="rounded-2xl border border-red-500/30 bg-arcade-900 p-6 text-sm text-red-300">
+      <p>{loadError}</p>
+      <button type="button" onClick={loadData} className="mt-3 font-bold text-neon-cyan hover:underline">Thử lại</button>
+    </div>;
   }
 
   if (items.length === 0) {
