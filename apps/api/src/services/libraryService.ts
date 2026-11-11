@@ -3,7 +3,7 @@ import { GameRepository } from '../repositories/gameRepository';
 import { AssetRepository } from '../repositories/assetRepository';
 import { StorageDriver } from '../storage/storage';
 import { generateId } from '@gametuoitho/shared-utils';
-import { PlayHistoryItem } from '@gametuoitho/shared-types';
+import { FavoriteGameItem, PlayHistoryItem } from '@gametuoitho/shared-types';
 
 export class LibraryService {
   constructor(
@@ -165,21 +165,21 @@ export class LibraryService {
     }));
   }
 
-  async toggleFavorite(userId: string, gameId: string) {
+  async toggleFavorite(userId: string, gameId: string, desired?: boolean) {
     // Security (R06-B): Only public published games can be favorited
     const game = await this.gameRepo.findById(gameId);
     if (!game || game.status !== 'PUBLISHED' || game.visibility !== 'PUBLIC') {
       throw new Error('Game không tồn tại hoặc chưa được xuất bản công khai');
     }
 
-    return this.libraryRepo.toggleFavorite(userId, gameId);
+    return this.libraryRepo.toggleFavorite(userId, gameId, desired);
   }
 
-  async getFavorites(userId: string) {
+  async getFavorites(userId: string): Promise<FavoriteGameItem[]> {
     const favs = await this.libraryRepo.getFavorites(userId);
-    return favs.map((f) => ({
+    return favs.map(({ cover_storage_key, ...f }) => ({
       ...f,
-      cover_url: f.cover_storage_key ? this.storage.getUrl(f.cover_storage_key) : null,
+      cover_url: cover_storage_key ? this.storage.getUrl(cover_storage_key) : null,
     }));
   }
 }

@@ -1,8 +1,9 @@
 import { ApiResponse } from '@gametuoitho/api-contracts';
-import { Game, GameVersion, Category, User, UserLibraryItem, PlayHistoryItem } from '@gametuoitho/shared-types';
+import { Game, GameVersion, Category, User, UserLibraryItem, PlayHistoryItem, FavoriteGameItem } from '@gametuoitho/shared-types';
 
 export const AUTH_CHANGED_EVENT = 'gtt:auth-changed';
 export const PLAY_HISTORY_UPDATED_EVENT = 'gtt:play-history-updated';
+export const FAVORITES_UPDATED_EVENT = 'gtt:favorites-updated';
 
 export const API_BASE_URL = typeof window !== 'undefined'
   ? (window as any).__PUBLIC_API_URL__ || '/api/v1'
@@ -291,15 +292,18 @@ export async function uploadJarFile(file: File, customName: string) {
   return importRes;
 }
 
-export async function getFavorites() {
-  return apiRequest<any[]>('/me/favorites');
+export async function getFavorites(signal?: AbortSignal) {
+  return apiRequest<FavoriteGameItem[]>('/me/favorites', { signal, cache: 'no-store' });
 }
 
-export async function toggleFavorite(gameId: string) {
-  return apiRequest<{ isFavorite: boolean }>('/me/favorites', {
+/** Sets (not flips) the star, so a stale page cannot undo what the user sees. */
+export async function setFavorite(gameId: string, favorite: boolean) {
+  const result = await apiRequest<{ isFavorite: boolean }>('/me/favorites', {
     method: 'POST',
-    body: JSON.stringify({ game_id: gameId }),
+    body: JSON.stringify({ game_id: gameId, favorite }),
   });
+  if (result.success) window.dispatchEvent(new Event(FAVORITES_UPDATED_EVENT));
+  return result;
 }
 
 export async function getHistory(limit = 20, signal?: AbortSignal) {

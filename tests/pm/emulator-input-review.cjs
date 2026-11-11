@@ -124,10 +124,15 @@ async function main() {
   await test('player captures touch, supports simultaneous keys and releases once on cancellation/background', () => {
     const window = eventTarget({ location: { origin: 'https://fixture.invalid' } }), document = eventTarget({ hidden: false });
     const refs = [], effects = [], messages = []; let refIndex = 0;
-    const React = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), useState: value => [value, () => {}], useRef: value => refs[refIndex++] ||= { current: value }, useEffect: callback => effects.push(callback) };
+    const React = { createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }), useState: value => [value, () => {}], useRef: value => refs[refIndex++] ||= { current: value }, useEffect: callback => effects.push(callback) };
+    const nokia = { exports: {} };
+    vm.runInNewContext(compile(read('apps/web/src/components/Nokia1280.tsx'), 'Nokia1280.tsx'), {
+      module: nokia, exports: nokia.exports,
+      require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name.endsWith('.css')) return {}; throw new Error(name); },
+    });
     const module = { exports: {} };
     vm.runInNewContext(compile(read('apps/web/src/components/EmulatorPlayer.tsx'), 'EmulatorPlayer.tsx'), { module, exports: module.exports, window, document, console,
-      require(name) { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === '../lib/api') return { recordPlay: async () => ({ success: true }) }; if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] }; if (name === '../lib/touchKeypad') return { bindTouchKeypad() { throw new Error('Native touch has a separate DOM fixture'); } }; if (name.endsWith('.css')) return {}; throw new Error(name); } });
+      require(name) { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === './Nokia1280') return nokia.exports; if (name === '../lib/api') return { recordPlay: async () => ({ success: true }) }; if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] }; if (name === '../lib/touchKeypad') return { bindTouchKeypad() { throw new Error('Native touch has a separate DOM fixture'); } }; if (name.endsWith('.css')) return {}; throw new Error(name); } });
     const tree = module.exports.default({ gameId: 'fixture', jarUrl: '/fixture.jar' });
     function find(node, test) { if (!node || typeof node !== 'object') return null; if (test(node)) return node; for (const child of [node.props?.children].flat(Infinity)) { const found = find(child, test); if (found) return found; } return null; }
     const audioOrder = [];

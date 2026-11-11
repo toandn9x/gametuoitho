@@ -93,6 +93,11 @@ export const userLibraryRoutes = (getService: (c: Context<AppEnv>) => LibrarySer
   });
 
   // Favorites
+  router.use('/favorites', async (c, next) => {
+    c.header('Cache-Control', 'private, no-store');
+    await next();
+  });
+
   router.get('/favorites', async (c) => {
     const libraryService = getService(c);
     const user = c.get('user')!;
@@ -111,8 +116,15 @@ export const userLibraryRoutes = (getService: (c: Context<AppEnv>) => LibrarySer
           400
         );
       }
+      // Optional: true/false sets the state; omitted keeps the original toggle behaviour.
+      if (body.favorite !== undefined && typeof body.favorite !== 'boolean') {
+        return c.json(
+          { success: false, error: { message: 'favorite phải là true hoặc false' } },
+          400
+        );
+      }
 
-      const res = await libraryService.toggleFavorite(user.id, body.game_id);
+      const res = await libraryService.toggleFavorite(user.id, body.game_id, body.favorite);
       return c.json({ success: true, data: res });
     } catch (err: any) {
       return c.json({ success: false, error: { message: err.message } }, 400);

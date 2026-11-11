@@ -132,6 +132,18 @@ export interface PlayHistoryItem extends UserGameActivity {
   cover_url: string | null;
 }
 
+/** A public game the user starred (GET /me/favorites), newest first. */
+export interface FavoriteGameItem {
+  id: string;
+  game_id: string;
+  favorited_at: string;
+  game_name: string;
+  game_slug: string;
+  developer: string | null;
+  category_name: string | null;
+  cover_url: string | null;
+}
+
 export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface UploadJob {

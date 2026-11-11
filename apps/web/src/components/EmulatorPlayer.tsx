@@ -3,7 +3,7 @@ import { recordPlay, reportGameCrash } from '../lib/api';
 import { Game, GameVersion } from '@gametuoitho/shared-types';
 import { DEFAULT_KEY_MAPPINGS, KEYBOARD_HINT_MESSAGE, DEFAULT_KEYS_NOTE } from '../constants/keyMapping';
 import { bindTouchKeypad, type TouchKeypadBinding } from '../lib/touchKeypad';
-import './Nokia1280.css';
+import Nokia1280 from './Nokia1280';
 
 export interface EmulatorPlayerProps {
   game?: Game;
@@ -507,94 +507,16 @@ export default function EmulatorPlayer({
 
       {/* Screen Presentation according to Skin */}
       {skin === 'nokia' ? (
-        <div ref={keypadRootRef} className="nokia1280 order-3 lg:order-1" role="group" aria-label="Điện thoại Nokia 1280">
-          <div className="nokia1280__top" aria-hidden="true">
-            <div className="nokia1280__speaker" />
-            <span className="nokia1280__brand">NOKIA</span>
-          </div>
-
-          <div className="nokia1280__bezel">
-            <div className="nokia1280__screen">
-              <iframe
-                ref={iframeRef}
-                onLoad={handleEmulatorLoad}
-                src={emulatorSrc ? `${emulatorSrc}&skin=nokia1280&fractionScale=true` : emulatorSrc}
-                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-                allow="autoplay"
-                title={effectiveGameName}
-              />
-            </div>
-          </div>
-
-          <div className="nokia1280__controls" role="group" aria-label="Phím điều hướng">
-            <div className="nokia1280__sidekeys">
-              <button type="button" {...createKeyHandlers('F1')} className="nokia1280__function"
-                aria-label="Phím mềm trái (F1)" title="Phím mềm trái · F1">
-                <span className="nokia1280__softkey-mark" aria-hidden="true" />
-              </button>
-              <button type="button" {...createKeyHandlers('Enter')} className="nokia1280__function nokia1280__call"
-                aria-label="Chọn / Đồng ý (Enter)" title="Chọn / Đồng ý · Enter">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m5 4 3-1 3 5-2 2a14 14 0 0 0 5 5l2-2 5 3-1 3c-.3 1-1.4 2-3 2C10 20 4 14 3 7c0-1.6 1-2.7 2-3Z" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="nokia1280__dpad">
-              {[
-                { code: 'ArrowUp', position: 'up', label: 'Lên', symbol: '▲' },
-                { code: 'ArrowLeft', position: 'left', label: 'Trái', symbol: '◀' },
-                { code: 'ArrowRight', position: 'right', label: 'Phải', symbol: '▶' },
-                { code: 'ArrowDown', position: 'down', label: 'Xuống', symbol: '▼' },
-              ].map(key => (
-                <button key={key.code} type="button" {...createKeyHandlers(key.code)}
-                  className={`nokia1280__direction nokia1280__direction--${key.position}`}
-                  aria-label={key.label} title={key.label}>
-                  <span aria-hidden="true">{key.symbol}</span>
-                </button>
-              ))}
-              <button type="button" {...createKeyHandlers('Enter')} className="nokia1280__select"
-                aria-label="OK / Chọn (Enter)" title="OK / Chọn · Enter">OK</button>
-            </div>
-
-            <div className="nokia1280__sidekeys">
-              <button type="button" {...createKeyHandlers('F2')} className="nokia1280__function"
-                aria-label="Phím mềm phải (F2)" title="Phím mềm phải · F2">
-                <span className="nokia1280__softkey-mark" aria-hidden="true" />
-              </button>
-              <button type="button" {...createKeyHandlers('Escape')} className="nokia1280__function nokia1280__end"
-                aria-label="Quay lại / Menu (Esc)" title="Quay lại / Menu · Esc">
-                <svg viewBox="0 0 24 24" aria-hidden="true" style={{ transform: 'rotate(135deg)' }}>
-                  <path d="m5 4 3-1 3 5-2 2a14 14 0 0 0 5 5l2-2 5 3-1 3c-.3 1-1.4 2-3 2C10 20 4 14 3 7c0-1.6 1-2.7 2-3Z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div className="nokia1280__numbers" role="group" aria-label="Bàn phím số">
-            {[
-              { digit: '1', letters: '· , ?', code: 'Digit1' },
-              { digit: '2', letters: 'abc', code: 'Digit2' },
-              { digit: '3', letters: 'def', code: 'Digit3' },
-              { digit: '4', letters: 'ghi', code: 'Digit4' },
-              { digit: '5', letters: 'jkl', code: 'Digit5' },
-              { digit: '6', letters: 'mno', code: 'Digit6' },
-              { digit: '7', letters: 'pqrs', code: 'Digit7' },
-              { digit: '8', letters: 'tuv', code: 'Digit8' },
-              { digit: '9', letters: 'wxyz', code: 'Digit9' },
-              { digit: '*', letters: '+', code: 'NumpadMultiply' },
-              { digit: '0', letters: '␣', code: 'Digit0' },
-              { digit: '#', letters: '↑', code: 'NumpadDivide' },
-            ].map(key => (
-              <button key={key.code} type="button" {...createKeyHandlers(key.code)} className="nokia1280__number"
-                aria-label={`Phím ${key.digit}`} title={`Phím ${key.digit}`}>
-                <span className="nokia1280__digit">{key.digit}</span>
-                <span className="nokia1280__letters" aria-hidden="true">{key.letters}</span>
-              </button>
-            ))}
-          </div>
-          <div className="nokia1280__bottom" aria-hidden="true"><span /><span /><span /></div>
-        </div>
+        <Nokia1280 keypadRef={keypadRootRef} keyHandlers={createKeyHandlers} className="order-3 lg:order-1">
+          <iframe
+            ref={iframeRef}
+            onLoad={handleEmulatorLoad}
+            src={emulatorSrc ? `${emulatorSrc}&skin=nokia1280&fractionScale=true` : emulatorSrc}
+            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+            allow="autoplay"
+            title={effectiveGameName}
+          />
+        </Nokia1280>
       ) : skin === 'arcade' ? (
         <div className="order-3 lg:order-1 relative w-full max-w-2xl lg:max-w-[min(42rem,calc((100dvh_-_220px)*4/3_+_56px))] lg:min-w-0 lg:flex-1 bg-arcade-900 border-4 border-neon-pink rounded-3xl p-3 sm:p-6 shadow-neon-pink">
           <div className="aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border-2 border-neon-cyan shadow-inner">

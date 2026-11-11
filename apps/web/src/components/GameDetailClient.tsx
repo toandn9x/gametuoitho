@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Game, GameVersion } from '@gametuoitho/shared-types';
 import { getGameDetail } from '../lib/api';
 import GameIcon from './GameIcon';
+import FavoriteButton from './FavoriteButton';
 
 interface GameDetailClientProps {
   slug: string;
@@ -128,6 +129,7 @@ export default function GameDetailClient({ slug, initialData }: GameDetailClient
           >
             ▶ Chơi ngay
           </a>
+          <FavoriteButton gameId={game.id} />
           {activeVersion?.jar_url && (
             <a
               href={activeVersion.jar_url}

@@ -1,5 +1,5 @@
 import { DatabaseClient } from './db';
-import { UserLibraryItem, UserGameActivity, PlayHistoryItem } from '@gametuoitho/shared-types';
+import { UserLibraryItem, UserGameActivity, PlayHistoryItem, FavoriteGameItem } from '@gametuoitho/shared-types';
 
 export class LibraryRepository {
   constructor(private db: DatabaseClient) {}
@@ -157,38 +157,48 @@ export class LibraryRepository {
     return this.db.query(sql, [userId, limit]);
   }
 
-  async toggleFavorite(userId: string, gameId: string): Promise<{ isFavorite: boolean }> {
+  /** Without `desired` the state flips; with it the state is set (safe to repeat, e.g. from a stale tab). */
+  async toggleFavorite(userId: string, gameId: string, desired?: boolean): Promise<{ isFavorite: boolean }> {
     const existing = await this.db.queryFirst<UserGameActivity>(
       "SELECT id FROM user_game_activity WHERE user_id = ? AND game_id = ? AND activity_type = 'FAVORITE'",
       [userId, gameId]
     );
+    const isFavorite = desired ?? !existing;
 
-    if (existing) {
-      await this.db.execute('DELETE FROM user_game_activity WHERE id = ?', [existing.id]);
-      return { isFavorite: false };
-    } else {
+    if (!isFavorite) {
+      if (existing) {
+        await this.db.execute(
+          "DELETE FROM user_game_activity WHERE user_id = ? AND game_id = ? AND activity_type = 'FAVORITE'",
+          [userId, gameId]
+        );
+      }
+    } else if (!existing) {
       const id = crypto.randomUUID();
       await this.db.execute(
         "INSERT INTO user_game_activity (id, user_id, game_id, activity_type, last_played_at, play_count) VALUES (?, ?, ?, 'FAVORITE', datetime('now'), 1)",
         [id, userId, gameId]
       );
-      return { isFavorite: true };
     }
+    return { isFavorite };
   }
 
-  async getFavorites(userId: string): Promise<any[]> {
+  async getFavorites(userId: string): Promise<(Omit<FavoriteGameItem, 'cover_url'> & { cover_storage_key: string | null })[]> {
     const sql = `
-      SELECT 
-        act.*,
+      SELECT
+        act.id,
+        g.id as game_id,
+        act.last_played_at as favorited_at,
         g.name as game_name,
         g.slug as game_slug,
         g.developer,
+        cat.name as category_name,
         a.storage_key as cover_storage_key
       FROM user_game_activity act
       JOIN games g ON act.game_id = g.id AND g.status = 'PUBLISHED' AND g.visibility = 'PUBLIC'
-      LEFT JOIN game_assets a ON g.cover_asset_id = a.id
+      LEFT JOIN categories cat ON g.category_id = cat.id
+      LEFT JOIN game_assets a ON g.cover_asset_id = a.id AND a.status = 'ACTIVE'
       WHERE act.user_id = ? AND act.activity_type = 'FAVORITE'
-      ORDER BY act.last_played_at DESC
+      ORDER BY julianday(act.last_played_at) DESC, act.rowid DESC
     `;
     return this.db.query(sql, [userId]);
   }

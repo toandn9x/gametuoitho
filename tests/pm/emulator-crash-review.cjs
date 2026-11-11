@@ -18,6 +18,10 @@ const playerSource = ts.transpileModule(read('apps/web/src/components/EmulatorPl
   fileName: 'EmulatorPlayer.tsx',
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true },
 }).outputText;
+const nokiaSource = ts.transpileModule(read('apps/web/src/components/Nokia1280.tsx'), {
+  fileName: 'Nokia1280.tsx',
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true },
+}).outputText;
 let passed = 0;
 async function test(name, run) { await run(); passed++; console.log(`PASS ${name}`); }
 
@@ -77,7 +81,7 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
     removeEventListener: type => listeners.delete(type),
   };
   const React = {
-    createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }),
     useState(initial) {
       const index = stateIndex++;
       if (!Object.hasOwn(state, index)) state[index] = initial;
@@ -87,12 +91,18 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
     useEffect(callback) { if (!mounted) effects.push(callback); },
   };
   const module = { exports: {} };
+  const nokia = { exports: {} };
+  vm.runInNewContext(nokiaSource, {
+    module: nokia, exports: nokia.exports,
+    require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name.endsWith('.css')) return {}; throw new Error(name); },
+  });
   const context = vm.createContext({
     module, exports: module.exports, window, document: { addEventListener() {}, removeEventListener() {} },
     console: { error: (...args) => errors.push(args) },
     require(name) {
       if (name.endsWith('.css')) return {};
       if (name === 'react') return { __esModule: true, default: React, ...React };
+      if (name === './Nokia1280') return nokia.exports;
       if (name === '../lib/api') return {
         recordPlay: () => Promise.resolve({ success: true }),
         reportGameCrash: payload => { calls.push(payload); return reportResult(payload); },
