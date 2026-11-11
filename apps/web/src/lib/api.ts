@@ -329,10 +329,11 @@ export async function getAdminStats() {
   return apiRequest<any>('/admin/stats');
 }
 
-export async function getAdminGames(page = 1, limit = 100, status?: string, search?: string) {
+export async function getAdminGames(page = 1, limit = 100, status?: string, search?: string, featuredOnly = false) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (status && status !== 'ALL') params.set('status', status);
   if (search) params.set('search', search);
+  if (featuredOnly) params.set('featured', 'true');
   return apiRequest<Game[]>(`/admin/games?${params.toString()}`);
 }
 

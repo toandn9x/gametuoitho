@@ -1,9 +1,10 @@
 import React from 'react';
 import './Nokia1280.css';
+import { SplitDpad, SplitActions } from './SplitControls';
 
 interface Nokia1280Props {
   children: React.ReactNode;
-  skin?: 'nokia' | 'arcade' | 'clean';
+  skin?: 'nokia' | 'arcade' | 'clean' | 'split';
   className?: string;
   keypadRef?: React.Ref<HTMLDivElement>;
   keyHandlers?: (code: string) => React.ButtonHTMLAttributes<HTMLButtonElement>;
@@ -17,6 +18,7 @@ export default function Nokia1280({ children, skin = 'nokia', className = '', ke
     nokia: 'nokia1280',
     arcade: 'relative w-full max-w-2xl lg:max-w-[min(42rem,calc((100dvh_-_220px)*4/3_+_56px))] lg:min-w-0 lg:flex-1 bg-arcade-900 border-4 border-neon-pink rounded-3xl p-3 sm:p-6 shadow-neon-pink',
     clean: 'relative w-full max-w-3xl lg:max-w-[min(48rem,calc((100dvh_-_170px)*4/3))] lg:min-w-0 lg:flex-1 aspect-[4/3] bg-black border border-arcade-800 rounded-2xl overflow-hidden shadow-2xl',
+    split: 'split-player',
   };
   const key = (code: string, label: string, title: string, style: string, content: React.ReactNode) =>
     keyHandlers ? (
@@ -35,12 +37,14 @@ export default function Nokia1280({ children, skin = 'nokia', className = '', ke
         <span className="nokia1280__brand">NOKIA</span>
       </div>
 
+      {keyHandlers && <SplitDpad visible={skin === 'split'} renderKey={key} />}
       {/* Keep these ancestors mounted: moving an iframe between wrappers reloads its game. */}
-      <div className={skin === 'nokia' ? 'nokia1280__bezel' : 'h-full w-full'}>
+      <div className={skin === 'nokia' ? 'nokia1280__bezel' : skin === 'split' ? 'split-player__viewport' : 'h-full w-full'}>
         <div className={skin === 'nokia' ? 'nokia1280__screen' : skin === 'arcade'
           ? 'aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border-2 border-neon-cyan shadow-inner'
-          : 'h-full w-full'}>{children}</div>
+          : skin === 'split' ? 'split-player__screen' : 'h-full w-full'}>{children}</div>
       </div>
+      {keyHandlers && <SplitActions visible={skin === 'split'} renderKey={key} />}
 
       <div className="nokia1280__controls" style={decorationStyle} role={keyHandlers ? 'group' : undefined}
         aria-label={keyHandlers ? 'Phím điều hướng' : undefined} aria-hidden={!keyHandlers || undefined}>

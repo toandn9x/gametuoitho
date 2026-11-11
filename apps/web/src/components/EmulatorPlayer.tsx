@@ -4,6 +4,7 @@ import { Game, GameVersion } from '@gametuoitho/shared-types';
 import { DEFAULT_KEY_MAPPINGS, KEYBOARD_HINT_MESSAGE, DEFAULT_KEYS_NOTE } from '../constants/keyMapping';
 import { bindTouchKeypad, type TouchKeypadBinding } from '../lib/touchKeypad';
 import Nokia1280 from './Nokia1280';
+import PlayerSettings, { type PlayerKeyAction, type KeyMappingCommand } from './PlayerSettings';
 
 export interface EmulatorPlayerProps {
   game?: Game;
@@ -30,7 +31,7 @@ export default function EmulatorPlayer({
   const effectiveGameName = gameName || game?.name || 'Trò chơi';
   const effectiveJarUrl = jarUrl || activeVersion?.jar_url || '';
 
-  const [skin, setSkin] = useState<'nokia' | 'arcade' | 'clean'>('nokia');
+  const [skin, setSkin] = useState<'nokia' | 'arcade' | 'clean' | 'split'>('nokia');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showKeyGuide, setShowKeyGuide] = useState(false);
   const [emulatorError, setEmulatorError] = useState<string | null>(null);
@@ -42,6 +43,11 @@ export default function EmulatorPlayer({
   const [reportDetails, setReportDetails] = useState('');
   const [isSendingReport, setIsSendingReport] = useState(false);
   const [reportSuccessMsg, setReportSuccessMsg] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [keyActions, setKeyActions] = useState<PlayerKeyAction[] | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [emulatorStarted, setEmulatorStarted] = useState(false);
+  const [showFpsHelp, setShowFpsHelp] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -50,6 +56,9 @@ export default function EmulatorPlayer({
   const keypadPointersRef = useRef(new Map<number, string>());
   const keypadRootRef = useRef<HTMLDivElement>(null);
   const touchKeypadRef = useRef<TouchKeypadBinding | null>(null);
+  const requestKeyMappings = (releaseKeys = false) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'GET_KEY_MAPPINGS', releaseKeys }, window.location.origin);
+  };
   const syncDisplaySkin = () => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'SET_DISPLAY_SKIN', skin: skin === 'nokia' ? 'nokia1280' : 'default' },
@@ -60,9 +69,12 @@ export default function EmulatorPlayer({
     crashReportedRef.current = false;
     setEmulatorError(null);
     setCrashReportStatus(null);
+    setEmulatorStarted(false);
+    setKeyActions(null);
     keypadPointersRef.current.clear();
     touchKeypadRef.current?.releaseAll();
     syncDisplaySkin();
+    requestKeyMappings();
   };
 
   useEffect(() => { syncDisplaySkin(); }, [skin]);
@@ -83,6 +95,19 @@ export default function EmulatorPlayer({
       if (event.data.type === 'EMULATOR_UI_READY') {
         // Startup may finish after the player has already selected another skin.
         syncDisplaySkin();
+        requestKeyMappings();
+      } else if (event.data.type === 'EMULATOR_STARTED') {
+        setEmulatorStarted(true);
+      } else if (event.data.type === 'KEY_MAPPINGS') {
+        if (!Array.isArray(event.data.actions)) return;
+        const actions: PlayerKeyAction[] = event.data.actions.slice(0, 24)
+          .filter((action: any) => typeof action?.action === 'string' && Array.isArray(action.keys))
+          .map((action: any) => ({ action: action.action.slice(0, 32), keys: action.keys.slice(0, 16)
+            .filter((key: any) => typeof key?.code === 'string' && typeof key.label === 'string')
+            .map((key: any) => ({ code: key.code.slice(0, 32), label: key.label.slice(0, 40) })) }));
+        setKeyActions(actions);
+        setSettingsError(typeof event.data.error === 'string' && event.data.error ? event.data.error.slice(0, 200) : null);
+        if (event.data.started === true) setEmulatorStarted(true);
       } else if (event.data.type === 'EMULATOR_READY' && directBytes) {
         if (!iframeRef.current?.contentWindow) return;
         const bytesToSend =
@@ -170,12 +195,40 @@ export default function EmulatorPlayer({
     );
   };
 
-  const changeSkin = (nextSkin: typeof skin) => {
-    if (nextSkin === skin) return;
+  const releaseVirtualKeys = () => {
     for (const code of new Set(keypadPointersRef.current.values())) sendKey(code, false);
     keypadPointersRef.current.clear();
     touchKeypadRef.current?.releaseAll();
+  };
+  const changeSkin = (nextSkin: typeof skin) => {
+    if (nextSkin === skin) return;
+    releaseVirtualKeys();
     setSkin(nextSkin);
+  };
+  const openSettings = () => {
+    releaseVirtualKeys();
+    setSettingsError(null);
+    requestKeyMappings(true);
+    setShowSettings(true);
+  };
+  const closeSettings = () => {
+    setShowSettings(false);
+    setTimeout(() => iframeRef.current?.focus(), 0);
+  };
+  const tapKey = (code: string) => {
+    sendKey(code, true);
+    sendKey(code, false);
+  };
+  const openFpsSettings = () => {
+    if (!emulatorStarted) return;
+    releaseVirtualKeys();
+    requestKeyMappings(true);
+    closeSettings();
+    setShowFpsHelp(true);
+    tapKey('Escape');
+  };
+  const updateKeyMappings = (command: KeyMappingCommand) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'UPDATE_KEY_MAPPINGS', ...command }, window.location.origin);
   };
 
   useEffect(() => {
@@ -260,14 +313,15 @@ export default function EmulatorPlayer({
       className={`relative flex flex-col items-center transition-all ${
         isFullscreen
           ? 'bg-black w-screen h-screen justify-center p-4'
-          : 'w-full justify-center p-1 sm:p-4 lg:p-0 lg:flex-row lg:items-start lg:gap-8'
+          : skin === 'split' ? 'w-full justify-center p-1 sm:p-4 lg:p-0'
+            : 'w-full justify-center p-1 sm:p-4 lg:p-0 lg:flex-row lg:items-start lg:gap-8'
       }`}
     >
       {/* Side panel: toolbar, error banner and key guide. On small screens its children flow
           around the player (display: contents + order); on laptops it becomes a right-hand column. */}
       <div
         className={
-          isFullscreen
+          isFullscreen || skin === 'split'
             ? 'contents'
             : 'contents lg:flex lg:flex-col lg:order-2 lg:w-[380px] lg:flex-shrink-0'
         }
@@ -281,7 +335,7 @@ export default function EmulatorPlayer({
           </div>
 
           {/* Skin Selector */}
-          <div className="order-3 sm:order-2 lg:order-3 flex w-full sm:w-auto lg:w-full items-center bg-arcade-800 rounded-lg p-0.5 text-[11px] sm:text-xs font-mono">
+          <div className="order-3 sm:order-2 lg:order-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 w-full items-center bg-arcade-800 rounded-lg p-0.5 text-[11px] sm:text-xs font-mono" role="group" aria-label="Bố cục điều khiển">
             <button
               onClick={() => changeSkin('nokia')}
               className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
@@ -306,9 +360,15 @@ export default function EmulatorPlayer({
             >
               🖥️ Màn hình rộng
             </button>
+            <button type="button" onClick={() => changeSkin('split')}
+              className={`whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${skin === 'split' ? 'bg-neon-green text-arcade-950 font-bold' : 'text-slate-400'}`}>
+              🎮 Chia đôi
+            </button>
           </div>
 
           <div className="order-2 sm:order-3 lg:order-2 flex items-center gap-2 flex-shrink-0">
+            <button type="button" onClick={openSettings} aria-label="Cài đặt phím và FPS"
+              className="h-9 sm:h-auto px-3 py-1.5 bg-arcade-800 border border-arcade-700 rounded-lg text-xs font-bold text-neon-cyan">⚙ Cài đặt</button>
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
@@ -336,6 +396,15 @@ export default function EmulatorPlayer({
           </div>
         </div>
       )}
+
+      {showFpsHelp && <div className={`${isFullscreen ? 'absolute bottom-3 left-3 right-3 z-30 mx-auto' : 'order-2 mb-4 w-full'} max-w-4xl rounded-xl border border-neon-cyan/40 bg-arcade-900 p-3 text-xs text-slate-300`} role="group" aria-label="Điều khiển cài đặt FPS">
+        <p>Trong màn hình game, chọn <strong>Limit FPS → Auto / 60 / 30 / 15</strong>. Chọn <strong>Return to Game</strong> để chơi tiếp.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[['ArrowUp', '↑ Lên'], ['ArrowDown', '↓ Xuống'], ['Enter', 'OK / Chọn'], ['Escape', 'Esc / Quay lại']].map(([code, label]) =>
+            <button key={code} type="button" onClick={() => tapKey(code)} className="min-h-10 rounded-lg border border-arcade-600 bg-arcade-800 px-3 font-bold">{label}</button>)}
+          <button type="button" onClick={() => setShowFpsHelp(false)} className="min-h-10 px-3 text-slate-400 underline">Ẩn hướng dẫn FPS</button>
+        </div>
+      </div>}
 
       {/* Emulator Error Alert Banner */}
       {emulatorError && (
@@ -422,6 +491,13 @@ export default function EmulatorPlayer({
         </div>
       )}
       </div>
+
+      {isFullscreen && <div className="absolute right-3 top-3 z-30 flex gap-2">
+        <button type="button" onClick={openSettings} className="rounded-lg border border-arcade-600 bg-arcade-900 px-3 py-2 text-xs text-neon-cyan">⚙ Cài đặt phím và FPS</button>
+        <button type="button" onClick={toggleFullscreen} className="rounded-lg border border-arcade-600 bg-arcade-900 px-3 py-2 text-xs text-slate-300">Thoát toàn màn hình</button>
+      </div>}
+      {showSettings && <PlayerSettings actions={keyActions} error={settingsError} ready={emulatorStarted}
+        onChange={updateKeyMappings} onClose={closeSettings} onOpenFps={openFpsSettings} />}
 
       {/* User Crash / Bug Report Modal */}
       {showReportModal && (
@@ -531,7 +607,7 @@ export default function EmulatorPlayer({
       )}
 
       {/* One mounted iframe keeps the running JVM/game alive across skin changes. */}
-      <Nokia1280 skin={skin} keypadRef={keypadRootRef} keyHandlers={createKeyHandlers} className="order-3 lg:order-1">
+      <Nokia1280 skin={skin} keypadRef={keypadRootRef} keyHandlers={createKeyHandlers} className={skin === 'split' ? 'order-3' : 'order-3 lg:order-1'}>
         <iframe
           ref={iframeRef}
           onLoad={handleEmulatorLoad}

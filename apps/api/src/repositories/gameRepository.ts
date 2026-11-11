@@ -72,6 +72,9 @@ export class GameRepository {
       orderSql = 'ORDER BY g.name ASC';
     } else if (filter.sort === 'popular') {
       orderSql = 'ORDER BY g.published_at DESC';
+    } else if (filter.featured === true) {
+      // "Game ưa thích": un-starring then starring again (like any edit) moves a game to the top.
+      orderSql = 'ORDER BY julianday(g.updated_at) DESC, julianday(g.created_at) DESC';
     }
 
     // Query games with category and cover details

@@ -1,0 +1,85 @@
+.split-player {
+  --split-screen-height: min(400px, max(180px, calc(100dvh - 330px)));
+  display: grid;
+  grid-template: "screen screen" auto "left right" auto / minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 960px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #334155;
+  border-radius: 24px;
+  background: #0b101b;
+}
+.split-player__viewport {
+  grid-area: screen;
+  width: 100%;
+  min-width: 0;
+}
+.split-player__screen {
+  height: var(--split-screen-height);
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #000;
+}
+.split-player__left { grid-area: left; display: grid; justify-items: center; gap: 12px; width: 100%; }
+.split-player__right { grid-area: right; display: grid; gap: 8px; width: 100%; max-width: 180px; }
+.split-player__dpad {
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  width: min(100%, 168px);
+  aspect-ratio: 1;
+  gap: 3px;
+}
+.split-player .split-player__key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  background: linear-gradient(#263244, #162030);
+  color: #f1f5f9;
+  font: 700 15px/1 system-ui, sans-serif;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.split-player__direction--up { grid-area: 1 / 2; }
+.split-player__direction--left { grid-area: 2 / 1; }
+.split-player__direction--right { grid-area: 2 / 3; }
+.split-player__direction--down { grid-area: 3 / 2; }
+.split-player__dpad-center { grid-area: 2 / 2; align-self: center; color: #64748b; font-size: 28px; text-align: center; }
+.split-player__caption { color: #94a3b8; font-size: 12px; }
+.split-player__actions, .split-player__numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.split-player .split-player__ok, .split-player .split-player__fire { border-color: #22d3ee; background: #164e63; color: #a5f3fc; }
+.split-player .split-player__fire { font-size: 20px; }
+.split-player .split-player__menu { min-height: 36px; font-size: 12px; }
+.split-player .split-player__key:active { background: #0e7490; transform: translateY(1px); }
+.split-player .split-player__key:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+:fullscreen .split-player { --split-screen-height: max(140px, calc(100dvh - 360px)); }
+@media (min-width: 700px), (min-width: 560px) and (orientation: landscape) and (max-height: 500px) {
+  .split-player {
+    --split-screen-height: min(500px, max(200px, calc(100dvh - 220px)));
+    grid-template: "left screen right" auto / minmax(120px, 160px) minmax(0, 1fr) minmax(132px, 180px);
+    flex: 1;
+  }
+  :fullscreen .split-player { --split-screen-height: max(160px, calc(100dvh - 76px)); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .split-player {
+    --split-screen-height: max(180px, calc(100dvh - 130px));
+    padding: 10px;
+    gap: 12px;
+  }
+  .split-player__right { gap: 4px; }
+  .split-player .split-player__key { min-height: 34px; border-radius: 9px; }
+}

@@ -193,4 +193,8 @@ Tài khoản Google mới đăng nhập lần đầu sẽ có role USER. Email t
 | `pnpm test` | Kiểm thử API, Google auth, Tigris, crawler, Range, helper deploy |
 | `pnpm cf:dev` | Chạy thử bản Cloudflare trên máy (D1/R2 giả lập). Cần tạo `apps/api/.dev.vars` từ `.dev.vars.example` |
 
+`pnpm catalog:update`            # chỉ xem trước: game mới, game bị bỏ qua, game nguồn đã gỡ
+`pnpm catalog:update --write`    # ghi vào database/
+
+
 Tài liệu kỹ thuật thêm: [kiến trúc](docs/architecture.md), [database](docs/database.md), [bảo mật](docs/security.md), [tích hợp emulator](docs/emulator-integration.md).

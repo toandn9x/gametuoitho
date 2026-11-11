@@ -92,9 +92,13 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
   };
   const module = { exports: {} };
   const nokia = { exports: {} };
+  const split = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(read('apps/web/src/components/SplitControls.tsx'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true },
+  }).outputText, { module: split, exports: split.exports, require: name => name === 'react' ? { __esModule: true, default: React, ...React } : {} });
   vm.runInNewContext(nokiaSource, {
     module: nokia, exports: nokia.exports,
-    require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name.endsWith('.css')) return {}; throw new Error(name); },
+    require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === './SplitControls') return split.exports; if (name.endsWith('.css')) return {}; throw new Error(name); },
   });
   const context = vm.createContext({
     module, exports: module.exports, window, document: { addEventListener() {}, removeEventListener() {} },
@@ -103,6 +107,7 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
       if (name.endsWith('.css')) return {};
       if (name === 'react') return { __esModule: true, default: React, ...React };
       if (name === './Nokia1280') return nokia.exports;
+      if (name === './PlayerSettings') return { __esModule: true, default: () => null };
       if (name === '../lib/api') return {
         recordPlay: () => Promise.resolve({ success: true }),
         reportGameCrash: payload => { calls.push(payload); return reportResult(payload); },

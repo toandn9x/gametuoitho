@@ -149,6 +149,7 @@ export class KeyMapper {
             // Reset to default instead of leaving empty
             const defaults = this.getDefaultKeysForAction(actionName);
             if (defaults.length > 0) {
+                for (const key of defaults) this._removeKeyFromAllActions(key);
                 this.mappings[actionName] = [...defaults];
             }
         }

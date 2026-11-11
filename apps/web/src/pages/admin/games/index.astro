@@ -66,6 +66,17 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span>
           Đang Ẩn
         </button>
+        <span class="hidden sm:inline-block w-px h-6 bg-arcade-700 mx-1" aria-hidden="true"></span>
+        <!-- Combines with the status tabs and the search box -->
+        <button
+          type="button"
+          id="featured-filter"
+          aria-pressed="false"
+          title="Chỉ hiện game được chọn vào mục Game ưa thích trên trang chủ"
+          class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-neon-yellow border border-arcade-700 hover:border-neon-yellow/50"
+        >
+          ★ Ưa thích
+        </button>
       </div>
 
       <!-- Search Input -->
@@ -326,11 +337,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     let pendingUploadGameId: string | null = null;
     let pendingUploadGameName: string | null = null;
     let gamesCache: any[] = [];
+    let gamesLoadGeneration = 0;
 
     // Filter states
     const urlParams = new URLSearchParams(window.location.search);
     let currentStatus = urlParams.get('status') || 'ALL';
     let currentSearch = urlParams.get('search') || '';
+    let currentFeaturedOnly = urlParams.get('featured') === 'true';
 
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     const clearSearchBtn = document.getElementById('clear-search-btn') as HTMLButtonElement;
@@ -365,6 +378,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             'status-tab px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-slate-100 border border-arcade-700 hover:border-arcade-600';
         }
       });
+      const featuredFilter = document.getElementById('featured-filter');
+      if (featuredFilter) {
+        featuredFilter.setAttribute('aria-pressed', String(currentFeaturedOnly));
+        featuredFilter.className = currentFeaturedOnly
+          ? 'px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-neon-yellow text-arcade-950 border border-neon-yellow'
+          : 'px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-arcade-800 text-slate-400 hover:text-neon-yellow border border-arcade-700 hover:border-neon-yellow/50';
+      }
     }
 
     function updateBulkToolbar() {
@@ -482,6 +502,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     });
 
     async function loadGames() {
+      const generation = ++gamesLoadGeneration;
+      gamesCache = [];
       selectedGameIds.clear();
       updateBulkToolbar();
       updateStatusTabsUI();
@@ -496,12 +518,15 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       loadingTr.appendChild(loadingTd);
       tbody.appendChild(loadingTr);
 
-      const res = await getAdminGames(1, 100, currentStatus, currentSearch);
+      const res = await getAdminGames(1, 100, currentStatus, currentSearch, currentFeaturedOnly);
+      if (generation !== gamesLoadGeneration) return;
 
       if (!res.success || !res.data || res.data.length === 0) {
-        const emptyMsg = currentSearch || currentStatus !== 'ALL'
-          ? `Không tìm thấy game nào phù hợp với bộ lọc (Trạng thái: ${currentStatus}${currentSearch ? `, Từ khóa: "${currentSearch}"` : ''}).`
-          : 'Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".';
+        const emptyMsg = currentFeaturedOnly && currentStatus === 'ALL' && !currentSearch
+          ? 'Chưa có game nào trong mục Game ưa thích. Bấm ☆ ở cột "Ưa thích" để chọn game.'
+          : currentSearch || currentStatus !== 'ALL' || currentFeaturedOnly
+            ? `Không tìm thấy game nào phù hợp với bộ lọc (Trạng thái: ${currentStatus}${currentFeaturedOnly ? ', chỉ Game ưa thích' : ''}${currentSearch ? `, Từ khóa: "${currentSearch}"` : ''}).`
+            : 'Chưa có game nào trong catalog. Bấm "Thêm Game Mới" hoặc "Nhập Từ gametuoitho.cc".';
 
         tbody.textContent = '';
         const emptyTr = document.createElement('tr');
@@ -516,7 +541,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
       gamesCache = res.data;
       const countAllEl = document.getElementById('count-all');
-      if (countAllEl && currentStatus === 'ALL' && !currentSearch) {
+      if (countAllEl && currentStatus === 'ALL' && !currentSearch && !currentFeaturedOnly) {
         countAllEl.textContent = String(res.data.length);
       }
 
@@ -613,6 +638,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             }
             game.is_featured = res.data.is_featured;
             updateFeaturedButton();
+            // In the "★ Ưa thích" view an un-starred game no longer belongs to the list.
+            if (currentFeaturedOnly && !game.is_featured) await loadGames();
           } catch (err) {
             alert(err instanceof Error ? err.message : 'Không thể cập nhật Game ưa thích.');
           } finally {
@@ -800,6 +827,19 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
         loadGames();
       });
+    });
+
+    // "★ Ưa thích" filter: independent of the status tab and the search box
+    document.getElementById('featured-filter')?.addEventListener('click', () => {
+      currentFeaturedOnly = !currentFeaturedOnly;
+      const url = new URL(window.location.href);
+      if (currentFeaturedOnly) {
+        url.searchParams.set('featured', 'true');
+      } else {
+        url.searchParams.delete('featured');
+      }
+      window.history.replaceState({}, '', url.toString());
+      loadGames();
     });
 
     // Search input handler with debounce

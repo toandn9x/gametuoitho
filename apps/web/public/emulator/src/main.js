@@ -75,6 +75,18 @@ function autoscale() {
 }
 
 function setListeners() {
+    const configurableKeys = new Set(keyMapper.getAllActions().flatMap(({ defaultKeys }) => defaultKeys));
+    const releaseHeldKeys = () => {
+        for (const key of [...keyRepeatManager.keyStates.keys()]) keyRepeatManager.post(false, key);
+    };
+    const sendKeyMappings = (error = '') => {
+        window.parent.postMessage({
+            type: 'KEY_MAPPINGS', started: evtQueue.started, error,
+            actions: keyMapper.getAllActions().map(({ action }) => ({
+                action, keys: keyMapper.getKeysForAction(action).map(code => ({ code, label: keyMapper.getFriendlyKeyName(code) })),
+            })),
+        }, window.location.origin);
+    };
     setKbdHandler((isDown, key) => {
         const symbol = keySymbol(key);
         keyRepeatManager.post(isDown, key, {symbol, ctrlKey: false, shiftKey: false});
@@ -92,11 +104,16 @@ function setListeners() {
             if (canonicalKeys.length > 0) {
                 effectiveKey = canonicalKeys[0];
             }
+        } else if (configurableKeys.has(e.code)) {
+            // A removed configurable binding must not fall back to its native key.
+            // Keep legacy letter aliases available when they have no custom mapping.
+            e.preventDefault();
+            return;
         }
 
         if (codeMap[effectiveKey]) {
             keyRepeatManager.post(isDown, effectiveKey, {
-                symbol: keySymbol(effectiveKey, e.key),
+                symbol: keySymbol(effectiveKey, effectiveKey === e.code ? e.key : undefined),
                 ctrlKey: e.ctrlKey,
                 shiftKey: e.shiftKey
             })
@@ -128,6 +145,27 @@ function setListeners() {
 
         // Schema validation
         if (!event.data || typeof event.data !== 'object') return;
+
+        if (event.data.type === 'GET_KEY_MAPPINGS') {
+            if (event.data.releaseKeys === true) releaseHeldKeys();
+            sendKeyMappings();
+            return;
+        }
+        if (event.data.type === 'UPDATE_KEY_MAPPINGS') {
+            const { operation, action, code } = event.data;
+            if (!['add', 'remove', 'reset'].includes(operation)) return;
+            if (operation !== 'reset' && (typeof action !== 'string' || !keyMapper.getAllActions().some(item => item.action === action) ||
+                typeof code !== 'string' || !Object.hasOwn(codeMap, code))) {
+                sendKeyMappings('Phím hoặc chức năng không được hỗ trợ.');
+                return;
+            }
+            releaseHeldKeys();
+            if (operation === 'reset') keyMapper.resetToDefaults();
+            else if (operation === 'add') keyMapper.addKeyMapping(action, code);
+            else keyMapper.removeKeyMapping(action, code);
+            sendKeyMappings();
+            return;
+        }
 
         if (event.data.type === 'SET_DISPLAY_SKIN') {
             if (event.data.skin === 'nokia1280') {
@@ -400,6 +438,9 @@ async function init() {
                 const KeyEvent = await lib.pl.zb3.freej2me.bridge.shell.KeyEvent;
                 const PointerEvent = await lib.pl.zb3.freej2me.bridge.shell.PointerEvent;
 
+                if (!evtQueue.started && window.parent !== window) {
+                    window.parent.postMessage({ type: 'EMULATOR_STARTED' }, window.location.origin);
+                }
                 const evt = await evtQueue.waitForEvent();
                 if (evt.kind == 'keydown') {
                     await listener.keyPressed(await new KeyEvent(...evt.args));

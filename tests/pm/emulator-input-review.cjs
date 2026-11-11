@@ -15,6 +15,14 @@ function loadModule(file) {
   vm.runInNewContext(compile(read(file), file), { module, exports: module.exports, console, setTimeout, clearTimeout, setInterval, clearInterval });
   return module.exports;
 }
+function loadSplitControls(React) {
+  const module = { exports: {} };
+  vm.runInNewContext(compile(read('apps/web/src/components/SplitControls.tsx'), 'SplitControls.tsx'), {
+    module, exports: module.exports,
+    require: name => name === 'react' ? { __esModule: true, default: React, ...React } : {},
+  });
+  return module.exports;
+}
 const { codeMap, keySymbol, KeyRepeatManager } = loadModule('apps/emulator-web/src/key.js');
 const { EventQueue } = loadModule('apps/emulator-web/src/eventqueue.js');
 const { canvasPoint, bindCanvasPointerEvents } = loadModule('apps/emulator-web/src/pointer.js');
@@ -35,9 +43,15 @@ function eventTarget(extra = {}) {
 }
 
 async function bridge() {
+  const settingsStore = new Map(), parentMessages = [];
+  const storage = { getItem: key => settingsStore.get(key) || null, setItem: (key, value) => settingsStore.set(key, value) };
+  const mappingModule = { exports: {} };
+  vm.runInNewContext(compile(read('apps/emulator-web/src/keyMapper.js'), 'keyMapper.js'), {
+    module: mappingModule, exports: mappingModule.exports, localStorage: storage, console: { error() {}, warn() {} },
+  });
   const rect = { left: 19, top: 47, width: 180, height: 240 };
   const canvas = eventTarget({ width: 240, height: 320, style: {}, focus() {}, setPointerCapture() {}, getBoundingClientRect: () => rect, getContext: () => ({ canvas }) });
-  const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: { postMessage() {} }, innerWidth: 180, innerHeight: 240 });
+  const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: { postMessage: message => parentMessages.push(message) }, innerWidth: 180, innerHeight: 240 });
   const document = eventTarget({ hidden: false, documentElement: { dataset: {} }, querySelector: () => ({ textContent: '' }), getElementById: id => id === 'display' ? canvas : { style: {} } });
   let natives;
   const file = 'apps/emulator-web/src/main.js';
@@ -46,14 +60,14 @@ async function bridge() {
     !ts.isImportDeclaration(node) && !(ts.isExpressionStatement(node) && node.getText(ast).startsWith('init().catch(')))));
   const context = vm.createContext({ window, document, location: { search: '?jar=/fixture.jar', pathname: '/emulator/run.html' }, URLSearchParams,
     codeMap, keySymbol, KeyRepeatManager, EventQueue, bindCanvasPointerEvents, resumeAudioContext,
-    KeyMapper: class { getActionForKey(code) { return code === 'Digit5' ? 'UP' : null; } getDefaultKeysForAction() { return ['ArrowUp']; } },
+    KeyMapper: class extends mappingModule.exports.KeyMapper { constructor() { super(); this.addKeyMapping('UP', 'Digit5'); } },
     setKbdHandler(handler) { context.screenKey = handler; }, initKbdListeners() {}, kbdWidth: 220, kbdHeight: 220,
     LibMidi: class { midiPlayer = { addEventListener() {} }; async init() {} }, LibMedia: class {}, createUnlockingAudioContext() {},
     canvasFontNatives: {}, canvasGraphicsNatives: {}, gles2Natives: {}, jsReferenceNatives: {}, mediaBridgeNatives: {}, midiBridgeNatives: {},
     cheerpjInit: async options => { natives = options.natives; },
     cheerpjRunLibrary: async () => ({ org: { recompile: { freej2me: { FreeJ2ME: { main: async () => {} } } } } }),
     cheerpOSAddStringFile() {}, fetch: async () => ({ ok: true, arrayBuffer: async () => { const bytes = new Uint8Array(22); bytes[0] = 80; bytes[1] = 75; return bytes.buffer; } }),
-    AbortSignal, localStorage: { getItem: () => null }, console: { log() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
+    AbortSignal, localStorage: storage, console: { log() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
   });
   vm.runInContext(inert, context);
   await vm.runInContext('init()', context);
@@ -66,7 +80,8 @@ async function bridge() {
   } } } } } };
   const listener = Object.fromEntries(['keyPressed', 'keyReleased', 'pointerPressed', 'pointerDragged', 'pointerReleased'].map(kind => [kind, async event => delivered.push({ kind, ...event })]));
   const dispatch = () => natives.Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener);
-  return { window, document, canvas, delivered, dispatch, screenKey: context.screenKey,
+  return { window, document, canvas, delivered, dispatch, settingsStore, parentMessages, screenKey: context.screenKey,
+    command(data, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data, ...overrides }); },
     key(code, pressed, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data: { type: 'KEY_EVENT', code, pressed }, ...overrides }); } };
 }
 
@@ -93,7 +108,7 @@ async function main() {
   });
   await test('every skin enables fractional fit for URL games and direct imported bytes', () => {
     const jarUrl = '/api/v1/assets/raw/fixture.jar?download=1&name=game';
-    for (const skin of ['nokia', 'arcade', 'clean']) for (const direct of [false, true]) {
+    for (const skin of ['nokia', 'arcade', 'clean', 'split']) for (const direct of [false, true]) {
       const React = { createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }),
         useState: value => [value === 'nokia' ? skin : value, () => {}], useRef: value => ({ current: value }), useEffect() {} };
       const requireDependency = name => {
@@ -103,9 +118,11 @@ async function main() {
         if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] };
         if (name === '../lib/touchKeypad') return { bindTouchKeypad };
         if (name === './Nokia1280') return nokia.exports;
+        if (name === './SplitControls') return split;
+        if (name === './PlayerSettings') return { __esModule: true, default: () => null };
         throw new Error(name);
       };
-      const nokia = { exports: {} }, player = { exports: {} };
+      const split = loadSplitControls(React), nokia = { exports: {} }, player = { exports: {} };
       vm.runInNewContext(compile(read('apps/web/src/components/Nokia1280.tsx'), 'Nokia1280.tsx'), { module: nokia, exports: nokia.exports, require: requireDependency });
       vm.runInNewContext(compile(read('apps/web/src/components/EmulatorPlayer.tsx'), 'EmulatorPlayer.tsx'), { module: player, exports: player.exports, require: requireDependency });
       const tree = player.exports.default({ gameId: 'fixture', activeVersion: { id: 'version-1' }, jarUrl,
@@ -136,6 +153,52 @@ async function main() {
     skin('unknown'); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
     skin('default'); assert.equal(runtime.document.documentElement.dataset.skin, undefined);
     skin('nokia1280'); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+  });
+  await test('key settings reuse the actual mapper, reject untrusted messages, persist and release held keys', async () => {
+    const runtime = await bridge();
+    const update = { type: 'UPDATE_KEY_MAPPINGS', operation: 'add', action: 'KEY_5', code: 'KeyZ' };
+    const before = runtime.settingsStore.get('freej2me-keymapper-config');
+    runtime.command(update, { source: {} }); runtime.command(update, { origin: 'https://untrusted.invalid' });
+    assert.equal(runtime.settingsStore.get('freej2me-keymapper-config'), before);
+    runtime.command({ ...update, code: '__proto__' });
+    assert.equal(runtime.settingsStore.get('freej2me-keymapper-config'), before);
+    assert.ok(runtime.parentMessages.at(-1).error);
+    runtime.command(update);
+    assert.ok(JSON.parse(runtime.settingsStore.get('freej2me-keymapper-config')).mappings.KEY_5.includes('KeyZ'));
+    assert.ok(runtime.parentMessages.at(-1).actions.find(item => item.action === 'KEY_5').keys.some(key => key.code === 'KeyZ'));
+    const pending = runtime.dispatch();
+    runtime.canvas.emit('keydown', { code: 'KeyZ', key: 'z', ctrlKey: false, shiftKey: false });
+    runtime.command({ type: 'GET_KEY_MAPPINGS', releaseKeys: true });
+    await settle(pending); await settle(runtime.dispatch());
+    assert.deepEqual(runtime.delivered.map(event => [event.kind, event.code, event.char]), [['keyPressed', 53, 53], ['keyReleased', 53, 53]]);
+    runtime.command({ ...update, operation: 'remove' });
+    assert.ok(!runtime.parentMessages.at(-1).actions.find(item => item.action === 'KEY_5').keys.some(key => key.code === 'KeyZ'));
+    runtime.command({ type: 'UPDATE_KEY_MAPPINGS', operation: 'reset' });
+    assert.deepEqual(plain(JSON.parse(runtime.settingsStore.get('freej2me-keymapper-config')).mappings.KEY_5), ['Digit5', 'Numpad5']);
+  });
+  await test('restoring the last binding cannot assign one physical key to two actions', async () => {
+    const runtime = await bridge();
+    const update = (operation, action, code) => runtime.command({ type: 'UPDATE_KEY_MAPPINGS', operation, action, code });
+    update('add', 'DOWN', 'KeyA');
+    update('add', 'UP', 'ArrowDown');
+    update('remove', 'DOWN', 'KeyA');
+    const mappings = JSON.parse(runtime.settingsStore.get('freej2me-keymapper-config')).mappings;
+    const owners = Object.entries(mappings).filter(([, keys]) => keys.includes('ArrowDown')).map(([action]) => action);
+    assert.deepEqual(owners, ['DOWN']);
+  });
+  await test('removed default PC keys stay disabled while virtual keys and legacy aliases still work', async () => {
+    const runtime = await bridge();
+    runtime.command({ type: 'UPDATE_KEY_MAPPINGS', operation: 'add', action: 'UP', code: 'KeyZ' });
+    runtime.command({ type: 'UPDATE_KEY_MAPPINGS', operation: 'remove', action: 'UP', code: 'ArrowUp' });
+    for (const type of ['keydown', 'keyup']) runtime.canvas.emit(type, { code: 'ArrowUp', key: 'ArrowUp' });
+    assert.equal(runtime.window.evtQueue.queue.length, 0, 'removed ArrowUp must not fall back to its raw code');
+    for (const type of ['keydown', 'keyup']) runtime.canvas.emit(type, { code: 'KeyZ', key: 'z' });
+    runtime.key('ArrowUp', true); runtime.key('ArrowUp', false);
+    for (const type of ['keydown', 'keyup']) runtime.canvas.emit(type, { code: 'KeyQ', key: 'q' });
+    const events = plain(runtime.window.evtQueue.queue).filter(event => event.kind !== 'keyclick');
+    assert.deepEqual(events.map(event => [event.kind, event.args[0]]), [
+      ['keydown', 38], ['keyup', 38], ['keydown', 38], ['keyup', 38], ['keydown', codeMap.KeyQ], ['keyup', codeMap.KeyQ],
+    ]);
   });
   await test('numeric Java chars for every phone key, including 5, * and #', () => {
     for (let i = 0; i < 10; i++) { assert.equal(keySymbol(`Digit${i}`), 48 + i); assert.equal(keySymbol(`Numpad${i}`), 48 + i); }
@@ -191,13 +254,14 @@ async function main() {
     const refs = [], effects = [], messages = []; let refIndex = 0;
     const React = { createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }), useState: value => [value, () => {}], useRef: value => refs[refIndex++] ||= { current: value }, useEffect: callback => effects.push(callback) };
     const nokia = { exports: {} };
+    const split = loadSplitControls(React);
     vm.runInNewContext(compile(read('apps/web/src/components/Nokia1280.tsx'), 'Nokia1280.tsx'), {
       module: nokia, exports: nokia.exports,
-      require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name.endsWith('.css')) return {}; throw new Error(name); },
+      require: name => { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === './SplitControls') return split; if (name.endsWith('.css')) return {}; throw new Error(name); },
     });
     const module = { exports: {} };
     vm.runInNewContext(compile(read('apps/web/src/components/EmulatorPlayer.tsx'), 'EmulatorPlayer.tsx'), { module, exports: module.exports, window, document, console,
-      require(name) { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === './Nokia1280') return nokia.exports; if (name === '../lib/api') return { recordPlay: async () => ({ success: true }) }; if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] }; if (name === '../lib/touchKeypad') return { bindTouchKeypad() { throw new Error('Native touch has a separate DOM fixture'); } }; if (name.endsWith('.css')) return {}; throw new Error(name); } });
+      require(name) { if (name === 'react') return { __esModule: true, default: React, ...React }; if (name === './Nokia1280') return nokia.exports; if (name === './PlayerSettings') return { __esModule: true, default: () => null }; if (name === '../lib/api') return { recordPlay: async () => ({ success: true }) }; if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] }; if (name === '../lib/touchKeypad') return { bindTouchKeypad() { throw new Error('Native touch has a separate DOM fixture'); } }; if (name.endsWith('.css')) return {}; throw new Error(name); } });
     const tree = module.exports.default({ gameId: 'fixture', jarUrl: '/fixture.jar' });
     function find(node, test) { if (!node || typeof node !== 'object') return null; if (test(node)) return node; for (const child of [node.props?.children].flat(Infinity)) { const found = find(child, test); if (found) return found; } return null; }
     const audioOrder = [];
@@ -260,7 +324,7 @@ async function main() {
     assert.equal(await resumeAudioContext(refused), false);
     assert.equal(attempts, 2);
   });
-  for (const file of ['main.js', 'key.js', 'eventqueue.js', 'pointer.js']) assert.equal(read(`apps/emulator-web/src/${file}`), read(`apps/web/public/emulator/src/${file}`), `${file} served copy must match source`);
+  for (const file of ['main.js', 'key.js', 'eventqueue.js', 'pointer.js', 'keyMapper.js']) assert.equal(read(`apps/emulator-web/src/${file}`), read(`apps/web/public/emulator/src/${file}`), `${file} served copy must match source`);
   assert.equal(read('apps/emulator-web/libmidi/libmidi.js'), read('apps/web/public/emulator/libmidi/libmidi.js'), 'audio helper served copy must match source');
   console.log(`${passed}/${passed} emulator input checks passed; source/served files match.`);
 }

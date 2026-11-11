@@ -90,8 +90,8 @@ export class AdminService {
     };
   }
 
-  async getAllGames(page = 1, limit = 50, status?: Game['status'], search?: string) {
-    const res = await this.gameRepo.findGames({ page, limit, status, search });
+  async getAllGames(page = 1, limit = 50, status?: Game['status'], search?: string, featured?: boolean) {
+    const res = await this.gameRepo.findGames({ page, limit, status, search, featured });
     return {
       games: res.games.map((g: any) => ({
         ...g,

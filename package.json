@@ -12,7 +12,7 @@
     "build:web": "pnpm --filter @gametuoitho/web build",
     "build:start": "pnpm build && pnpm start",
     "restart": "pnpm build && pnpm start",
-    "test": "pnpm --filter \"@gametuoitho/*\" test && pnpm test:deploy",
+    "test": "pnpm --filter \"@gametuoitho/*\" test && pnpm test:deploy && node --test tests/source-catalog.test.mjs",
     "lint": "pnpm --filter \"@gametuoitho/*\" lint",
     "cf:build": "node scripts/cf-build-web.mjs",
     "cf:dev": "pnpm cf:build && pnpm --filter @gametuoitho/api cf:migrate:local && pnpm --filter @gametuoitho/api cf:seed:local && pnpm --filter @gametuoitho/api cf:dev",
@@ -20,7 +20,8 @@
     "cf:seed": "pnpm --filter @gametuoitho/api cf:seed",
     "cf:deploy": "pnpm cf:build && pnpm --filter @gametuoitho/api cf:deploy",
     "cf:deploy:token": "node scripts/cf-deploy-token.mjs",
-    "test:deploy": "node --test tests/deploy-token.test.mjs tests/deploy-bat.test.mjs"
+    "test:deploy": "node --test tests/deploy-token.test.mjs tests/deploy-bat.test.mjs",
+    "catalog:update": "node scripts/update-source-catalog.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

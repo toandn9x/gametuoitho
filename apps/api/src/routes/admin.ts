@@ -62,7 +62,10 @@ export const adminRoutes = (
     const limit = Number(c.req.query('limit') || '100');
     const status = c.req.query('status') as any;
     const search = c.req.query('search') || undefined;
-    const res = await adminService.getAllGames(page, limit, status, search);
+    // "true" = only homepage "Game ưa thích", "false" = only the others, anything else = no filter.
+    const featuredParam = c.req.query('featured');
+    const featured = featuredParam === 'true' ? true : featuredParam === 'false' ? false : undefined;
+    const res = await adminService.getAllGames(page, limit, status, search, featured);
     return c.json({ success: true, data: res.games, total: res.total, page, limit });
   });
 
