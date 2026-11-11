@@ -63,8 +63,12 @@ function autoscale() {
         screenHeight/screenCtx.canvas.height
     );
 
-    if (!fractionScale) {
-        scale = scale|0;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+
+    // Integer scaling applies only to enlargement. Small frames must shrink
+    // fractionally: CSS zoom: 0 behaves like 1 and clips the native canvas.
+    if (!fractionScale && scale >= 1) {
+        scale = Math.floor(scale);
     }
 
     display.style.zoom = scale;
@@ -124,6 +128,18 @@ function setListeners() {
 
         // Schema validation
         if (!event.data || typeof event.data !== 'object') return;
+
+        if (event.data.type === 'SET_DISPLAY_SKIN') {
+            if (event.data.skin === 'nokia1280') {
+                document.documentElement.dataset.skin = 'nokia1280';
+            } else if (event.data.skin === 'default') {
+                delete document.documentElement.dataset.skin;
+            } else {
+                return;
+            }
+            autoscale();
+            return;
+        }
 
         // Direct bytes delivery for private/imported games
         if (event.data.type === 'LOAD_GAME_BYTES') {
@@ -197,6 +213,10 @@ function setListeners() {
     window.addEventListener('resize', autoscale);
 
     initKbdListeners();
+
+    if (window.parent !== window) {
+        window.parent.postMessage({ type: 'EMULATOR_UI_READY' }, window.location.origin);
+    }
 }
 
 function setFaviconFromBuffer(arrayBuffer) {

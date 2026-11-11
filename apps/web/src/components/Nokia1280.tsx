@@ -3,6 +3,7 @@ import './Nokia1280.css';
 
 interface Nokia1280Props {
   children: React.ReactNode;
+  skin?: 'nokia' | 'arcade' | 'clean';
   className?: string;
   keypadRef?: React.Ref<HTMLDivElement>;
   keyHandlers?: (code: string) => React.ButtonHTMLAttributes<HTMLButtonElement>;
@@ -10,7 +11,13 @@ interface Nokia1280Props {
 
 // The same frame serves the playable emulator and the homepage's static preview.
 // Without handlers, keys are decorative spans so the preview can be a single link.
-export default function Nokia1280({ children, className = '', keypadRef, keyHandlers }: Nokia1280Props) {
+export default function Nokia1280({ children, skin = 'nokia', className = '', keypadRef, keyHandlers }: Nokia1280Props) {
+  const decorationStyle = skin === 'nokia' ? undefined : { display: 'none' };
+  const frameClasses = {
+    nokia: 'nokia1280',
+    arcade: 'relative w-full max-w-2xl lg:max-w-[min(42rem,calc((100dvh_-_220px)*4/3_+_56px))] lg:min-w-0 lg:flex-1 bg-arcade-900 border-4 border-neon-pink rounded-3xl p-3 sm:p-6 shadow-neon-pink',
+    clean: 'relative w-full max-w-3xl lg:max-w-[min(48rem,calc((100dvh_-_170px)*4/3))] lg:min-w-0 lg:flex-1 aspect-[4/3] bg-black border border-arcade-800 rounded-2xl overflow-hidden shadow-2xl',
+  };
   const key = (code: string, label: string, title: string, style: string, content: React.ReactNode) =>
     keyHandlers ? (
       <button type="button" {...keyHandlers(code)} className={`nokia1280__key ${style}`} aria-label={label} title={title}>
@@ -21,17 +28,21 @@ export default function Nokia1280({ children, className = '', keypadRef, keyHand
     );
 
   return (
-    <div ref={keypadRef} className={`nokia1280 ${className}`} role="group" aria-label="Điện thoại Nokia 1280">
-      <div className="nokia1280__top" aria-hidden="true">
+    <div ref={keypadRef} className={`${frameClasses[skin]} ${className}`} role="group"
+      aria-label={skin === 'nokia' ? 'Điện thoại Nokia 1280' : 'Màn hình trò chơi'}>
+      <div className="nokia1280__top" style={decorationStyle} aria-hidden="true">
         <div className="nokia1280__speaker" />
         <span className="nokia1280__brand">NOKIA</span>
       </div>
 
-      <div className="nokia1280__bezel">
-        <div className="nokia1280__screen">{children}</div>
+      {/* Keep these ancestors mounted: moving an iframe between wrappers reloads its game. */}
+      <div className={skin === 'nokia' ? 'nokia1280__bezel' : 'h-full w-full'}>
+        <div className={skin === 'nokia' ? 'nokia1280__screen' : skin === 'arcade'
+          ? 'aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border-2 border-neon-cyan shadow-inner'
+          : 'h-full w-full'}>{children}</div>
       </div>
 
-      <div className="nokia1280__controls" role={keyHandlers ? 'group' : undefined}
+      <div className="nokia1280__controls" style={decorationStyle} role={keyHandlers ? 'group' : undefined}
         aria-label={keyHandlers ? 'Phím điều hướng' : undefined} aria-hidden={!keyHandlers || undefined}>
         <div className="nokia1280__sidekeys">
           {key('F1', 'Phím mềm trái (F1)', 'Phím mềm trái · F1', 'nokia1280__function',
@@ -67,7 +78,7 @@ export default function Nokia1280({ children, className = '', keypadRef, keyHand
         </div>
       </div>
 
-      <div className="nokia1280__numbers" role={keyHandlers ? 'group' : undefined}
+      <div className="nokia1280__numbers" style={decorationStyle} role={keyHandlers ? 'group' : undefined}
         aria-label={keyHandlers ? 'Bàn phím số' : undefined} aria-hidden={!keyHandlers || undefined}>
         {[
           { digit: '1', letters: '· , ?', code: 'Digit1' },
@@ -91,7 +102,7 @@ export default function Nokia1280({ children, className = '', keypadRef, keyHand
           </React.Fragment>
         ))}
       </div>
-      <div className="nokia1280__bottom" aria-hidden="true"><span /><span /><span /></div>
+      <div className="nokia1280__bottom" style={decorationStyle} aria-hidden="true"><span /><span /><span /></div>
     </div>
   );
 }

@@ -37,8 +37,8 @@ function eventTarget(extra = {}) {
 async function bridge() {
   const rect = { left: 19, top: 47, width: 180, height: 240 };
   const canvas = eventTarget({ width: 240, height: 320, style: {}, focus() {}, setPointerCapture() {}, getBoundingClientRect: () => rect, getContext: () => ({ canvas }) });
-  const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: {}, innerWidth: 180, innerHeight: 240 });
-  const document = eventTarget({ hidden: false, querySelector: () => ({ textContent: '' }), getElementById: id => id === 'display' ? canvas : { style: {} } });
+  const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: { postMessage() {} }, innerWidth: 180, innerHeight: 240 });
+  const document = eventTarget({ hidden: false, documentElement: { dataset: {} }, querySelector: () => ({ textContent: '' }), getElementById: id => id === 'display' ? canvas : { style: {} } });
   let natives;
   const file = 'apps/emulator-web/src/main.js';
   const ast = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
@@ -72,6 +72,71 @@ async function bridge() {
 
 async function main() {
   ({ resumeAudioContext } = await audioModule);
+  await test('canvas fits small frames without zoom zero and preserves integer enlargement preference', () => {
+    const source = ts.createSourceFile('main.js', read('apps/emulator-web/src/main.js'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    const autoscale = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'autoscale').getText(source);
+    for (const [width, height, fractional, expected] of [
+      [766, 574, true, 574 / 320], [322, 241, true, 241 / 320],
+      [322, 241, false, 241 / 320], [766, 574, false, 1], [180, 240, true, .75],
+    ]) {
+      const display = { style: { zoom: 1 } };
+      const runtime = vm.createContext({ window: { innerWidth: width, innerHeight: height },
+        display, screenCtx: { canvas: { width: 240, height: 320 } }, scaleSet: true, isMobile: false, fractionScale: fractional });
+      vm.runInContext(autoscale, runtime); runtime.autoscale();
+      assert.equal(display.style.zoom, expected);
+      assert.ok(240 * expected <= width && 320 * expected <= height);
+      runtime.window.innerWidth = 0; runtime.window.innerHeight = 0; runtime.autoscale();
+      assert.equal(display.style.zoom, expected, 'temporarily hidden frames keep their last valid scale');
+      runtime.window.innerWidth = 180; runtime.window.innerHeight = 240; runtime.autoscale();
+      assert.equal(display.style.zoom, .75, 'resize shrinks again even with integer preference');
+    }
+  });
+  await test('every skin enables fractional fit for URL games and direct imported bytes', () => {
+    const jarUrl = '/api/v1/assets/raw/fixture.jar?download=1&name=game';
+    for (const skin of ['nokia', 'arcade', 'clean']) for (const direct of [false, true]) {
+      const React = { createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, children }) : ({ type, props: { ...props, children } }),
+        useState: value => [value === 'nokia' ? skin : value, () => {}], useRef: value => ({ current: value }), useEffect() {} };
+      const requireDependency = name => {
+        if (name === 'react') return { __esModule: true, default: React, ...React };
+        if (name.endsWith('.css')) return {};
+        if (name === '../lib/api') return {};
+        if (name === '../constants/keyMapping') return { DEFAULT_KEY_MAPPINGS: [] };
+        if (name === '../lib/touchKeypad') return { bindTouchKeypad };
+        if (name === './Nokia1280') return nokia.exports;
+        throw new Error(name);
+      };
+      const nokia = { exports: {} }, player = { exports: {} };
+      vm.runInNewContext(compile(read('apps/web/src/components/Nokia1280.tsx'), 'Nokia1280.tsx'), { module: nokia, exports: nokia.exports, require: requireDependency });
+      vm.runInNewContext(compile(read('apps/web/src/components/EmulatorPlayer.tsx'), 'EmulatorPlayer.tsx'), { module: player, exports: player.exports, require: requireDependency });
+      const tree = player.exports.default({ gameId: 'fixture', activeVersion: { id: 'version-1' }, jarUrl,
+        ...(direct ? { directBytes: new Uint8Array([80, 75]) } : {}) });
+      function frame(node) {
+        if (!node || typeof node !== 'object') return;
+        if (node.type === 'iframe') return node;
+        return [node.props?.children].flat(Infinity).map(frame).find(Boolean);
+      }
+      const url = new URL(frame(tree).props.src, 'https://fixture.invalid');
+      assert.equal(url.searchParams.get('fractionScale'), 'true', `${skin}, direct=${direct}`);
+      assert.equal(url.searchParams.getAll('fractionScale').length, 1);
+      assert.equal(url.searchParams.get('skin'), null, 'the game URL is independent of its current skin');
+      assert.equal(url.searchParams.get('appId'), 'version-1');
+      assert.equal(url.searchParams.get('mode'), direct ? 'direct' : null);
+      assert.equal(url.searchParams.get('jar'), direct ? null : jarUrl);
+    }
+  });
+  await test('display skin messages only accept the same-origin parent and known skins', async () => {
+    const runtime = await bridge();
+    const skin = (value, overrides = {}) => runtime.window.emit('message', {
+      source: runtime.window.parent, origin: runtime.window.location.origin,
+      data: { type: 'SET_DISPLAY_SKIN', skin: value }, ...overrides,
+    });
+    skin('nokia1280'); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+    skin('default', { source: {} }); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+    skin('default', { origin: 'https://untrusted.invalid' }); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+    skin('unknown'); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+    skin('default'); assert.equal(runtime.document.documentElement.dataset.skin, undefined);
+    skin('nokia1280'); assert.equal(runtime.document.documentElement.dataset.skin, 'nokia1280');
+  });
   await test('numeric Java chars for every phone key, including 5, * and #', () => {
     for (let i = 0; i < 10; i++) { assert.equal(keySymbol(`Digit${i}`), 48 + i); assert.equal(keySymbol(`Numpad${i}`), 48 + i); }
     for (const key of ['Enter', 'F1', 'F2', 'ArrowUp', 'Escape']) assert.equal(keySymbol(key), 0);
@@ -138,7 +203,7 @@ async function main() {
     const audioOrder = [];
     const iframe = { contentWindow: {
       unlockGameAudio: () => audioOrder.push('unlock'),
-      postMessage: data => { audioOrder.push(data.pressed ? 'down' : 'up'); messages.push(data); },
+      postMessage: data => { if (data.type !== 'KEY_EVENT') return; audioOrder.push(data.pressed ? 'down' : 'up'); messages.push(data); },
     } };
     find(tree, node => node.type === 'iframe').props.ref.current = iframe;
     effects.forEach(effect => effect());

@@ -74,7 +74,7 @@ function player(reportResult = () => Promise.resolve({ success: true, data: { id
   const calls = [];
   const state = [], refs = [], effects = [], listeners = new Map(), errors = [];
   let stateIndex = 0, refIndex = 0, mounted = false;
-  const iframeWindow = {};
+  const iframeWindow = { postMessage() {} };
   const window = {
     location: { origin: 'https://game.example.test' }, history: { length: 1 },
     addEventListener: (type, listener) => listeners.set(type, listener),

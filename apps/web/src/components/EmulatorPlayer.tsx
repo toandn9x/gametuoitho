@@ -50,13 +50,22 @@ export default function EmulatorPlayer({
   const keypadPointersRef = useRef(new Map<number, string>());
   const keypadRootRef = useRef<HTMLDivElement>(null);
   const touchKeypadRef = useRef<TouchKeypadBinding | null>(null);
+  const syncDisplaySkin = () => {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'SET_DISPLAY_SKIN', skin: skin === 'nokia' ? 'nokia1280' : 'default' },
+      window.location.origin
+    );
+  };
   const handleEmulatorLoad = () => {
     crashReportedRef.current = false;
     setEmulatorError(null);
     setCrashReportStatus(null);
     keypadPointersRef.current.clear();
     touchKeypadRef.current?.releaseAll();
+    syncDisplaySkin();
   };
+
+  useEffect(() => { syncDisplaySkin(); }, [skin]);
 
   useEffect(() => {
     const target = userLibraryId ? `import:${userLibraryId}` : effectiveGameId ? `game:${effectiveGameId}` : '';
@@ -71,7 +80,10 @@ export default function EmulatorPlayer({
       if (event.origin !== window.location.origin || event.source !== iframeRef.current?.contentWindow) return;
       if (!event.data || typeof event.data !== 'object') return;
 
-      if (event.data.type === 'EMULATOR_READY' && directBytes) {
+      if (event.data.type === 'EMULATOR_UI_READY') {
+        // Startup may finish after the player has already selected another skin.
+        syncDisplaySkin();
+      } else if (event.data.type === 'EMULATOR_READY' && directBytes) {
         if (!iframeRef.current?.contentWindow) return;
         const bytesToSend =
           directBytes instanceof Uint8Array
@@ -121,7 +133,7 @@ export default function EmulatorPlayer({
 
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, [directBytes, effectiveGameId, effectiveGameName, game?.slug, activeVersion?.id]);
+  }, [directBytes, effectiveGameId, effectiveGameName, game?.slug, activeVersion?.id, skin]);
 
   // Follow the browser's real fullscreen state, so leaving fullscreen with Esc, F11 or the
   // system back gesture restores the normal layout (toolbar, key guide) instead of getting stuck.
@@ -156,6 +168,14 @@ export default function EmulatorPlayer({
       { type: 'KEY_EVENT', code, pressed },
       targetOrigin
     );
+  };
+
+  const changeSkin = (nextSkin: typeof skin) => {
+    if (nextSkin === skin) return;
+    for (const code of new Set(keypadPointersRef.current.values())) sendKey(code, false);
+    keypadPointersRef.current.clear();
+    touchKeypadRef.current?.releaseAll();
+    setSkin(nextSkin);
   };
 
   useEffect(() => {
@@ -223,11 +243,16 @@ export default function EmulatorPlayer({
 
   const isDirectMode = !!directBytes;
   const effectiveAppId = activeVersion?.id || effectiveGameId || 'game';
-  const emulatorSrc = isDirectMode
+  const emulatorBaseSrc = isDirectMode
     ? `/emulator/run.html?mode=direct&appId=${encodeURIComponent(effectiveAppId)}`
     : effectiveJarUrl
       ? `/emulator/run.html?jar=${encodeURIComponent(effectiveJarUrl)}&appId=${encodeURIComponent(effectiveAppId)}`
       : '';
+  // The URL identifies the game only. Skin changes update the existing iframe via messages.
+  // All skins must fit their iframe, including frames smaller than the game's native screen.
+  const emulatorSrc = emulatorBaseSrc
+    ? `${emulatorBaseSrc}&fractionScale=true`
+    : '';
 
   return (
     <div
@@ -258,7 +283,7 @@ export default function EmulatorPlayer({
           {/* Skin Selector */}
           <div className="order-3 sm:order-2 lg:order-3 flex w-full sm:w-auto lg:w-full items-center bg-arcade-800 rounded-lg p-0.5 text-[11px] sm:text-xs font-mono">
             <button
-              onClick={() => setSkin('nokia')}
+              onClick={() => changeSkin('nokia')}
               className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
                 skin === 'nokia' ? 'bg-neon-cyan text-arcade-950 font-bold' : 'text-slate-400'
               }`}
@@ -266,7 +291,7 @@ export default function EmulatorPlayer({
               📱 Nokia 1280
             </button>
             <button
-              onClick={() => setSkin('arcade')}
+              onClick={() => changeSkin('arcade')}
               className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
                 skin === 'arcade' ? 'bg-neon-pink text-white font-bold' : 'text-slate-400'
               }`}
@@ -274,7 +299,7 @@ export default function EmulatorPlayer({
               🕹️ Arcade
             </button>
             <button
-              onClick={() => setSkin('clean')}
+              onClick={() => changeSkin('clean')}
               className={`flex-1 sm:flex-none lg:flex-1 whitespace-nowrap px-2 sm:px-3 py-2 sm:py-1 rounded transition-colors ${
                 skin === 'clean' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'
               }`}
@@ -505,45 +530,18 @@ export default function EmulatorPlayer({
         </div>
       )}
 
-      {/* Screen Presentation according to Skin */}
-      {skin === 'nokia' ? (
-        <Nokia1280 keypadRef={keypadRootRef} keyHandlers={createKeyHandlers} className="order-3 lg:order-1">
-          <iframe
-            ref={iframeRef}
-            onLoad={handleEmulatorLoad}
-            src={emulatorSrc ? `${emulatorSrc}&skin=nokia1280&fractionScale=true` : emulatorSrc}
-            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-            allow="autoplay"
-            title={effectiveGameName}
-          />
-        </Nokia1280>
-      ) : skin === 'arcade' ? (
-        <div className="order-3 lg:order-1 relative w-full max-w-2xl lg:max-w-[min(42rem,calc((100dvh_-_220px)*4/3_+_56px))] lg:min-w-0 lg:flex-1 bg-arcade-900 border-4 border-neon-pink rounded-3xl p-3 sm:p-6 shadow-neon-pink">
-          <div className="aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border-2 border-neon-cyan shadow-inner">
-            <iframe
-              ref={iframeRef}
-              onLoad={handleEmulatorLoad}
-              src={emulatorSrc}
-              className="w-full h-full border-0"
-              sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-              allow="autoplay"
-              title={effectiveGameName}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="order-3 lg:order-1 relative w-full max-w-3xl lg:max-w-[min(48rem,calc((100dvh_-_170px)*4/3))] lg:min-w-0 lg:flex-1 aspect-[4/3] bg-black border border-arcade-800 rounded-2xl overflow-hidden shadow-2xl">
-          <iframe
-            ref={iframeRef}
-            onLoad={handleEmulatorLoad}
-            src={emulatorSrc}
-            className="w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-            allow="autoplay"
-            title={effectiveGameName}
-          />
-        </div>
-      )}
+      {/* One mounted iframe keeps the running JVM/game alive across skin changes. */}
+      <Nokia1280 skin={skin} keypadRef={keypadRootRef} keyHandlers={createKeyHandlers} className="order-3 lg:order-1">
+        <iframe
+          ref={iframeRef}
+          onLoad={handleEmulatorLoad}
+          src={emulatorSrc}
+          className="block h-full w-full border-0"
+          sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+          allow="autoplay"
+          title={effectiveGameName}
+        />
+      </Nokia1280>
     </div>
   );
 }
