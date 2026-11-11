@@ -18,6 +18,19 @@ If persistence fails, the adapter reports `BluetoothStateException` instead of
 issuing a changing temporary identity. This patch does not access host Bluetooth,
 provide Bluetooth networking, modify game JARs or delete RMS data.
 
+`bluetooth/` completes the JSR-82 `javax.bluetooth` API so Bluetooth multiplayer games can
+start. The bundled emulator had no `UUID`, `DiscoveryAgent`, `L2CAPConnection` or
+`L2CAPConnectionNotifier`: Art Of War 2 Bluetooth stopped on its loading screen with
+`NoClassDefFoundError: javax/bluetooth/UUID`. Its `DataElement` and three exceptions had
+package-private constructors, so a game calling them would fail with `IllegalAccessError`.
+`LocalDevice.java` also gains the rest of its API (`getDiscoveryAgent`, `setDiscoverable`,
+`getRecord`, ...); the identity methods above are unchanged. There is still no Bluetooth
+networking. The emulator behaves like a phone with no other device in range: inquiries and
+service searches complete through the normal listener callbacks with nothing found.
+Hosting a game (`setDiscoverable` with GIAC/LIAC) throws `BluetoothStateException`, as when
+Bluetooth is switched off, and `btl2cap://` connections are not available. Single-player
+modes run normally.
+
 This is a patch of the existing emulator, not a replacement emulator. Game files
 under `uploads/` are never modified or executed by this build.
 
@@ -29,9 +42,10 @@ powershell.exe -NoProfile -File apps/emulator-web/patches/rebuild.ps1
 
 Tested with JDK 19.0.2. The script checks the input emulator hash, disables compiler
 annotation processors, compiles only these trusted emulator sources, and creates
-`build/freej2me-web.jar`. The input pins cover the original, menu-only patch and
-current patch. Compared with the menu-patched JAR, the Bluetooth patch adds only
-`javax/bluetooth/LocalDevice.class`; existing entries remain byte-for-byte identical.
+`build/freej2me-web.jar`. The input pins cover the original, the menu-only patch, the
+identity-only Bluetooth patch and the current patch. Compared with the menu-patched JAR, the
+Bluetooth patches add or replace only `javax/bluetooth/*.class`; all other entries remain
+byte-for-byte identical.
 
 After checking the output hash against `provenance.json`, distribute it to both
 `apps/emulator-web/freej2me-web.jar` and

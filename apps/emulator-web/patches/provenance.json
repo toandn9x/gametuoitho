@@ -5,13 +5,31 @@
   "patchedSourceSha256": "735fad7a10b214ff4ccae1bb8b8e5a3aa93b0ae48978421240f7617c0f7a7d82",
   "upstreamJarSha256": "c9fcc5faca09f184e7a056855d1c244ce6909fde1b166cb3fd6e15e22db0fd0a",
   "menuPatchedJarSha256": "36d880b9a3069bc16fffe89a6339b6594d1dd0e22ae8c529a2fa1aaf875be5c6",
-  "patchedJarSha256": "88c8f369b4fda623ba9e55a8548e819cf70e440e0e63a19f800edd13812c1c83",
+  "identityPatchedJarSha256": "88c8f369b4fda623ba9e55a8548e819cf70e440e0e63a19f800edd13812c1c83",
+  "patchedJarSha256": "efbff57227ae85625d35d16a770754aac56e74412d52a770cdc4c51f08cc82d7",
   "bluetoothPatch": {
     "sourceFile": "LocalDevice.java",
-    "sourceSha256": "35f19f70118a1045729e6804bc0efe2cc2e0811846512e973751cc0d89b3c89d",
+    "sourceSha256": "6cbb0dd02edb1c383f4fb16c97f573efdc7568083ba39dbed2c204884d295575",
+    "identityOnlySourceSha256": "35f19f70118a1045729e6804bc0efe2cc2e0811846512e973751cc0d89b3c89d",
     "specificationUrl": "https://docs.oracle.com/javame/config/cldc/opt-pkgs/api/bluetooth/jsr082/javax/bluetooth/LocalDevice.html",
     "addedOn": "2026-11-11",
     "change": "Add the missing LocalDevice identity API used by Ninja School 1. The host supplies a per-installation virtual address persisted in localStorage via CheerpJ javaProperties. No host Bluetooth access or Bluetooth networking is implemented; unavailable persistent identity throws BluetoothStateException."
+  },
+  "bluetoothApiPatch": {
+    "sourceDirectory": "bluetooth/",
+    "sourceSha256": {
+      "BluetoothConnectionException.java": "30b3fe626e9be88d5d2207fee8b749091cab31ac76451019a2b1dc34786cf810",
+      "BluetoothStateException.java": "f9e85c40f2f16a5148dc827403e7e893a6edbad5528183e6f5bf4ac7a775f635",
+      "DataElement.java": "a2280b7521c64178761598e7aa4bfae3da750228a7c527f54cacd4651337a173",
+      "DiscoveryAgent.java": "a0e8866e67231fbb9d28970925535a654667c81c04946bcf241ac6329c886029",
+      "L2CAPConnection.java": "6be482c71a024e810ded6d6e9b1b51682db792ace0e41ea2625be4e592ecc727",
+      "L2CAPConnectionNotifier.java": "d1da31b0b4d0326a347608204470d6bebad54b3925f118e093be36583ef014c9",
+      "ServiceRegistrationException.java": "e18d0a396ded9cb31a3d8aa3dd168b59faf8ac838af7ba8ab8d09b081a306b1d",
+      "UUID.java": "23f556e822979a6a5bb233e3cc90102ffbcf3a97c7d6c8c84a3fb164d7a263a9"
+    },
+    "specificationUrl": "https://docs.oracle.com/javame/config/cldc/opt-pkgs/api/bluetooth/jsr082/javax/bluetooth/package-summary.html",
+    "addedOn": "2026-11-11",
+    "change": "Complete the javax.bluetooth API so Bluetooth multiplayer MIDlets (e.g. Art Of War 2 Bluetooth, NoClassDefFoundError: javax/bluetooth/UUID) can start. Adds UUID, DiscoveryAgent, L2CAPConnection, L2CAPConnectionNotifier and the rest of LocalDevice; replaces DataElement and the three exceptions, whose bundled constructors were package-private. No Bluetooth networking: inquiries and service searches complete with nothing found, hosting (setDiscoverable) throws BluetoothStateException."
   },
   "license": "GPL-3.0-or-later",
   "change": "List.renderScreen skips null optional menu icons; all other class behavior is preserved."
