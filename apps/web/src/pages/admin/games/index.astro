@@ -22,7 +22,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           class="px-4 py-2.5 bg-neon-cyan hover:bg-neon-yellow text-arcade-950 font-black rounded-xl text-xs transition-all shadow-neon-cyan flex items-center gap-2"
         >
           <span>🕷️</span>
-          <span>Nhập Từ gametuoitho.cc</span>
+          <span>Nhập Từ Internet</span>
         </a>
 
         <a
@@ -201,10 +201,25 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         </button>
       </div>
 
-      <div id="modal-alert" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+      <div id="modal-alert" role="alert" class="hidden p-3 rounded-xl text-xs font-bold"></div>
 
       <form id="modal-edit-form" class="space-y-4">
+        <fieldset id="edit-game-fields" class="space-y-4 disabled:opacity-60">
         <input type="hidden" id="edit-game-id" />
+
+        <div class="rounded-xl border border-arcade-700 bg-arcade-850 p-4">
+          <label for="edit-game-cover" class="mb-3 block text-xs font-bold text-slate-300">Icon game / ảnh bìa</label>
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div id="edit-cover-preview" class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-arcade-700 bg-arcade-950 p-2 text-2xl">🎮</div>
+            <div class="min-w-0 flex-1">
+              <input type="file" id="edit-game-cover"
+                accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                class="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-arcade-700 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-200 hover:file:bg-arcade-600" />
+              <p class="mt-2 text-[11px] leading-relaxed text-slate-500">JPG/JPEG, PNG, WEBP, GIF · tối đa 5 MB. Chọn ảnh để bổ sung hoặc thay icon hiện tại.</p>
+              <button type="button" id="edit-cover-reset" class="hidden mt-2 text-xs text-neon-cyan hover:underline">Hủy ảnh đã chọn</button>
+            </div>
+          </div>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -312,6 +327,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             class="w-full bg-arcade-800 border border-arcade-700 focus:border-neon-cyan rounded-xl p-3 text-xs text-slate-100 focus:outline-none"
           ></textarea>
         </div>
+        </fieldset>
 
         <div class="border-t border-arcade-800 pt-5 flex items-center justify-end gap-3">
           <button
@@ -378,6 +394,84 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     const editVisSelect = document.getElementById('edit-game-visibility') as HTMLSelectElement;
     const editDescInput = document.getElementById('edit-game-desc') as HTMLTextAreaElement;
     const modalSubmitBtn = document.getElementById('modal-submit-btn') as HTMLButtonElement;
+    const modalFields = document.getElementById('edit-game-fields') as HTMLFieldSetElement;
+    const modalCloseBtn = document.getElementById('modal-close-btn') as HTMLButtonElement;
+    const modalCancelBtn = document.getElementById('modal-cancel-btn') as HTMLButtonElement;
+    const editCoverInput = document.getElementById('edit-game-cover') as HTMLInputElement;
+    const editCoverPreview = document.getElementById('edit-cover-preview') as HTMLDivElement;
+    const editCoverReset = document.getElementById('edit-cover-reset') as HTMLButtonElement;
+    let savingEdit = false;
+    let existingCoverUrl: string | null = null;
+    let coverPreviewUrl: string | null = null;
+    let uploadedCoverId: string | null = null;
+
+    function previewEditCover(url: string | null) {
+      editCoverPreview.textContent = '';
+      if (!url) {
+        editCoverPreview.textContent = '🎮';
+        return;
+      }
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = 'Icon game';
+      image.className = 'h-full w-full object-contain';
+      image.addEventListener('error', () => {
+        if (image.parentElement === editCoverPreview) editCoverPreview.textContent = '🎮';
+      });
+      editCoverPreview.appendChild(image);
+    }
+
+    function resetEditCover() {
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+      coverPreviewUrl = null;
+      uploadedCoverId = null;
+      editCoverInput.value = '';
+      editCoverReset.classList.add('hidden');
+      previewEditCover(existingCoverUrl);
+    }
+
+    function validateEditCover(file: File) {
+      if (!file.size) throw new Error('Ảnh đã chọn là file trống. Vui lòng chọn ảnh khác.');
+      if (file.size > 5 * 1024 * 1024) throw new Error('Icon game phải có dung lượng tối đa 5 MB.');
+      if (!/\.(jpe?g|png|webp|gif)$/i.test(file.name) &&
+          !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+        throw new Error('Vui lòng chọn ảnh JPG/JPEG, PNG, WEBP hoặc GIF.');
+      }
+    }
+
+    function showEditError(message: string) {
+      modalAlert.className = 'p-3 rounded-xl text-xs font-bold bg-red-500/20 border border-red-500 text-red-200';
+      modalAlert.textContent = message;
+    }
+
+    editCoverInput.addEventListener('change', () => {
+      const file = editCoverInput.files?.[0];
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+      coverPreviewUrl = null;
+      uploadedCoverId = null;
+      modalAlert.classList.add('hidden');
+      if (!file) { resetEditCover(); return; }
+      try {
+        validateEditCover(file);
+        coverPreviewUrl = URL.createObjectURL(file);
+        previewEditCover(coverPreviewUrl);
+        editCoverReset.classList.remove('hidden');
+      } catch (error) {
+        resetEditCover();
+        showEditError(error instanceof Error ? error.message : 'Không thể đọc ảnh đã chọn.');
+      }
+    });
+    editCoverReset.addEventListener('click', resetEditCover);
+
+    function setEditSaving(saving: boolean) {
+      savingEdit = saving;
+      modalFields.disabled = saving;
+      modalCloseBtn.disabled = saving;
+      modalCancelBtn.disabled = saving;
+      modalSubmitBtn.disabled = saving;
+      modalForm.setAttribute('aria-busy', String(saving));
+      modalSubmitBtn.textContent = saving ? 'ĐANG LƯU...' : 'Lưu Thay Đổi';
+    }
 
     function updateStatusTabsUI() {
       document.querySelectorAll('.status-tab').forEach((tab) => {
@@ -443,6 +537,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     loadCategories();
 
     function openEditModal(game: any) {
+      if (savingEdit) return;
       editIdInput.value = game.id;
       editNameInput.value = game.name || '';
       editSlugInput.value = game.slug || '';
@@ -458,14 +553,20 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       editStatusSelect.value = game.status || 'DRAFT';
       editVisSelect.value = game.visibility || 'PUBLIC';
       editDescInput.value = game.description || '';
+      existingCoverUrl = game.cover_url || null;
+      resetEditCover();
 
       modalAlert.className = 'hidden';
       modalAlert.textContent = '';
       editModal.classList.remove('hidden');
+      const panel = editModal.firstElementChild;
+      if (panel) panel.scrollTop = 0;
     }
 
     function closeEditModal() {
+      if (savingEdit) return;
       editModal.classList.add('hidden');
+      resetEditCover();
     }
 
     document.getElementById('modal-close-btn')?.addEventListener('click', closeEditModal);
@@ -473,12 +574,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
     modalForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      modalSubmitBtn.disabled = true;
-      modalSubmitBtn.textContent = 'ĐANG LƯU...';
+      if (savingEdit) return;
+      setEditSaving(true);
       modalAlert.classList.add('hidden');
 
       const id = editIdInput.value;
-      const updateData = {
+      const updateData: Parameters<typeof updateAdminGame>[1] = {
         name: editNameInput.value.trim(),
         slug: editSlugInput.value.trim(),
         category_id: editCatSelect.value,
@@ -489,7 +590,26 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         description: editDescInput.value.trim() || undefined,
       };
 
+      let saved = false;
       try {
+        const coverFile = editCoverInput.files?.[0];
+        if (coverFile) {
+          validateEditCover(coverFile);
+          if (!uploadedCoverId) {
+            modalSubmitBtn.textContent = 'ĐANG TẢI ICON...';
+            const body = new FormData();
+            body.append('file', coverFile);
+            body.append('assetType', 'COVER');
+            body.append('gameId', id);
+            const upload = await apiRequest<{ id: string }>('/upload', { method: 'POST', body });
+            if (!upload.success || !upload.data?.id) {
+              throw new Error(upload.error?.message || 'Tải icon game thất bại. Vui lòng thử lại.');
+            }
+            uploadedCoverId = upload.data.id;
+          }
+          updateData.cover_asset_id = uploadedCoverId;
+        }
+        modalSubmitBtn.textContent = 'ĐANG LƯU...';
         const res = await updateAdminGame(id, updateData);
         if (!res.success) {
           throw new Error(res.error?.message || 'Cập nhật game thất bại');
@@ -499,18 +619,16 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         modalAlert.textContent = 'Cập nhật thành công!';
         modalAlert.classList.remove('hidden');
 
-        setTimeout(() => {
-          closeEditModal();
-          modalSubmitBtn.disabled = false;
-          modalSubmitBtn.textContent = 'Lưu Thay Đổi';
-          loadGames();
-        }, 800);
+        saved = true;
+        await new Promise(resolve => setTimeout(resolve, 800));
       } catch (err: any) {
-        modalAlert.className = 'p-3 rounded-xl text-xs font-bold bg-red-500/20 border border-red-500 text-red-200';
-        modalAlert.textContent = err.message || 'Lỗi cập nhật';
-        modalAlert.classList.remove('hidden');
-        modalSubmitBtn.disabled = false;
-        modalSubmitBtn.textContent = 'Lưu Thay Đổi';
+        showEditError(err.message || 'Lỗi cập nhật');
+      } finally {
+        setEditSaving(false);
+        if (saved) {
+          closeEditModal();
+          void loadGames();
+        }
       }
     });
 
