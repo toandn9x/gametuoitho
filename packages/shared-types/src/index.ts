@@ -101,6 +101,11 @@ export interface UserLibraryItem {
   game?: Game | null;
   version?: GameVersion | null;
   custom_asset?: GameAsset | null;
+  catalog_game_name?: string | null;
+  catalog_game_slug?: string | null;
+  cover_url?: string | null;
+  custom_original_filename?: string | null;
+  is_available?: boolean | 0 | 1;
 }
 
 export interface GameScreenshot {

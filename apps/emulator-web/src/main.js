@@ -334,6 +334,23 @@ function errorText(error) {
     }
 }
 
+function getVirtualBluetoothAddress() {
+    const storageKey = 'pl.zb3.freej2me.bluetoothAddress';
+    try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored && /^[0-9a-fA-F]{12}$/.test(stored)) return stored.toUpperCase();
+        const bytes = crypto.getRandomValues(new Uint8Array(6));
+        bytes[0] = (bytes[0] | 2) & 0xfe; // Locally administered, unicast virtual address.
+        const address = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
+        // Never give games a temporary identity when persistence is unavailable.
+        localStorage.setItem(storageKey, address);
+        return address;
+    } catch {
+        console.error('[Emulator] Could not persist the virtual device identity.');
+        return null;
+    }
+}
+
 let errorReported = false;
 function showError(message, canRetry = true, details = {}) {
     // A Java exception can be swallowed by FreeJ2ME without rejecting main().
@@ -402,8 +419,10 @@ async function init() {
     })
     window.libmedia = new LibMedia();
 
+    const bluetoothAddress = getVirtualBluetoothAddress();
     await cheerpjInit({
         enableDebug: false,
+        javaProperties: bluetoothAddress ? [`freej2me.bluetooth.address=${bluetoothAddress}`] : [],
         natives: {
             ...canvasFontNatives,
             ...canvasGraphicsNatives,

@@ -53,7 +53,7 @@ async function bridge() {
   const canvas = eventTarget({ width: 240, height: 320, style: {}, focus() {}, setPointerCapture() {}, getBoundingClientRect: () => rect, getContext: () => ({ canvas }) });
   const window = eventTarget({ location: { origin: 'https://fixture.invalid' }, parent: { postMessage: message => parentMessages.push(message) }, innerWidth: 180, innerHeight: 240 });
   const document = eventTarget({ hidden: false, documentElement: { dataset: {} }, querySelector: () => ({ textContent: '' }), getElementById: id => id === 'display' ? canvas : { style: {} } });
-  let natives;
+  let natives, javaProperties;
   const file = 'apps/emulator-web/src/main.js';
   const ast = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const inert = ts.createPrinter().printFile(ts.factory.updateSourceFile(ast, ast.statements.filter(node =>
@@ -64,10 +64,10 @@ async function bridge() {
     setKbdHandler(handler) { context.screenKey = handler; }, initKbdListeners() {}, kbdWidth: 220, kbdHeight: 220,
     LibMidi: class { midiPlayer = { addEventListener() {} }; async init() {} }, LibMedia: class {}, createUnlockingAudioContext() {},
     canvasFontNatives: {}, canvasGraphicsNatives: {}, gles2Natives: {}, jsReferenceNatives: {}, mediaBridgeNatives: {}, midiBridgeNatives: {},
-    cheerpjInit: async options => { natives = options.natives; },
+    cheerpjInit: async options => { natives = options.natives; javaProperties = options.javaProperties; },
     cheerpjRunLibrary: async () => ({ org: { recompile: { freej2me: { FreeJ2ME: { main: async () => {} } } } } }),
     cheerpOSAddStringFile() {}, fetch: async () => ({ ok: true, arrayBuffer: async () => { const bytes = new Uint8Array(22); bytes[0] = 80; bytes[1] = 75; return bytes.buffer; } }),
-    AbortSignal, localStorage: storage, console: { log() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
+    AbortSignal, crypto: require('node:crypto').webcrypto, localStorage: storage, console: { log() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
   });
   vm.runInContext(inert, context);
   await vm.runInContext('init()', context);
@@ -80,13 +80,31 @@ async function bridge() {
   } } } } } };
   const listener = Object.fromEntries(['keyPressed', 'keyReleased', 'pointerPressed', 'pointerDragged', 'pointerReleased'].map(kind => [kind, async event => delivered.push({ kind, ...event })]));
   const dispatch = () => natives.Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener);
-  return { window, document, canvas, delivered, dispatch, settingsStore, parentMessages, screenKey: context.screenKey,
+  return { window, document, canvas, delivered, dispatch, settingsStore, parentMessages, javaProperties, screenKey: context.screenKey,
     command(data, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data, ...overrides }); },
     key(code, pressed, overrides = {}) { window.emit('message', { source: window.parent, origin: window.location.origin, data: { type: 'KEY_EVENT', code, pressed }, ...overrides }); } };
 }
 
 async function main() {
   ({ resumeAudioContext } = await audioModule);
+  await test('virtual device identity survives reloads and reaches Java without a temporary fallback', async () => {
+    const source = ts.createSourceFile('main.js', read('apps/emulator-web/src/main.js'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    const getter = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'getVirtualBluetoothAddress').getText(source);
+    const stored = new Map();
+    const storage = { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) };
+    const run = (localStorage = storage) => {
+      const runtime = vm.createContext({ localStorage, crypto: require('node:crypto').webcrypto, console: { error() {} } });
+      return vm.runInContext(getter + '\ngetVirtualBluetoothAddress()', runtime);
+    };
+    const address = run();
+    assert.match(address, /^[0-9A-F]{12}$/);
+    assert.equal(parseInt(address.slice(0, 2), 16) & 3, 2, 'locally administered unicast identity');
+    assert.equal(run(), address, 'a new page/VM must reuse the persisted identity');
+    assert.equal(run({ getItem() { throw new Error('Storage blocked'); } }), null);
+    assert.equal(run({ getItem() { return null; }, setItem() { throw new Error('Storage full'); } }), null, 'never return an unpersisted ID');
+    const runtime = await bridge();
+    assert.deepEqual(plain(runtime.javaProperties), [`freej2me.bluetooth.address=${runtime.settingsStore.get('pl.zb3.freej2me.bluetoothAddress')}`]);
+  });
   await test('canvas fits small frames without zoom zero and preserves integer enlargement preference', () => {
     const source = ts.createSourceFile('main.js', read('apps/emulator-web/src/main.js'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
     const autoscale = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'autoscale').getText(source);

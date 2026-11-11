@@ -99,41 +99,51 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       </div>
     </div>
 
-    <!-- Bulk Action Toolbar -->
-    <div id="bulk-toolbar" class="hidden bg-arcade-850 border border-neon-cyan/40 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg transition-all">
-      <div class="flex items-center gap-3">
-        <span class="w-3 h-3 rounded-full bg-neon-cyan animate-pulse"></span>
-        <span class="text-xs font-bold text-slate-200">
-          Đã chọn: <strong id="selected-count" class="text-neon-cyan text-sm">0</strong> game
+    <!-- Bulk Action Toolbar: floats at the bottom of the screen while games are selected, so it stays
+         reachable after ticking rows far down the list (above the table it was scrolled out of view).
+         md+: centred over the content area next to the 16rem sidebar. -->
+    <div
+      id="bulk-toolbar"
+      role="region"
+      aria-label="Thao tác hàng loạt"
+      class="hidden fixed inset-x-3 bottom-3 z-30 md:inset-x-auto md:left-[calc(50%_+_8rem)] md:-translate-x-1/2 md:w-[min(48rem,calc(100vw_-_18rem))] bg-arcade-900 border border-neon-cyan/50 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5 sm:gap-4 shadow-2xl"
+    >
+      <div class="flex items-center justify-between sm:justify-start gap-3">
+        <span class="flex items-center gap-2 text-xs font-bold text-slate-200">
+          <span class="w-2.5 h-2.5 rounded-full bg-neon-cyan animate-pulse" aria-hidden="true"></span>
+          <span>Đã chọn: <strong id="selected-count" class="text-neon-cyan text-sm">0</strong> game</span>
         </span>
-        <button id="btn-deselect-all" class="text-[11px] text-slate-400 hover:text-red-400 underline ml-2">
+        <button id="btn-deselect-all" class="text-[11px] text-slate-400 hover:text-red-400 underline">
           Bỏ chọn tất cả
         </button>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         <button
           id="btn-bulk-publish"
-          class="px-4 py-2 bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-arcade-950 border border-neon-green/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          class="px-2 sm:px-4 py-2.5 sm:py-2 bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-arcade-950 border border-neon-green/50 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
         >
-          <span>✓</span>
-          <span>Duyệt & Xuất Bản</span>
+          <span aria-hidden="true">✓</span>
+          <span class="sm:hidden">Xuất bản</span>
+          <span class="hidden sm:inline">Duyệt & Xuất Bản</span>
         </button>
 
         <button
           id="btn-bulk-hide"
-          class="px-4 py-2 bg-neon-yellow/20 hover:bg-neon-yellow text-neon-yellow hover:text-arcade-950 border border-neon-yellow/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          class="px-2 sm:px-4 py-2.5 sm:py-2 bg-neon-yellow/20 hover:bg-neon-yellow text-neon-yellow hover:text-arcade-950 border border-neon-yellow/50 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
         >
-          <span>👁️</span>
-          <span>Ẩn Khỏi Catalog</span>
+          <span aria-hidden="true">👁️</span>
+          <span class="sm:hidden">Ẩn</span>
+          <span class="hidden sm:inline">Ẩn Khỏi Catalog</span>
         </button>
 
         <button
           id="btn-bulk-delete"
-          class="px-4 py-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          class="px-2 sm:px-4 py-2.5 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/50 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
         >
-          <span>🗑️</span>
-          <span>Xóa Các Game Đã Chọn</span>
+          <span aria-hidden="true">🗑️</span>
+          <span class="sm:hidden">Xóa</span>
+          <span class="hidden sm:inline">Xóa Các Game Đã Chọn</span>
         </button>
       </div>
     </div>
@@ -174,6 +184,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         </table>
       </div>
     </div>
+    <!-- Room under the last row while the floating bulk toolbar is shown -->
+    <div id="bulk-toolbar-spacer" class="hidden h-28 sm:h-20" aria-hidden="true"></div>
   </div>
 
   <!-- Modal Chỉnh Sửa Thông Tin Game (Edit Modal) -->
@@ -400,6 +412,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       } else {
         toolbar.classList.add('hidden');
       }
+      document.getElementById('bulk-toolbar-spacer')?.classList.toggle('hidden', count === 0);
 
       const allCheckboxes = document.querySelectorAll<HTMLInputElement>('.game-checkbox');
       if (allCheckboxes.length > 0) {
