@@ -3,6 +3,8 @@ import { Game } from '@gametuoitho/shared-types';
 import { getGames } from '../lib/api';
 import GameCard from './GameCard';
 
+const HOME_GAME_LIMIT = 9;
+
 interface FeaturedGamesProps {
   initialGames?: Game[];
   featuredOnly?: boolean;
@@ -16,7 +18,7 @@ export default function FeaturedGames({ initialGames = [], featuredOnly = false 
   useEffect(() => {
     let isMounted = true;
     setError(null);
-    getGames({ limit: 8, sort: 'newest', featured: featuredOnly ? true : undefined })
+    getGames({ limit: HOME_GAME_LIMIT, sort: 'newest', featured: featuredOnly ? true : undefined })
       .then((res) => {
         if (!isMounted) return;
         if (res.success && Array.isArray(res.data)) {
@@ -40,7 +42,7 @@ export default function FeaturedGames({ initialGames = [], featuredOnly = false 
   if (loading) {
     return (
       <div className="game-list-grid">
-        {[...Array(4)].map((_, i) => (
+        {[...Array(HOME_GAME_LIMIT)].map((_, i) => (
           <div
             key={i}
             className="bg-arcade-850/60 border border-arcade-800 rounded-2xl p-4 animate-pulse"
@@ -70,7 +72,7 @@ export default function FeaturedGames({ initialGames = [], featuredOnly = false 
 
   return (
     <div className="game-list-grid">
-      {games.slice(0, 8).map((game) => (
+      {games.slice(0, HOME_GAME_LIMIT).map((game) => (
         <GameCard key={game.id} game={game} />
       ))}
     </div>
