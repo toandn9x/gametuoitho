@@ -10,6 +10,7 @@ Website chơi lại game điện thoại Java (J2ME) ngay trên trình duyệt, 
 - [Deploy lên Cloudflare (Workers + D1 + Tigris)](#cloudflare)
 - [Lệnh hay dùng](#lenh)
 - [Xử lý lỗi thường gặp](#loi)
+- [Kế hoạch Android APK](plan.md)
 
 <a id="muc-dich"></a>
 
