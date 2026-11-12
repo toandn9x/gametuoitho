@@ -213,5 +213,16 @@ Log nằm trong `backup/logs/`. Có thể xóa nguyên folder snapshot cũ; nên
 `pnpm catalog:update`            # chỉ xem trước: game mới, game bị bỏ qua, game nguồn đã gỡ
 `pnpm catalog:update --write`    # ghi vào database/
 
+---
 
-Tài liệu kỹ thuật thêm: [kiến trúc](docs/architecture.md), [database](docs/database.md), [bảo mật](docs/security.md), [tích hợp emulator](docs/emulator-integration.md).
+## Ủng hộ tác giả
+
+Nếu thấy dự án hữu ích, bạn có thể ủng hộ mình để duy trì máy chủ và phát triển Game Tuổi Thơ. Cảm ơn bạn! ☕
+
+[![Mã VietQR ủng hộ tác giả Toandn](https://img.vietqr.io/image/TCB-94183868386-qr_only.svg?accountName=DINH+NGOC+TOAN)](https://img.vietqr.io/image/TCB-94183868386-qr_only.svg?accountName=DINH+NGOC+TOAN)
+
+| Thông tin | Nội dung |
+| --- | --- |
+| Ngân hàng | Techcombank (TCB) |
+| Số tài khoản | `94183868386` |
+| Chủ tài khoản | DINH NGOC TOAN |
