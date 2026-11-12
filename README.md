@@ -8,6 +8,7 @@ Website chơi lại game điện thoại Java (J2ME) ngay trên trình duyệt, 
 - [Các nền tảng sử dụng](#nen-tang)
 - [Chạy trên máy (local)](#local)
 - [Deploy lên Cloudflare (Workers + D1 + Tigris)](#cloudflare)
+- [Sao lưu và kiểm tra snapshot](#backup)
 - [Lệnh hay dùng](#lenh)
 - [Xử lý lỗi thường gặp](#loi)
 - [Kế hoạch Android APK](plan.md)
@@ -167,7 +168,7 @@ Có thể chạy thử trước mà không thay đổi gì trên cloud: `deploy.
 - **Domain riêng:** Worker → **Settings → Domains & Routes → Add → Custom domain**.
 - **Xem log:** Worker → **Observability → Logs**. Lỗi trình giả lập của người chơi được gửi về `/admin/reports`.
 - **Quay lại bản cũ:** Worker → **Deployments → Rollback**. Rollback chỉ đổi code, không hoàn tác migration hay file đã xóa.
-- **Sao lưu:** export D1 và giữ các object Tigris với nguyên tên (key); hai phần này phải đi cùng nhau. Deploy không copy dữ liệu local lên cloud.
+- **Sao lưu:** chạy bộ backup độc lập theo [hướng dẫn bên dưới](#backup). Deploy không copy dữ liệu local lên cloud.
 
 <a id="google-login"></a>
 
@@ -180,6 +181,21 @@ Có thể chạy thử trước mà không thay đổi gì trên cloud: `deploy.
    - Local: đặt biến môi trường cùng tên rồi khởi động lại server.
 
 Tài khoản Google mới đăng nhập lần đầu sẽ có role USER. Email trùng với tài khoản mật khẩu có sẵn sẽ không được tự gộp.
+
+<a id="backup"></a>
+
+## Sao lưu và kiểm tra snapshot
+
+Cần Node.js 22+ và Windows PowerShell. Nhấp đúp [backup/backup.bat](backup/backup.bat) để sao lưu D1 và toàn bộ bucket Tigris; nên chạy lúc ít người truy cập vì export D1 có thể tạm chặn truy vấn.
+
+- **Xem bản backup:** mở `backup/snapshots/<ngày-giờ-ID>/`, gồm `database.sql`, `game_jar/`, `storage_assets/` và `manifest.json`. Bản thành công có `status: "complete"`.
+- **Kiểm tra file offline:** chạy lệnh dưới tại gốc project, thay `TEN_SNAPSHOT` bằng tên thư mục cần kiểm tra. Kết quả phải là `VERIFY OK`.
+
+```powershell
+.\backup\backup.bat --verify "snapshots\TEN_SNAPSHOT"
+```
+
+Log nằm trong `backup/logs/`. Có thể xóa nguyên folder snapshot cũ; nên giữ ít nhất một bản đã verify thành công. Snapshot, log, lock và key được bỏ qua trong Git.
 
 <a id="lenh"></a>
 

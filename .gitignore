@@ -38,3 +38,10 @@ Thumbs.db
 *.db*
 local_storage/
 uploads/
+
+# Backup data and credentials; keep the standalone scripts in Git
+/backup/snapshots/
+/backup/logs/
+/backup/validation/
+/backup/.backup.lock
+/backup/.env.backup.local

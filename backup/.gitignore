@@ -1,0 +1,8 @@
+*
+!.gitignore
+!backup.bat
+!backup.mjs
+!backup.test.mjs
+!parse-s3-list.ps1
+!.env.backup.local.example
+!HUONG_DAN.txt
