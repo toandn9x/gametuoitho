@@ -195,7 +195,7 @@ Cần Node.js 22+ và Windows PowerShell. Nhấp đúp [backup/backup.bat](backu
 .\backup\backup.bat --verify "snapshots\TEN_SNAPSHOT"
 ```
 
-Log nằm trong `backup/logs/`. Có thể xóa nguyên folder snapshot cũ; nên giữ ít nhất một bản đã verify thành công. Snapshot, log, lock và key được bỏ qua trong Git.
+Log nằm trong `backup/logs/`. Có thể xóa nguyên folder snapshot cũ; nên giữ ít nhất một bản đã verify thành công.
 
 <a id="lenh"></a>
 
