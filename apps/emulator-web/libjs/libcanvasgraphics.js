@@ -105,6 +105,13 @@ ctx.canvas.width = 10; ctx.canvas.height = 10;
 //document.body.appendChild(ctx.canvas);
 
 async function transformBitmapOrCanvas(src, sx, sy, sw, sh, a90, mirror) {
+  // Games can crop empty status bars. A zero-sized canvas would stop the JVM's native thread.
+  if (sw === 0 || sh === 0) {
+    const empty = document.createElement('canvas');
+    empty.width = empty.height = 1;
+    return await createImageBitmap(empty);
+  }
+
   if (a90 == 0 && !mirror) {
     return await createImageBitmap(src, sx, sy, sw, sh);
   }

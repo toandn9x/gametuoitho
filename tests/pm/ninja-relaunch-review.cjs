@@ -13,6 +13,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
   await context.route('**/*',route=>{
    const req=route.request();
    if(new URL(req.url()).pathname==='/emulator/src/main.js')return route.fulfill({contentType:'text/javascript',headers:{'Cache-Control':'no-store'},body:fs.readFileSync('apps/emulator-web/src/main.js')});
+   if(new URL(req.url()).pathname==='/emulator/libjs/libcanvasgraphics.js')return route.fulfill({contentType:'text/javascript',headers:{'Cache-Control':'no-store'},body:fs.readFileSync('apps/emulator-web/libjs/libcanvasgraphics.js')});
    if(new URL(req.url()).pathname==='/emulator/freej2me-web.jar'){
     const data=fs.readFileSync('apps/emulator-web/freej2me-web.jar'),range=req.headers().range;
     let status=200,start=0,end=data.length-1;
